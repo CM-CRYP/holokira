@@ -124,6 +124,7 @@ export const starterCards = [
 export const starterSite = {
   dataVersion: 5,
   language: 'fr',
+  colorMode: 'dark',
   brandName: 'HoloKira',
   brandMark: 'HK',
   adminPin: '1234',

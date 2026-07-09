@@ -14,6 +14,7 @@ import {
   LogOut,
   Mail,
   Minus,
+  Moon,
   PackageCheck,
   Palette,
   Plus,
@@ -24,6 +25,7 @@ import {
   ShoppingBag,
   SlidersHorizontal,
   Sparkles,
+  Sun,
   Trash2,
 } from 'lucide-react'
 import { starterCards, starterOrders, starterSellRequests, starterSite } from './data'
@@ -116,6 +118,8 @@ const labels = {
     privateNote: 'Note privée',
     reply: 'Répondre',
     copyEmail: 'Copier e-mail',
+    darkMode: 'Mode sombre',
+    lightMode: 'Mode clair',
     reservationPending: 'Nouvelle réservation',
     paymentPending: 'Réservée',
     sellRequests: 'Demandes de rachat',
@@ -191,6 +195,8 @@ const labels = {
     privateNote: 'Private note',
     reply: 'Reply',
     copyEmail: 'Copy email',
+    darkMode: 'Dark mode',
+    lightMode: 'Light mode',
     reservationPending: 'New reservation',
     paymentPending: 'Reserved',
     sellRequests: 'Buylist requests',
@@ -357,7 +363,7 @@ function CardArt({ card, large = false }) {
   )
 }
 
-function Header({ view, setView, cartCount, site, setLanguage }) {
+function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }) {
   const t = labels[site.language]
   const nav = [
     ['shop', t.shop],
@@ -397,6 +403,10 @@ function Header({ view, setView, cartCount, site, setLanguage }) {
             <option value="en">EN</option>
           </select>
         </label>
+        <button className="theme-toggle" type="button" onClick={toggleColorMode}>
+          {site.colorMode === 'light' ? <Sun size={17} /> : <Moon size={17} />}
+          <span>{site.colorMode === 'light' ? t.lightMode : t.darkMode}</span>
+        </button>
         <button className="cart-pill" type="button" onClick={() => setView('shop')}>
           <ShoppingBag size={18} />
           <span>{cartCount}</span>
@@ -1692,6 +1702,15 @@ function App() {
     saveLocal('kc-site', next)
   }
 
+  function toggleColorMode() {
+    const next = {
+      ...site,
+      colorMode: site.colorMode === 'light' ? 'dark' : 'light',
+    }
+    setSite(next)
+    saveLocal('kc-site', next)
+  }
+
   function addToCart(id) {
     const card = cards.find((item) => item.id === id)
     const existing = cart.find((item) => item.id === id)
@@ -1814,6 +1833,7 @@ function App() {
   return (
     <div
       className="app-shell"
+      data-theme={site.colorMode}
       style={{
         '--red': site.theme.red,
         '--ink': site.theme.ink,
@@ -1826,6 +1846,7 @@ function App() {
         cartCount={cartCount}
         site={site}
         setLanguage={setLanguage}
+        toggleColorMode={toggleColorMode}
       />
       {view === 'shop' && (
         <ShopView

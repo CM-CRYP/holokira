@@ -1,6 +1,39 @@
 .app-shell {
   min-height: 100vh;
   color: var(--ink);
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-strong: rgba(255, 255, 255, 0.92);
+  --field-bg: #ffffff;
+  --topbar-bg: rgba(255, 255, 255, 0.9);
+  --button-ink: var(--ink);
+  background:
+    linear-gradient(90deg, rgba(17, 19, 24, 0.035) 1px, transparent 1px),
+    linear-gradient(rgba(17, 19, 24, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at top right, rgba(219, 42, 42, 0.13), transparent 30%),
+    var(--paper);
+  background-size: 38px 38px, 38px 38px, auto, auto;
+}
+
+.app-shell[data-theme='dark'] {
+  --paper: #090b10;
+  --paper-deep: #151821;
+  --ink: #f5f0e8;
+  --muted: #a8acb8;
+  --line: rgba(255, 255, 255, 0.13);
+  --surface: rgba(18, 21, 29, 0.86);
+  --surface-strong: rgba(20, 23, 31, 0.94);
+  --field-bg: rgba(255, 255, 255, 0.055);
+  --topbar-bg: rgba(9, 11, 16, 0.9);
+  --button-ink: #f5f0e8;
+  --shadow-soft: 0 18px 48px rgba(0, 0, 0, 0.3);
+  --shadow-strong: 0 20px 56px rgba(0, 0, 0, 0.45);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at top right, rgba(219, 42, 42, 0.25), transparent 32%),
+    radial-gradient(circle at 12% 18%, rgba(54, 127, 215, 0.16), transparent 24%),
+    var(--paper);
+  background-size: 38px 38px, 38px 38px, auto, auto, auto;
 }
 
 .topbar {
@@ -13,13 +46,14 @@
   gap: 24px;
   padding: 14px clamp(18px, 4vw, 56px);
   border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--topbar-bg);
   backdrop-filter: blur(18px);
 }
 
 .brand,
 .cart-pill,
 .language-switch,
+.theme-toggle,
 .nav-tabs button,
 .hero-copy button,
 .buy-row button,
@@ -86,11 +120,19 @@
   min-height: 38px;
   padding: 0 10px;
   border: 1px solid var(--line);
-  background: white;
+  background: var(--field-bg);
 }
 
 .language-switch select {
   min-width: 48px;
+}
+
+.theme-toggle {
+  min-height: 38px;
+  padding: 0 10px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: var(--field-bg);
 }
 
 .nav-tabs button {
@@ -105,14 +147,14 @@
 .nav-tabs button:hover {
   color: var(--ink);
   border-color: var(--line);
-  background: white;
+  background: var(--field-bg);
 }
 
 .cart-pill {
   min-width: 72px;
   min-height: 38px;
-  color: white;
-  background: var(--ink);
+  color: var(--paper);
+  background: var(--button-ink);
 }
 
 .shop-layout {
@@ -192,7 +234,7 @@ td select {
   min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--line);
-  background: white;
+  background: var(--field-bg);
   color: var(--muted);
 }
 
@@ -222,7 +264,7 @@ textarea {
 .product-card {
   position: relative;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
 
@@ -465,7 +507,7 @@ td span,
 .admin-orders,
 .table-wrap {
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
 
@@ -531,7 +573,7 @@ dd {
   gap: 12px;
   padding: 14px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--surface);
 }
 
 .checkout-form h3,
@@ -626,7 +668,7 @@ dd {
   height: 30px;
   place-items: center;
   border: 1px solid var(--line);
-  background: white;
+  background: var(--field-bg);
   cursor: pointer;
 }
 
@@ -675,7 +717,7 @@ dd {
 .info-card,
 .empty-state {
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
 
@@ -723,7 +765,7 @@ dd {
   padding: 12px;
   text-align: left;
   border: 1px solid var(--line);
-  background: white;
+  background: var(--surface);
   cursor: pointer;
 }
 
@@ -779,7 +821,7 @@ dd {
   height: fit-content;
   padding: 12px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
 
@@ -805,7 +847,7 @@ dd {
 
 .admin-panel {
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--surface);
   box-shadow: var(--shadow-soft);
   padding: 16px;
 }
@@ -856,7 +898,7 @@ dd {
   gap: 12px;
   padding: 14px;
   border: 1px solid var(--line);
-  background: white;
+  background: var(--field-bg);
 }
 
 .integration-grid span {
@@ -915,7 +957,7 @@ dd {
   min-height: 42px;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  background: white;
+  background: var(--field-bg);
 }
 
 .field input[type="color"] {
@@ -956,7 +998,7 @@ dd {
   align-content: start;
   padding: 14px;
   border: 1px solid var(--line);
-  background: var(--paper-deep);
+  background: var(--field-bg);
 }
 
 .translation-card h3 {
@@ -976,7 +1018,7 @@ dd {
   align-items: start;
   padding: 12px;
   border: 1px solid var(--line);
-  background: white;
+  background: var(--surface);
 }
 
 .editable-product .card-art {
@@ -995,7 +1037,7 @@ dd {
   padding: 0 12px;
   color: var(--red);
   border: 1px solid rgba(219, 42, 42, 0.28);
-  background: white;
+  background: var(--field-bg);
   cursor: pointer;
   font-weight: 800;
 }
@@ -1059,7 +1101,7 @@ dd {
   place-items: center;
   color: var(--red);
   border: 1px solid var(--line);
-  background: white;
+  background: var(--field-bg);
   cursor: pointer;
 }
 
@@ -1107,7 +1149,7 @@ td small {
   padding: 7px 8px;
   color: var(--ink);
   border: 1px solid var(--line);
-  background: white;
+  background: var(--field-bg);
   font: 800 12px/1 var(--ui);
   text-decoration: none;
   cursor: pointer;
