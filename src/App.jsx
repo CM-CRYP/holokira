@@ -1120,7 +1120,7 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
   return (
     <main className="card-detail-page">
       <section className="card-detail-hero">
-        <CardArt card={card} large />
+        <CardPhotoGallery card={card} images={images} />
         <div className="card-detail-copy">
           <button className="text-button" type="button" onClick={() => setView('shop')}>
             ← Retour boutique
@@ -1146,16 +1146,6 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
           </div>
         </div>
       </section>
-      {images.length > 1 && (
-        <section className="card-gallery" aria-label="Photos de la carte">
-          {images.map((image, index) => (
-            <figure key={image}>
-              <img src={image} alt={`${card.name} - photo ${index + 1}`} loading="lazy" decoding="async" />
-              <figcaption>{index === 0 ? 'Photo principale' : `Photo ${index + 1}`}</figcaption>
-            </figure>
-          ))}
-        </section>
-      )}
       <section className="card-detail-grid">
         <article>
           <h2>Informations</h2>
@@ -1289,6 +1279,65 @@ function CollectionPage({ title, intro, cards, openCardPage, addToCart, site, t 
       </div>
       {cards.length === 0 && <p className="empty">{site.copy[site.language].emptyCart}</p>}
     </main>
+  )
+}
+
+function CardPhotoGallery({ card, images }) {
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [zoomOpen, setZoomOpen] = useState(false)
+  const activeImage = images[activeIndex]
+
+  if (images.length === 0) {
+    return <CardArt card={card} large />
+  }
+
+  function selectImage(index) {
+    setActiveIndex(index)
+  }
+
+  function move(direction) {
+    setActiveIndex((current) => (current + direction + images.length) % images.length)
+  }
+
+  return (
+    <section className="photo-gallery" aria-label="Photos de la carte">
+      <button className="photo-main" type="button" onClick={() => setZoomOpen(true)}>
+        <img src={activeImage} alt={`${card.name} - photo ${activeIndex + 1}`} />
+        <span>Zoomer</span>
+      </button>
+      {images.length > 1 && (
+        <div className="photo-thumbs" aria-label="Choisir une photo">
+          {images.map((image, index) => (
+            <button
+              className={index === activeIndex ? 'active' : ''}
+              key={image}
+              type="button"
+              onClick={() => selectImage(index)}
+            >
+              <img src={image} alt={`${card.name} miniature ${index + 1}`} loading="lazy" decoding="async" />
+              <span>{index === 0 ? 'Principale' : `Photo ${index + 1}`}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {zoomOpen && (
+        <div className="zoom-modal" role="dialog" aria-modal="true" aria-label="Zoom photo carte">
+          <button className="zoom-close" type="button" onClick={() => setZoomOpen(false)}>Fermer</button>
+          {images.length > 1 && (
+            <button className="zoom-nav previous" type="button" onClick={() => move(-1)} aria-label="Photo précédente">
+              <ArrowLeft size={22} />
+            </button>
+          )}
+          <img src={activeImage} alt={`${card.name} zoom ${activeIndex + 1}`} />
+          {images.length > 1 && (
+            <button className="zoom-nav next" type="button" onClick={() => move(1)} aria-label="Photo suivante">
+              <ArrowRight size={22} />
+            </button>
+          )}
+          <span className="zoom-count">{activeIndex + 1} / {images.length}</span>
+        </div>
+      )}
+    </section>
   )
 }
 

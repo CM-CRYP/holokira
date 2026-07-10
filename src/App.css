@@ -1116,9 +1116,9 @@ dd {
 
 .card-detail-hero {
   display: grid;
-  grid-template-columns: minmax(280px, 430px) minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 560px) minmax(0, 1fr);
   gap: clamp(18px, 4vw, 44px);
-  align-items: stretch;
+  align-items: start;
   padding-bottom: 22px;
   border-bottom: 1px solid var(--line);
 }
@@ -1126,6 +1126,138 @@ dd {
 .card-detail-hero .card-art {
   min-height: clamp(380px, 54vw, 560px);
   box-shadow: var(--shadow-strong);
+}
+
+.photo-gallery {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.photo-main {
+  position: relative;
+  display: grid;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-strong);
+  cursor: zoom-in;
+}
+
+.photo-main img {
+  width: 100%;
+  max-height: min(68vh, 680px);
+  object-fit: contain;
+  background: #050609;
+}
+
+.photo-main span {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 7px 9px;
+  color: white;
+  background: rgba(0, 0, 0, 0.68);
+  font: 900 12px/1 var(--ui);
+}
+
+.photo-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 8px;
+}
+
+.photo-thumbs button {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 7px;
+  color: var(--muted);
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.photo-thumbs button.active {
+  color: var(--ink);
+  border-color: rgba(219, 42, 42, 0.78);
+  box-shadow: 0 0 0 2px rgba(219, 42, 42, 0.12);
+}
+
+.photo-thumbs img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: var(--paper-deep);
+}
+
+.photo-thumbs span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 800 11px/1 var(--ui);
+}
+
+.zoom-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 3vw, 36px);
+  background: rgba(0, 0, 0, 0.92);
+}
+
+.zoom-modal img {
+  max-width: 100%;
+  max-height: 92vh;
+  object-fit: contain;
+}
+
+.zoom-close,
+.zoom-count,
+.zoom-nav {
+  position: fixed;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(12, 13, 16, 0.86);
+  font: 900 12px/1 var(--ui);
+}
+
+.zoom-close {
+  top: 18px;
+  right: 18px;
+  min-height: 42px;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.zoom-count {
+  left: 50%;
+  bottom: 18px;
+  padding: 10px 12px;
+  transform: translateX(-50%);
+}
+
+.zoom-nav {
+  top: 50%;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.zoom-nav.previous {
+  left: 18px;
+}
+
+.zoom-nav.next {
+  right: 18px;
 }
 
 .card-detail-copy {
