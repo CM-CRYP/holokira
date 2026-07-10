@@ -1931,6 +1931,53 @@ dd {
   gap: 12px;
 }
 
+.admin-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--paper-deep);
+}
+
+.admin-save-bar > span {
+  color: var(--muted);
+  font: 800 13px/1 var(--ui);
+}
+
+.admin-save-bar div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-save-bar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font: 900 12px/1 var(--ui);
+}
+
+.admin-save-bar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.admin-save-bar .checkout {
+  color: white;
+  border-color: transparent;
+  background: var(--red);
+}
+
 .editable-product {
   display: grid;
   grid-template-columns: 180px minmax(0, 1fr);
@@ -2464,6 +2511,16 @@ td:nth-child(2) {
   .field:has(.image-uploader),
   .wide-form > button {
     grid-column: auto;
+  }
+
+  .admin-save-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-save-bar div,
+  .admin-save-bar button {
+    width: 100%;
   }
 
   .danger-button {

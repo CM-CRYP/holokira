@@ -1819,6 +1819,9 @@ function SellRequestsTable({ sellRequests, updateSellRequestStatus, t }) {
 }
 
 function ProductEditor({ cards, persistCards, removeCardById, t }) {
+  const [draftCards, setDraftCards] = useState(cards)
+  const [deletedIds, setDeletedIds] = useState([])
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [draft, setDraft] = useState({
     name: '',
     set: '',
@@ -1847,13 +1850,21 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     reserved: false,
   })
 
-  function persist(next) {
-    persistCards(next)
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      setDraftCards(cards)
+      setDeletedIds([])
+    }
+  }, [cards, hasUnsavedChanges])
+
+  function markEdited(nextCards) {
+    setDraftCards(nextCards)
+    setHasUnsavedChanges(true)
   }
 
   function updateCard(id, field, value) {
     const numeric = ['price', 'stock'].includes(field)
-    persist(cards.map((card) => {
+    markEdited(draftCards.map((card) => {
       if (card.id !== id) return card
       if (field === 'imageUrls') {
         return { ...card, imageUrls: value, imageUrl: value[0] || '' }
@@ -1876,7 +1887,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       reserved: false,
       featured: Boolean(draft.featured),
     }
-    persist([nextCard, ...cards])
+    markEdited([nextCard, ...draftCards])
     setDraft((current) => ({
       ...current,
       name: '',
@@ -1894,7 +1905,23 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
   }
 
   function removeCard(id) {
-    removeCardById(id)
+    markEdited(draftCards.filter((card) => card.id !== id))
+    if (cards.some((card) => card.id === id)) {
+      setDeletedIds((current) => [...new Set([...current, id])])
+    }
+  }
+
+  function saveProducts() {
+    deletedIds.forEach((id) => removeCardById(id))
+    persistCards(draftCards)
+    setDeletedIds([])
+    setHasUnsavedChanges(false)
+  }
+
+  function cancelProductChanges() {
+    setDraftCards(cards)
+    setDeletedIds([])
+    setHasUnsavedChanges(false)
   }
 
   return (
@@ -1902,6 +1929,18 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       <div className="panel-title admin-panel-title">
         <h2>Produits</h2>
         <span>Modifie toutes les informations visibles sur les cartes.</span>
+      </div>
+      <div className="admin-save-bar">
+        <span>{hasUnsavedChanges ? 'Modifications non sauvegardées' : 'Tous les produits sont sauvegardés'}</span>
+        <div>
+          <button type="button" onClick={cancelProductChanges} disabled={!hasUnsavedChanges}>
+            Annuler
+          </button>
+          <button className="checkout" type="button" onClick={saveProducts} disabled={!hasUnsavedChanges}>
+            <Save size={16} />
+            Sauvegarder les produits
+          </button>
+        </div>
       </div>
       <form className="admin-form wide-form" onSubmit={addCard}>
         <Field label="Nom">
@@ -1980,7 +2019,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
         </button>
       </form>
       <div className="product-editor-list">
-        {cards.map((card) => (
+        {draftCards.map((card) => (
           <article className="editable-product" key={card.id}>
             <CardArt card={card} />
             <div className="editable-grid">
@@ -2054,7 +2093,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
               <Field label="Statut">
                 <select value={getCardStatus(card)} onChange={(event) => {
                   const status = event.target.value
-                  persist(cards.map((item) =>
+                  markEdited(draftCards.map((item) =>
                     item.id === card.id
                       ? {
                           ...item,
