@@ -255,8 +255,7 @@ const labels = {
   },
 }
 
-const statusOptions = ['Nouvelle réservation', 'Contacté', 'Confirmée', 'Annulée', 'Archivée']
-
+const reservationStatusOptions = ['Nouvelle', 'Contacté', 'Confirmée', 'Annulée']
 const defaultCheckout = {
   fullName: '',
   email: '',
@@ -347,8 +346,36 @@ function normalizeStatus(status) {
     Payée: 'Confirmée',
     Préparée: 'Contacté',
     Expédiée: 'Confirmée',
+    'Nouvelle réservation': 'Nouvelle',
+    Archivée: 'Annulée',
   }
   return replacements[status] ?? status
+}
+
+function getCardSearchText(card) {
+  return [
+    card.name,
+    card.set,
+    card.rarity,
+    card.type,
+    card.condition,
+    card.language,
+    card.grade,
+    card.tags,
+    card.badge,
+  ].join(' ').toLowerCase()
+}
+
+function getCollectionSignals(card) {
+  const haystack = getCardSearchText(card)
+  const grade = `${card.grade || ''}`.toLowerCase()
+  return {
+    japanese: card.language?.toUpperCase() === 'JP',
+    graded: grade && grade !== 'raw',
+    vintage: /neo|archive|vault|promo|old|vintage|japan|osaka|kyoto|hanami|ancienne/i.test(haystack),
+    promo: /promo/i.test(haystack),
+    favorite: Boolean(card.featured || card.badge),
+  }
 }
 
 function getCardHash(card) {
@@ -392,6 +419,37 @@ function formatDateTime(value) {
 
 function addHours(date, hours) {
   return new Date(date.getTime() + Number(hours || 48) * 60 * 60 * 1000).toISOString()
+}
+
+function setMetaTag(selector, attributes) {
+  let tag = document.head.querySelector(selector)
+  if (!tag) {
+    tag = document.createElement('meta')
+    document.head.appendChild(tag)
+  }
+  Object.entries(attributes).forEach(([key, value]) => tag.setAttribute(key, value))
+}
+
+function setLinkTag(rel, href) {
+  let tag = document.head.querySelector(`link[rel="${rel}"]`)
+  if (!tag) {
+    tag = document.createElement('link')
+    tag.setAttribute('rel', rel)
+    document.head.appendChild(tag)
+  }
+  tag.setAttribute('href', href)
+}
+
+function setStructuredData(data) {
+  const id = 'holokira-structured-data'
+  let script = document.getElementById(id)
+  if (!script) {
+    script = document.createElement('script')
+    script.type = 'application/ld+json'
+    script.id = id
+    document.head.appendChild(script)
+  }
+  script.textContent = JSON.stringify(data)
 }
 
 function getCardBadges(card) {
@@ -446,7 +504,7 @@ function CardArt({ card, large = false }) {
       className={large ? 'card-art card-art-large' : 'card-art'}
       style={{ '--card-accent': card.color }}
     >
-      {card.imageUrl && <img src={card.imageUrl} alt={card.name} />}
+      {card.imageUrl && <img src={card.imageUrl} alt={card.name} loading="lazy" decoding="async" />}
       <div className="card-art-top">
         <span>{card.language}</span>
         <strong>{card.grade}</strong>
@@ -612,9 +670,46 @@ function ProductCard({ card, selected, onSelect, onAdd, t }) {
   )
 }
 
-function Filters({ query, setQuery, type, setType, rarity, setRarity, status, setStatus, sort, setSort, cards, site, t }) {
+function Filters({
+  query,
+  setQuery,
+  type,
+  setType,
+  rarity,
+  setRarity,
+  status,
+  setStatus,
+  sort,
+  setSort,
+  language,
+  setLanguageFilter,
+  grade,
+  setGradeFilter,
+  collectionTag,
+  setCollectionTag,
+  minPrice,
+  setMinPrice,
+  maxPrice,
+  setMaxPrice,
+  stockOnly,
+  setStockOnly,
+  cards,
+  site,
+  t,
+}) {
   const types = [t.all, ...new Set(cards.map((card) => card.type))]
   const rarities = [t.allFeminine, ...new Set(cards.map((card) => card.rarity))]
+  const languages = [t.all, ...new Set(cards.map((card) => card.language).filter(Boolean))]
+  const grades = [t.all, ...new Set(cards.map((card) => card.grade).filter(Boolean))]
+  const isFr = site.language === 'fr'
+  const collectionOptions = [
+    ['all', t.all],
+    ['japanese', isFr ? 'Japonais' : 'Japanese'],
+    ['graded', isFr ? 'Gradée' : 'Graded'],
+    ['vintage', 'Vintage'],
+    ['promo', 'Promo'],
+    ['favorite', isFr ? 'Coup de cœur' : 'Favorite'],
+  ]
   const statuses = [
     [t.all, t.all],
     ['available', t.available],
@@ -670,6 +765,60 @@ function Filters({ query, setQuery, type, setType, rarity, setRarity, status, se
             <option value={value} key={value}>{label}</option>
           ))}
         </select>
+      </label>
+      <label>
+        <Globe2 size={17} />
+        <select value={language} onChange={(event) => setLanguageFilter(event.target.value)}>
+          {languages.map((option) => (
+            <option key={option}>{option}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <PackageCheck size={17} />
+        <select value={grade} onChange={(event) => setGradeFilter(event.target.value)}>
+          {grades.map((option) => (
+            <option key={option}>{option}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <Sparkles size={17} />
+        <select value={collectionTag} onChange={(event) => setCollectionTag(event.target.value)}>
+          {collectionOptions.map(([value, label]) => (
+            <option value={value} key={value}>{label}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <CircleDollarSign size={17} />
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={minPrice}
+          onChange={(event) => setMinPrice(event.target.value)}
+          placeholder={isFr ? 'Prix min' : 'Min price'}
+        />
+      </label>
+      <label>
+        <CircleDollarSign size={17} />
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={maxPrice}
+          onChange={(event) => setMaxPrice(event.target.value)}
+          placeholder={isFr ? 'Prix max' : 'Max price'}
+        />
+      </label>
+      <label className="toggle-filter">
+        <input
+          type="checkbox"
+          checked={stockOnly}
+          onChange={(event) => setStockOnly(event.target.checked)}
+        />
+        <span>{isFr ? 'Stock disponible' : 'In stock'}</span>
       </label>
     </section>
   )
@@ -864,6 +1013,7 @@ function ShopView(props) {
             />
           ))}
         </div>
+        <TrustSection site={props.site} />
       </section>
       <section className="side-stack">
         <DetailPanel card={props.selected} onAdd={props.addToCart} t={props.t} />
@@ -890,6 +1040,7 @@ function CardsView({ cards, allCards, filters, openCardPage, addToCart, site, t 
         <h1>{t.cards}</h1>
         <p>{site.copy[site.language].cardsIntro}</p>
       </div>
+      <TrustSection site={site} />
       {filters && <Filters {...filters} cards={allCards} site={site} t={t} />}
       <div className="inventory-list">
         {cards.map((card) => {
@@ -1118,6 +1269,41 @@ function CollectionPage({ title, intro, cards, openCardPage, addToCart, site, t 
   )
 }
 
+function TrustSection({ site }) {
+  const isFr = site.language === 'fr'
+  const items = isFr
+    ? [
+        ['Comment fonctionne la réservation', 'Tu ajoutes les cartes souhaitées, tu envoies ta demande, puis elles passent en réservé pendant le délai indiqué.'],
+        ['Paiement après validation vendeur', 'Aucun paiement en ligne. Le vendeur vérifie le stock, l’état et les détails avant de te recontacter.'],
+        ['Expédition protégée', 'Envoi suivi depuis la France, protection rigide et emballage adapté aux cartes de collection.'],
+        ['État des cartes transparent', 'Langue, grade, rareté et défauts visibles sont indiqués sur chaque fiche carte.'],
+      ]
+    : [
+        ['How reservation works', 'Add the cards you want, submit your request, then the cards are marked as reserved for the displayed period.'],
+        ['Payment after seller approval', 'No online payment. The seller checks stock, condition, and details before contacting you.'],
+        ['Protected shipping', 'Tracked shipping from France with rigid protection for collectible cards.'],
+        ['Transparent card condition', 'Language, grade, rarity, and visible flaws are listed on each card page.'],
+      ]
+
+  return (
+    <section className="trust-panel">
+      <div className="panel-title">
+        <h2>{isFr ? 'Réserver en confiance' : 'Reserve with confidence'}</h2>
+        <span>{site.copy[site.language].paymentMode}</span>
+      </div>
+      <div className="trust-grid">
+        {items.map(([title, text]) => (
+          <article key={title}>
+            <Check size={18} />
+            <strong>{title}</strong>
+            <p>{text}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 function OrdersView({ orders, site, t }) {
   return (
     <main className="simple-page">
@@ -1335,7 +1521,7 @@ function OrderTable({ orders, updateOrderStatus, updateOrderNote, releaseReserva
                     value={normalizeStatus(order.status)}
                     onChange={(event) => updateOrderStatus(order.id, event.target.value)}
                   >
-                    {statusOptions.map((status) => (
+                    {reservationStatusOptions.map((status) => (
                       <option key={status}>{status}</option>
                     ))}
                   </select>
@@ -1801,9 +1987,28 @@ function AdminView({
   backendConfig,
 }) {
   const [activeTab, setActiveTab] = useState('overview')
+  const [orderQuery, setOrderQuery] = useState('')
+  const [orderStatusFilter, setOrderStatusFilter] = useState('Tous')
   const revenue = orders.reduce((sum, order) => sum + Number(order.total), 0)
   const stock = cards.reduce((sum, card) => sum + Number(card.stock), 0)
   const lowStock = cards.filter((card) => Number(card.stock) <= Number(site.lowStockLimit)).length
+  const filteredOrders = useMemo(() => {
+    const normalized = orderQuery.toLowerCase().trim()
+    return orders.filter((order) => {
+      const text = [
+        order.id,
+        order.customer,
+        order.email,
+        order.phone,
+        order.message,
+        order.privateNote,
+        ...(order.lines || []).map((line) => `${line.name} ${line.set} ${line.rarity}`),
+      ].join(' ').toLowerCase()
+      const matchQuery = text.includes(normalized)
+      const matchStatus = orderStatusFilter === 'Tous' || normalizeStatus(order.status) === orderStatusFilter
+      return matchQuery && matchStatus
+    })
+  }, [orderQuery, orderStatusFilter, orders])
 
   function updateOrderStatus(id, status) {
     const next = orders.map((order) => (order.id === id ? { ...order, status } : order))
@@ -1968,8 +2173,30 @@ function AdminView({
                 <h2>Réservations</h2>
                 <span>Lis les messages clients et change le statut des réservations.</span>
               </div>
+              <div className="admin-toolbar">
+                <label className="searchbox">
+                  <Search size={18} />
+                  <input
+                    value={orderQuery}
+                    onChange={(event) => setOrderQuery(event.target.value)}
+                    placeholder="Rechercher client, carte, message..."
+                  />
+                </label>
+                <label>
+                  <PackageCheck size={17} />
+                  <select
+                    value={orderStatusFilter}
+                    onChange={(event) => setOrderStatusFilter(event.target.value)}
+                  >
+                    <option>Tous</option>
+                    {reservationStatusOptions.map((status) => (
+                      <option key={status}>{status}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               <OrderTable
-                orders={orders}
+                orders={filteredOrders}
                 updateOrderStatus={updateOrderStatus}
                 updateOrderNote={updateOrderNote}
                 releaseReservation={releaseReservation}
@@ -2029,8 +2256,80 @@ function App() {
   const [rarity, setRarity] = useState(labels[site.language].allFeminine)
   const [statusFilter, setStatusFilter] = useState(labels[site.language].all)
   const [sortOrder, setSortOrder] = useState('featured')
+  const [languageFilter, setLanguageFilter] = useState(labels[site.language].all)
+  const [gradeFilter, setGradeFilter] = useState(labels[site.language].all)
+  const [collectionTag, setCollectionTag] = useState('all')
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [stockOnly, setStockOnly] = useState(false)
   const [toast, setToast] = useState('')
   const t = labels[site.language]
+
+  useEffect(() => {
+    const copy = site.copy[site.language]
+    const origin = window.location.origin
+    const canonical = `${origin}${window.location.pathname}${window.location.hash || '#home'}`
+    const pageTitles = {
+      home: copy.homeTitle,
+      shop: copy.heroTitle,
+      cards: t.cards,
+      highlights: copy.highlightsTitle,
+      japanese: copy.japaneseTitle,
+      vintageJapanese: copy.vintageJapaneseTitle,
+      graded: copy.gradedTitle,
+      sell: copy.sellTitle,
+      about: copy.aboutTitle,
+      contact: copy.contactTitle,
+      legal: copy.legalTitle,
+      orders: t.orders,
+    }
+    const title = view === 'cardDetail' && selected
+      ? `${selected.name} | ${site.brandName}`
+      : `${pageTitles[view] || site.brandName} | ${site.brandName}`
+    const description = view === 'cardDetail' && selected
+      ? `${selected.name}, ${selected.rarity}, ${selected.condition}, ${selected.language}, ${selected.grade}. Réservation sans paiement en ligne.`
+      : copy.heroSubtitle
+
+    document.documentElement.lang = site.language
+    document.title = title
+    setMetaTag('meta[name="description"]', { name: 'description', content: description })
+    setMetaTag('meta[property="og:title"]', { property: 'og:title', content: title })
+    setMetaTag('meta[property="og:description"]', { property: 'og:description', content: description })
+    setMetaTag('meta[property="og:type"]', { property: 'og:type', content: view === 'cardDetail' ? 'product' : 'website' })
+    setMetaTag('meta[property="og:url"]', { property: 'og:url', content: canonical })
+    setMetaTag('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' })
+    setLinkTag('canonical', canonical)
+
+    const structuredData = view === 'cardDetail' && selected
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: selected.name,
+          description,
+          brand: site.brandName,
+          category: 'Pokémon card',
+          image: selected.imageUrl || `${origin}/favicon.svg`,
+          offers: {
+            '@type': 'Offer',
+            priceCurrency: 'EUR',
+            price: Number(selected.price).toFixed(2),
+            availability: isReservable(selected)
+              ? 'https://schema.org/InStock'
+              : 'https://schema.org/OutOfStock',
+            url: canonical,
+          },
+        }
+      : {
+          '@context': 'https://schema.org',
+          '@type': 'Store',
+          name: site.brandName,
+          url: origin,
+          email: site.contactEmail,
+          description,
+        }
+
+    setStructuredData(structuredData)
+  }, [selected, site, t.cards, t.orders, view])
 
   useEffect(() => {
     async function loadRemoteData() {
@@ -2103,18 +2402,6 @@ function App() {
     return () => window.removeEventListener('hashchange', applyHashTarget)
   }, [cards])
 
-  useEffect(() => {
-    const copy = site.copy[site.language]
-    const pageTitle = view === 'cardDetail' && selected
-      ? `${selected.name} - ${site.brandName}`
-      : `${site.brandName} - ${copy.heroTitle}`
-    const pageDescription = view === 'cardDetail' && selected
-      ? `${selected.name}, ${selected.set}, ${selected.rarity}, ${formatMoney(selected.price)}.`
-      : copy.heroSubtitle
-    document.title = pageTitle
-    document.querySelector('meta[name="description"]')?.setAttribute('content', pageDescription)
-  }, [site, selected, view])
-
   function persistCards(next) {
     setCards(next)
     saveLocal('kc-cards', next)
@@ -2134,17 +2421,36 @@ function App() {
 
   const filteredCards = useMemo(() => {
     const normalized = query.toLowerCase().trim()
+    const min = minPrice === '' ? null : Number(minPrice)
+    const max = maxPrice === '' ? null : Number(maxPrice)
     const filtered = cards.filter((card) => {
-      const matchQuery = [card.name, card.set, card.rarity, card.type]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalized)
+      const signals = getCollectionSignals(card)
+      const matchQuery = getCardSearchText(card).includes(normalized)
       const matchType = [labels.fr.all, labels.en.all].includes(type) || card.type === type
       const matchRarity =
         [labels.fr.allFeminine, labels.en.allFeminine].includes(rarity) || card.rarity === rarity
       const matchStatus =
         [labels.fr.all, labels.en.all].includes(statusFilter) || getCardStatus(card) === statusFilter
-      return matchQuery && matchType && matchRarity && matchStatus
+      const matchLanguage =
+        [labels.fr.all, labels.en.all].includes(languageFilter) || card.language === languageFilter
+      const matchGrade =
+        [labels.fr.all, labels.en.all].includes(gradeFilter) || card.grade === gradeFilter
+      const matchCollection = collectionTag === 'all' || Boolean(signals[collectionTag])
+      const matchMin = min === null || Number(card.price) >= min
+      const matchMax = max === null || Number(card.price) <= max
+      const matchStock = !stockOnly || isReservable(card)
+      return (
+        matchQuery &&
+        matchType &&
+        matchRarity &&
+        matchStatus &&
+        matchLanguage &&
+        matchGrade &&
+        matchCollection &&
+        matchMin &&
+        matchMax &&
+        matchStock
+      )
     })
     return [...filtered].sort((a, b) => {
       if (sortOrder === 'priceAsc') return Number(a.price) - Number(b.price)
@@ -2153,7 +2459,20 @@ function App() {
       if (sortOrder === 'rarity') return `${a.rarity} ${a.name}`.localeCompare(`${b.rarity} ${b.name}`)
       return Number(Boolean(b.featured || b.badge)) - Number(Boolean(a.featured || a.badge))
     })
-  }, [cards, query, rarity, sortOrder, statusFilter, type])
+  }, [
+    cards,
+    collectionTag,
+    gradeFilter,
+    languageFilter,
+    maxPrice,
+    minPrice,
+    query,
+    rarity,
+    sortOrder,
+    statusFilter,
+    stockOnly,
+    type,
+  ])
 
   const japaneseCards = useMemo(
     () => cards.filter((card) => card.language?.toUpperCase() === 'JP'),
@@ -2189,6 +2508,8 @@ function App() {
     setType(labels[language].all)
     setRarity(labels[language].allFeminine)
     setStatusFilter(labels[language].all)
+    setLanguageFilter(labels[language].all)
+    setGradeFilter(labels[language].all)
     saveLocal('kc-site', next)
   }
 
@@ -2318,7 +2639,7 @@ function App() {
       lines: cartItems,
       total: subtotal,
       items: lines.reduce((sum, item) => sum + item.qty, 0),
-      status: 'Nouvelle réservation',
+      status: 'Nouvelle',
       reservedUntil: addHours(new Date(), site.reservationHours),
       paymentProvider: 'reservation',
       paymentNote: site.copy[site.language].paymentNote,
@@ -2417,6 +2738,18 @@ function App() {
             setStatus: setStatusFilter,
             sort: sortOrder,
             setSort: setSortOrder,
+            language: languageFilter,
+            setLanguageFilter,
+            grade: gradeFilter,
+            setGradeFilter,
+            collectionTag,
+            setCollectionTag,
+            minPrice,
+            setMinPrice,
+            maxPrice,
+            setMaxPrice,
+            stockOnly,
+            setStockOnly,
           }}
           site={site}
           t={t}
@@ -2446,6 +2779,18 @@ function App() {
             setStatus: setStatusFilter,
             sort: sortOrder,
             setSort: setSortOrder,
+            language: languageFilter,
+            setLanguageFilter,
+            grade: gradeFilter,
+            setGradeFilter,
+            collectionTag,
+            setCollectionTag,
+            minPrice,
+            setMinPrice,
+            maxPrice,
+            setMaxPrice,
+            stockOnly,
+            setStockOnly,
           }}
           openCardPage={openCardPage}
           addToCart={addToCart}

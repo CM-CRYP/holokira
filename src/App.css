@@ -550,9 +550,13 @@
 
 .filters {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 150px 170px 150px 180px;
+  grid-template-columns: minmax(220px, 1.4fr) repeat(5, minmax(132px, 1fr));
   gap: 10px;
   margin: 18px 0;
+}
+
+.filters .searchbox {
+  grid-column: span 2;
 }
 
 .filters label,
@@ -572,6 +576,18 @@ td select {
   border: 1px solid var(--line);
   background: var(--field-bg);
   color: var(--muted);
+}
+
+.toggle-filter {
+  justify-content: flex-start;
+  color: var(--ink);
+  font: 800 13px/1 var(--ui);
+}
+
+.toggle-filter input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--red);
 }
 
 input,
@@ -603,6 +619,8 @@ textarea {
   display: flex;
   flex-direction: column;
   height: 100%;
+  content-visibility: auto;
+  contain-intrinsic-size: 430px;
   border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
@@ -707,6 +725,7 @@ textarea {
   inset: 0;
   width: 100%;
   height: 100%;
+  background: var(--paper-deep);
   object-fit: cover;
   z-index: 0;
 }
@@ -1176,6 +1195,18 @@ dd {
   gap: 12px;
 }
 
+.trust-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.trust-panel .trust-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .trust-grid article {
   display: grid;
   gap: 10px;
@@ -1297,6 +1328,8 @@ dd {
   padding: 12px;
   min-height: 126px;
   overflow: hidden;
+  content-visibility: auto;
+  contain-intrinsic-size: 126px;
   color: var(--ink);
   text-align: left;
   border: 1px solid var(--line);
@@ -1741,6 +1774,24 @@ td small {
   min-height: 64px;
 }
 
+.admin-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(180px, 240px);
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.admin-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+  color: var(--muted);
+}
+
 .collection-grid {
   margin-top: 18px;
 }
@@ -1914,10 +1965,16 @@ td:nth-child(2) {
   .side-stack,
   .stats,
   .admin-grid,
+  .admin-toolbar,
   .admin-shell,
   .translation-grid,
-  .trust-grid {
+  .trust-grid,
+  .trust-panel .trust-grid {
     grid-template-columns: 1fr;
+  }
+
+  .filters .searchbox {
+    grid-column: auto;
   }
 
   .card-detail-hero,

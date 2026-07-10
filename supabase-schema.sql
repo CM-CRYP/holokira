@@ -30,7 +30,7 @@ create table if not exists public.reservations (
   customer_message text not null,
   total numeric(10, 2) not null check (total >= 0),
   items_count integer not null check (items_count >= 0),
-  status text not null default 'Nouvelle réservation',
+  status text not null default 'Nouvelle',
   reserved_until timestamptz,
   private_note text,
   email_sent boolean not null default false,
@@ -81,6 +81,15 @@ alter table public.cards add column if not exists added_at date;
 alter table public.reservations add column if not exists reserved_until timestamptz;
 alter table public.reservations add column if not exists private_note text;
 alter table public.reservations add column if not exists email_sent boolean not null default false;
+alter table public.reservations alter column status set default 'Nouvelle';
+
+update public.reservations
+set status = case status
+  when 'Nouvelle réservation' then 'Nouvelle'
+  when 'Archivée' then 'Annulée'
+  else status
+end
+where status in ('Nouvelle réservation', 'Archivée');
 
 drop policy if exists "Public can read available cards" on public.cards;
 drop policy if exists "Public can read cards" on public.cards;
@@ -234,7 +243,7 @@ begin
     reservation_payload->>'customer_message',
     (reservation_payload->>'total')::numeric,
     (reservation_payload->>'items_count')::integer,
-    coalesce(reservation_payload->>'status', 'Nouvelle réservation'),
+    coalesce(reservation_payload->>'status', 'Nouvelle'),
     nullif(reservation_payload->>'reserved_until', '')::timestamptz,
     nullif(reservation_payload->>'private_note', ''),
     coalesce((reservation_payload->>'email_sent')::boolean, false)

@@ -147,7 +147,7 @@ export async function saveReservation(reservation) {
     customer_message: reservation.message,
     total: Number(reservation.total) || 0,
     items_count: Number(reservation.items) || reservation.lines.length,
-    status: reservation.status || 'Nouvelle réservation',
+    status: reservation.status || 'Nouvelle',
     reserved_until: reservation.reservedUntil || null,
     private_note: reservation.privateNote || null,
     email_sent: Boolean(reservation.emailSent),
