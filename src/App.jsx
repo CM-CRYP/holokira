@@ -46,6 +46,7 @@ import {
   syncCards,
   updateRemoteReservation,
   updateRemoteSellRequest,
+  uploadCardImage,
 } from './api'
 import './App.css'
 
@@ -289,7 +290,13 @@ function loadLocal(key, fallback) {
 }
 
 function saveLocal(key, value) {
-  localStorage.setItem(key, JSON.stringify(value))
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+    return { saved: true }
+  } catch (error) {
+    console.warn(`Local save failed for ${key}`, error)
+    return { saved: false, error }
+  }
 }
 
 function mergeSite(saved) {
@@ -1527,10 +1534,10 @@ function TextInput({ value, onChange, type = 'text', step, min, placeholder }) {
   )
 }
 
-function imageFileToDataUrl(file) {
+function imageFileToWebpBlob(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
-      resolve('')
+      resolve(null)
       return
     }
 
@@ -1549,7 +1556,13 @@ function imageFileToDataUrl(file) {
         canvas.height = height
         const context = canvas.getContext('2d')
         context.drawImage(image, 0, 0, width, height)
-        resolve(canvas.toDataURL('image/webp', 0.82))
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Compression image impossible.'))
+            return
+          }
+          resolve(blob)
+        }, 'image/webp', 0.82)
       }
       image.src = reader.result
     }
@@ -1557,8 +1570,53 @@ function imageFileToDataUrl(file) {
   })
 }
 
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Image impossible à préparer.'))
+    reader.onload = () => resolve(reader.result)
+    reader.readAsDataURL(blob)
+  })
+}
+
+function isInlineImage(image) {
+  return typeof image === 'string' && image.startsWith('data:image/')
+}
+
+async function inlineImageToStoredUrl(image, name) {
+  const response = await fetch(image)
+  const blob = await response.blob()
+  const uploadResult = await uploadCardImage(blob, name)
+  if (uploadResult.url) return uploadResult.url
+  if (uploadResult.storageEnabled === false) return image
+  throw new Error(uploadResult.error?.message || 'Upload Supabase impossible. Vérifie le bucket card-images.')
+}
+
+async function prepareCardsForSave(cards) {
+  const preparedCards = []
+  for (const card of cards) {
+    const images = getCardImages(card)
+    const preparedImages = []
+    for (let index = 0; index < images.length; index += 1) {
+      const image = images[index]
+      preparedImages.push(
+        isInlineImage(image)
+          ? await inlineImageToStoredUrl(image, `${card.name || 'carte'}-${index + 1}`)
+          : image,
+      )
+    }
+    preparedCards.push({
+      ...card,
+      imageUrl: preparedImages[0] || '',
+      imageUrls: preparedImages,
+    })
+  }
+  return preparedCards
+}
+
 function ImageUploader({ value, onChange, name }) {
   const [error, setError] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
   const images = Array.isArray(value) ? value : [value].filter(Boolean)
 
   async function uploadImage(event) {
@@ -1571,10 +1629,24 @@ function ImageUploader({ value, onChange, name }) {
     }
     try {
       setError('')
-      const dataUrls = await Promise.all(files.map((file) => imageFileToDataUrl(file)))
-      onChange([...images, ...dataUrls])
+      setIsUploading(true)
+      const uploadedImages = []
+      for (const file of files) {
+        const blob = await imageFileToWebpBlob(file)
+        const uploadResult = await uploadCardImage(blob, `${name || 'carte'}-${file.name}`)
+        if (uploadResult.url) {
+          uploadedImages.push(uploadResult.url)
+        } else if (uploadResult.storageEnabled === false) {
+          uploadedImages.push(await blobToDataUrl(blob))
+        } else {
+          throw new Error(uploadResult.error?.message || 'Upload Supabase impossible. Vérifie le bucket card-images.')
+        }
+      }
+      onChange([...images, ...uploadedImages])
     } catch (uploadError) {
       setError(uploadError.message)
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -1619,8 +1691,8 @@ function ImageUploader({ value, onChange, name }) {
       <div className="image-uploader-actions">
         <label className="file-button">
           <Upload size={15} />
-          Importer une ou plusieurs photos
-          <input type="file" accept="image/*" multiple onChange={uploadImage} />
+          {isUploading ? 'Envoi des photos...' : 'Importer une ou plusieurs photos'}
+          <input type="file" accept="image/*" multiple onChange={uploadImage} disabled={isUploading} />
         </label>
         {images.length > 0 && (
           <button type="button" onClick={() => onChange([])}>
@@ -1910,7 +1982,18 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     setIsSaving(true)
     setSaveMessage('')
 
-    const result = await persistCards(draftCards)
+    let cardsToSave = draftCards
+    try {
+      cardsToSave = await prepareCardsForSave(draftCards)
+    } catch (error) {
+      setIsSaving(false)
+      setSaveMessage(`Photos non sauvegardées : ${error.message}`)
+      return
+    }
+
+    setDraftCards(cardsToSave)
+
+    const result = await persistCards(cardsToSave)
     if (result?.saved === false) {
       setIsSaving(false)
       setSaveMessage(`Sauvegarde impossible : ${result.error?.message || 'vérifie Supabase puis réessaie.'}`)
@@ -1926,7 +2009,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     }
 
     if (deletedIds.length > 0) {
-      await persistCards(draftCards)
+      await persistCards(cardsToSave)
     }
 
     setIsSaving(false)

@@ -75,6 +75,14 @@ alter table public.reservation_items enable row level security;
 alter table public.sell_requests enable row level security;
 alter table public.site_settings enable row level security;
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('card-images', 'card-images', true, 5242880, array['image/webp', 'image/jpeg', 'image/png'])
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
 alter table public.cards add column if not exists status text not null default 'available';
 alter table public.cards add column if not exists reserved_until timestamptz;
 alter table public.cards add column if not exists image_url text;
@@ -128,6 +136,10 @@ drop policy if exists "Authenticated can read reservation items" on public.reser
 drop policy if exists "Public can create sell requests" on public.sell_requests;
 drop policy if exists "Authenticated can read sell requests" on public.sell_requests;
 drop policy if exists "Authenticated can update sell requests" on public.sell_requests;
+drop policy if exists "Public can read card images" on storage.objects;
+drop policy if exists "Authenticated can upload card images" on storage.objects;
+drop policy if exists "Authenticated can update card images" on storage.objects;
+drop policy if exists "Authenticated can delete card images" on storage.objects;
 
 create policy "Public can read cards"
 on public.cards for select
@@ -187,6 +199,26 @@ on public.sell_requests for update
 to authenticated
 using (true)
 with check (true);
+
+create policy "Public can read card images"
+on storage.objects for select
+using (bucket_id = 'card-images');
+
+create policy "Authenticated can upload card images"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'card-images');
+
+create policy "Authenticated can update card images"
+on storage.objects for update
+to authenticated
+using (bucket_id = 'card-images')
+with check (bucket_id = 'card-images');
+
+create policy "Authenticated can delete card images"
+on storage.objects for delete
+to authenticated
+using (bucket_id = 'card-images');
 
 create or replace function public.reserve_card_from_item()
 returns trigger

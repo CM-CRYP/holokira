@@ -183,6 +183,33 @@ export async function deleteRemoteCard(id) {
   return { deleted: !error, error }
 }
 
+export async function uploadCardImage(blob, fileName = 'card') {
+  if (!supabase) return { url: '', storageEnabled: false }
+  if (!blob) return { url: '', error: { message: 'Image vide.' } }
+
+  const safeName = fileName
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'card'
+
+  const path = `cards/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}.webp`
+  const { error } = await supabase.storage
+    .from('card-images')
+    .upload(path, blob, {
+      contentType: 'image/webp',
+      cacheControl: '31536000',
+      upsert: false,
+    })
+
+  if (error) return { url: '', error, storageEnabled: true }
+
+  const { data } = supabase.storage.from('card-images').getPublicUrl(path)
+  return { url: data.publicUrl, path, storageEnabled: true }
+}
+
 export async function fetchReservations() {
   if (!supabase) return []
   const { data, error } = await supabase
