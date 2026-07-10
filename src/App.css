@@ -1566,6 +1566,11 @@ dd {
   text-transform: uppercase;
 }
 
+.field {
+  display: grid;
+  gap: 6px;
+}
+
 .field input,
 .field select,
 .field textarea {
@@ -1578,6 +1583,70 @@ dd {
 .field input[type="color"] {
   min-height: 46px;
   padding: 4px;
+}
+
+.field:has(.image-uploader) {
+  grid-column: span 2;
+}
+
+.image-uploader {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+}
+
+.image-uploader-preview {
+  display: grid;
+  min-height: 150px;
+  place-items: center;
+  overflow: hidden;
+  color: var(--muted);
+  background: var(--paper-deep);
+  font: 800 12px/1 var(--ui);
+}
+
+.image-uploader-preview img {
+  width: 100%;
+  height: 100%;
+  max-height: 220px;
+  object-fit: cover;
+}
+
+.image-uploader-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.file-button,
+.image-uploader-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 10px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  font: 800 12px/1 var(--ui);
+}
+
+.file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.image-uploader small {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .wide-form,

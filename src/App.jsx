@@ -27,6 +27,7 @@ import {
   Sparkles,
   Sun,
   Trash2,
+  Upload,
 } from 'lucide-react'
 import { starterCards, starterOrders, starterSellRequests, starterSite } from './data'
 import {
@@ -1443,10 +1444,10 @@ function StatCard({ icon: Icon, label, value, tone }) {
 
 function Field({ label, children }) {
   return (
-    <label className="field">
+    <div className="field">
       <span>{label}</span>
       {children}
-    </label>
+    </div>
   )
 }
 
@@ -1460,6 +1461,80 @@ function TextInput({ value, onChange, type = 'text', step, min, placeholder }) {
       placeholder={placeholder}
       onChange={(event) => onChange(event.target.value)}
     />
+  )
+}
+
+function imageFileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve('')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Image impossible à lire.'))
+    reader.onload = () => {
+      const image = new Image()
+      image.onerror = () => reject(new Error('Format image non reconnu.'))
+      image.onload = () => {
+        const maxSide = 1200
+        const ratio = Math.min(1, maxSide / Math.max(image.width, image.height))
+        const width = Math.max(1, Math.round(image.width * ratio))
+        const height = Math.max(1, Math.round(image.height * ratio))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const context = canvas.getContext('2d')
+        context.drawImage(image, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/webp', 0.82))
+      }
+      image.src = reader.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+function ImageUploader({ value, onChange, name }) {
+  const [error, setError] = useState('')
+
+  async function uploadImage(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setError('Choisis un fichier image.')
+      return
+    }
+    try {
+      setError('')
+      const dataUrl = await imageFileToDataUrl(file)
+      onChange(dataUrl)
+    } catch (uploadError) {
+      setError(uploadError.message)
+    }
+  }
+
+  return (
+    <div className="image-uploader">
+      <div className="image-uploader-preview">
+        {value ? <img src={value} alt={name || 'Aperçu carte'} /> : <span>Aucune image</span>}
+      </div>
+      <div className="image-uploader-actions">
+        <label className="file-button">
+          <Upload size={15} />
+          Importer depuis mon PC
+          <input type="file" accept="image/*" onChange={uploadImage} />
+        </label>
+        {value && (
+          <button type="button" onClick={() => onChange('')}>
+            <Trash2 size={14} />
+            Retirer
+          </button>
+        )}
+      </div>
+      <small>Image compressée automatiquement pour le site.</small>
+      {error && <small className="form-error">{error}</small>}
+    </div>
   )
 }
 
@@ -1659,7 +1734,18 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       featured: Boolean(draft.featured),
     }
     persist([nextCard, ...cards])
-    setDraft((current) => ({ ...current, name: '', set: '', price: '39.90', stock: '1' }))
+    setDraft((current) => ({
+      ...current,
+      name: '',
+      set: '',
+      price: '39.90',
+      stock: '1',
+      imageUrl: '',
+      flaws: '',
+      privateNote: '',
+      tags: '',
+      badge: '',
+    }))
   }
 
   function removeCard(id) {
@@ -1716,6 +1802,13 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
         <Field label="Date d’ajout">
           <TextInput type="date" value={draft.addedAt} onChange={(value) => setDraft({ ...draft, addedAt: value })} />
         </Field>
+        <Field label="Image">
+          <ImageUploader
+            value={draft.imageUrl}
+            name={draft.name}
+            onChange={(value) => setDraft({ ...draft, imageUrl: value })}
+          />
+        </Field>
         <Field label="Coup de cœur">
           <input
             type="checkbox"
@@ -1741,7 +1834,6 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
                 ['condition', 'État'],
                 ['language', 'Langue'],
                 ['grade', 'Grade'],
-                ['imageUrl', 'Image URL'],
                 ['flaws', 'Défauts visibles'],
                 ['privateNote', 'Note privée'],
                 ['tags', 'Tags'],
@@ -1755,6 +1847,13 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
                   />
                 </Field>
               ))}
+              <Field label="Image">
+                <ImageUploader
+                  value={card.imageUrl || ''}
+                  name={card.name}
+                  onChange={(value) => updateCard(card.id, 'imageUrl', value)}
+                />
+              </Field>
               <Field label="Badge">
                 <select value={card.badge || ''} onChange={(event) => updateCard(card.id, 'badge', event.target.value)}>
                   <option value="">Aucun</option>
