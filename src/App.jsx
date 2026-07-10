@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  ArrowLeft,
+  ArrowRight,
   BarChart3,
   Boxes,
   Check,
@@ -1537,6 +1539,15 @@ function ImageUploader({ value, onChange, name }) {
     onChange(images.filter((_, index) => index !== indexToRemove))
   }
 
+  function moveImage(fromIndex, direction) {
+    const toIndex = fromIndex + direction
+    if (toIndex < 0 || toIndex >= images.length) return
+    const nextImages = [...images]
+    const [movedImage] = nextImages.splice(fromIndex, 1)
+    nextImages.splice(toIndex, 0, movedImage)
+    onChange(nextImages)
+  }
+
   return (
     <div className="image-uploader">
       <div className={images.length > 0 ? 'image-uploader-preview has-images' : 'image-uploader-preview'}>
@@ -1545,9 +1556,17 @@ function ImageUploader({ value, onChange, name }) {
             <figure key={image}>
               <img src={image} alt={`${name || 'Carte'} ${index + 1}`} />
               <figcaption>{index === 0 ? 'Principale' : `Photo ${index + 1}`}</figcaption>
-              <button type="button" onClick={() => removeImage(index)}>
-                <Trash2 size={13} />
-              </button>
+              <div className="image-order-actions">
+                <button type="button" onClick={() => moveImage(index, -1)} disabled={index === 0} title="Déplacer avant">
+                  <ArrowLeft size={13} />
+                </button>
+                <button type="button" onClick={() => moveImage(index, 1)} disabled={index === images.length - 1} title="Déplacer après">
+                  <ArrowRight size={13} />
+                </button>
+                <button type="button" onClick={() => removeImage(index)} title="Retirer cette photo">
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </figure>
           ))
         ) : (

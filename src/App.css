@@ -1671,18 +1671,28 @@ dd {
   font: 800 11px/1 var(--ui);
 }
 
-.image-uploader-preview figure button {
+.image-order-actions {
   position: absolute;
   top: 6px;
   right: 6px;
+  display: flex;
+  gap: 4px;
+}
+
+.image-order-actions button {
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   place-items: center;
   color: white;
   border: 0;
   background: rgba(0, 0, 0, 0.7);
   cursor: pointer;
+}
+
+.image-order-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
 .image-uploader-actions {
