@@ -380,15 +380,15 @@ function addHours(date, hours) {
 
 const creatureForms = [
   { name: 'Pikachu', family: 'electric', color: '#ffd84d', accent: '#ff5f57', size: 1 },
-  { name: 'Salamèche', family: 'fire', color: '#ff8a3d', accent: '#ffd45c', size: 0.88 },
-  { name: 'Reptincel', family: 'fire', color: '#f35d34', accent: '#ffcf4f', size: 1.02 },
-  { name: 'Dracaufeu', family: 'fire', color: '#ff6d35', accent: '#69c7ff', size: 1.2 },
-  { name: 'Carapuce', family: 'water', color: '#67c7ff', accent: '#d7b17f', size: 0.9 },
-  { name: 'Carabaffe', family: 'water', color: '#79c9ff', accent: '#f1e2c5', size: 1.02 },
-  { name: 'Tortank', family: 'water', color: '#5aa9e8', accent: '#d8b07f', size: 1.18 },
-  { name: 'Bulbizarre', family: 'plant', color: '#6ed7aa', accent: '#89d85f', size: 0.92 },
-  { name: 'Herbizarre', family: 'plant', color: '#58c89a', accent: '#d778a9', size: 1.04 },
-  { name: 'Florizarre', family: 'plant', color: '#4fc08c', accent: '#e576a8', size: 1.22 },
+  { name: 'Salamèche', family: 'fire', color: '#ff8a3d', accent: '#ffd45c', size: 0.82 },
+  { name: 'Reptincel', family: 'fire', color: '#f35d34', accent: '#ffcf4f', size: 0.82 },
+  { name: 'Dracaufeu', family: 'fire', color: '#ff6d35', accent: '#69c7ff', size: 0.72 },
+  { name: 'Carapuce', family: 'water', color: '#67c7ff', accent: '#d7b17f', size: 0.84 },
+  { name: 'Carabaffe', family: 'water', color: '#79c9ff', accent: '#f1e2c5', size: 0.82 },
+  { name: 'Tortank', family: 'water', color: '#5aa9e8', accent: '#d8b07f', size: 0.72 },
+  { name: 'Bulbizarre', family: 'plant', color: '#6ed7aa', accent: '#89d85f', size: 0.82 },
+  { name: 'Herbizarre', family: 'plant', color: '#58c89a', accent: '#d778a9', size: 0.8 },
+  { name: 'Florizarre', family: 'plant', color: '#4fc08c', accent: '#e576a8', size: 0.7 },
 ]
 
 function drawEllipse(ctx, x, y, rx, ry, color, rotation = 0) {
@@ -445,18 +445,19 @@ function drawFire(ctx, form) {
   const mid = form.name === 'Reptincel'
   drawEllipse(ctx, 374, 496, big ? 116 : 92, big ? 158 : 142, c, -0.06)
   drawEllipse(ctx, 389, big ? 284 : 302, big ? 102 : 86, big ? 82 : 76, c, 0.12)
-  drawStroke(ctx, [[456, 485], [560, 380], [641, 269], [682, 186]], c, big ? 46 : 36)
-  drawEllipse(ctx, 692, 170, big ? 52 : 38, big ? 70 : 54, a, -0.5)
+  drawStroke(ctx, [[456, 485], [560, 380], [641, 269], [672, 198]], c, big ? 46 : 36)
+  drawTriangle(ctx, [[674, 112], [620, 206], [708, 206]], a)
+  drawEllipse(ctx, 676, 188, big ? 44 : 34, big ? 58 : 46, '#ffef7d', -0.45)
   drawEllipse(ctx, 404, 598, 58, 95, '#f6d88a', -0.03)
   drawStroke(ctx, [[316, 430], [218, 454], [158, 515]], c, mid ? 32 : 26)
   drawStroke(ctx, [[446, 430], [526, 464], [600, 520]], c, mid ? 32 : 26)
   drawEllipse(ctx, 322, 672, 42, 58, c)
   drawEllipse(ctx, 432, 672, 42, 58, c)
   if (big) {
-    drawTriangle(ctx, [[294, 376], [66, 174], [256, 252]], c)
-    drawTriangle(ctx, [[480, 376], [715, 174], [520, 252]], c)
-    drawTriangle(ctx, [[294, 360], [98, 202], [254, 274]], '#69c7ff')
-    drawTriangle(ctx, [[480, 360], [682, 202], [528, 274]], '#69c7ff')
+    drawTriangle(ctx, [[294, 376], [92, 178], [276, 254]], c)
+    drawTriangle(ctx, [[480, 376], [692, 178], [500, 254]], c)
+    drawTriangle(ctx, [[292, 350], [132, 212], [260, 284]], '#69c7ff')
+    drawTriangle(ctx, [[482, 350], [652, 212], [518, 284]], '#69c7ff')
     drawStroke(ctx, [[348, 232], [332, 156], [376, 216]], c, 28)
   }
   if (mid) {
@@ -515,9 +516,9 @@ function drawPlant(ctx, form) {
 
 function drawCreature(ctx, form) {
   ctx.save()
-  ctx.translate(360, 390)
+  ctx.translate(382, 410)
   ctx.scale(form.size, form.size)
-  ctx.translate(-360, -390)
+  ctx.translate(-382, -410)
   if (form.family === 'electric') drawElectric(ctx, form)
   if (form.family === 'fire') drawFire(ctx, form)
   if (form.family === 'water') drawWater(ctx, form)
@@ -557,7 +558,7 @@ function renderCreatureTarget(form, pointCount) {
   const edgePixels = pixels.filter((point) => point.edge)
 
   return Array.from({ length: pointCount }, () => {
-    const pool = Math.random() > 0.38 && edgePixels.length ? edgePixels : pixels
+    const pool = Math.random() > 0.58 && edgePixels.length ? edgePixels : pixels
     return pool[Math.floor(Math.random() * pool.length)] || pixels[Math.floor(Math.random() * pixels.length)]
   })
 }
@@ -633,6 +634,16 @@ function PokemonPointCloud() {
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
       context.fillStyle = gradient
       context.fillRect(0, 0, rect.width, rect.height)
+
+      const creatureScale = Math.min(rect.width, rect.height) / 760
+      context.save()
+      context.translate((rect.width - 760 * creatureScale) / 2, (rect.height - 760 * creatureScale) / 2)
+      context.scale(creatureScale, creatureScale)
+      context.globalAlpha = 0.16
+      context.shadowBlur = 32
+      context.shadowColor = activeForm.color
+      drawCreature(context, activeForm)
+      context.restore()
 
       context.globalAlpha = 0.15
       context.strokeStyle = activeForm.color
