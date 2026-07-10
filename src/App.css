@@ -1911,6 +1911,7 @@ dd {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  max-width: 100%;
   margin: 14px 0;
   padding: 12px;
   border: 1px solid var(--line);
@@ -1918,6 +1919,7 @@ dd {
 }
 
 .admin-save-bar > span {
+  min-width: 0;
   color: var(--muted);
   font: 800 13px/1 var(--ui);
 }
@@ -1925,6 +1927,8 @@ dd {
 .admin-save-bar div {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  flex: 0 0 auto;
   gap: 8px;
 }
 
@@ -1955,20 +1959,29 @@ dd {
 
 .editable-product {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   gap: 14px;
   align-items: start;
+  overflow: hidden;
   padding: 12px;
   border: 1px solid var(--line);
   background: var(--surface);
 }
 
 .editable-product .card-art {
-  min-height: 190px;
+  width: 100%;
+  min-width: 0;
+  min-height: 160px;
+  aspect-ratio: 1.38 / 1;
+}
+
+.editable-product .card-art img {
+  object-fit: contain;
 }
 
 .editable-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
 }
 
 .editable-product .danger-button {

@@ -1814,6 +1814,8 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
   const [draftCards, setDraftCards] = useState(cards)
   const [deletedIds, setDeletedIds] = useState([])
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
   const [draft, setDraft] = useState({
     name: '',
     set: '',
@@ -1852,6 +1854,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
   function markEdited(nextCards) {
     setDraftCards(nextCards)
     setHasUnsavedChanges(true)
+    setSaveMessage('')
   }
 
   function updateCard(id, field, value) {
@@ -1903,17 +1906,40 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     }
   }
 
-  function saveProducts() {
-    deletedIds.forEach((id) => removeCardById(id))
-    persistCards(draftCards)
+  async function saveProducts() {
+    setIsSaving(true)
+    setSaveMessage('')
+
+    const result = await persistCards(draftCards)
+    if (result?.saved === false) {
+      setIsSaving(false)
+      setSaveMessage(`Sauvegarde impossible : ${result.error?.message || 'vérifie Supabase puis réessaie.'}`)
+      return
+    }
+
+    const deleteResults = await Promise.all(deletedIds.map((id) => removeCardById(id)))
+    const failedDelete = deleteResults.find((result) => result && result.deleted === false && result.error)
+    if (failedDelete) {
+      setIsSaving(false)
+      setSaveMessage(`Suppression impossible : ${failedDelete.error.message}`)
+      return
+    }
+
+    if (deletedIds.length > 0) {
+      await persistCards(draftCards)
+    }
+
+    setIsSaving(false)
     setDeletedIds([])
     setHasUnsavedChanges(false)
+    setSaveMessage('Produits sauvegardés.')
   }
 
   function cancelProductChanges() {
     setDraftCards(cards)
     setDeletedIds([])
     setHasUnsavedChanges(false)
+    setSaveMessage('')
   }
 
   return (
@@ -1923,14 +1949,14 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
         <span>Modifie toutes les informations visibles sur les cartes.</span>
       </div>
       <div className="admin-save-bar">
-        <span>{hasUnsavedChanges ? 'Modifications non sauvegardées' : 'Tous les produits sont sauvegardés'}</span>
+        <span>{saveMessage || (hasUnsavedChanges ? 'Modifications non sauvegardées' : 'Tous les produits sont sauvegardés')}</span>
         <div>
-          <button type="button" onClick={cancelProductChanges} disabled={!hasUnsavedChanges}>
+          <button type="button" onClick={cancelProductChanges} disabled={!hasUnsavedChanges || isSaving}>
             Annuler
           </button>
-          <button className="checkout" type="button" onClick={saveProducts} disabled={!hasUnsavedChanges}>
+          <button className="checkout" type="button" onClick={saveProducts} disabled={!hasUnsavedChanges || isSaving}>
             <Save size={16} />
-            Sauvegarder les produits
+            {isSaving ? 'Sauvegarde...' : 'Sauvegarder les produits'}
           </button>
         </div>
       </div>
@@ -2710,21 +2736,23 @@ function App() {
     return () => window.removeEventListener('hashchange', applyHashTarget)
   }, [cards])
 
-  function persistCards(next) {
+  async function persistCards(next) {
     setCards(next)
     saveLocal('kc-cards', next)
     if (backendConfig.databaseEnabled) {
-      syncCards(next)
+      return syncCards(next)
     }
+    return { saved: true }
   }
 
-  function removeCardById(id) {
+  async function removeCardById(id) {
     const next = cards.filter((card) => card.id !== id)
     setCards(next)
     saveLocal('kc-cards', next)
     if (backendConfig.databaseEnabled) {
-      deleteRemoteCard(id)
+      return deleteRemoteCard(id)
     }
+    return { deleted: true }
   }
 
   const filteredCards = useMemo(() => {
