@@ -223,30 +223,30 @@
   gap: 10px;
 }
 
-.pokemon-cloud {
+.holo-stage {
   position: relative;
   min-height: 560px;
   overflow: hidden;
   border-left: 1px solid var(--line);
   background:
-    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.045)),
-    radial-gradient(circle at 50% 42%, rgba(255, 216, 77, 0.14), transparent 25%),
-    radial-gradient(circle at 50% 50%, rgba(219, 42, 42, 0.12), transparent 48%),
-    radial-gradient(circle at 18% 62%, rgba(255, 216, 77, 0.1), transparent 22%),
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.1), transparent 22%),
+    radial-gradient(circle at 22% 22%, rgba(219, 42, 42, 0.18), transparent 24%),
+    radial-gradient(circle at 78% 68%, rgba(79, 177, 255, 0.16), transparent 26%),
     #080a0f;
   isolation: isolate;
+  perspective: 1100px;
 }
 
-.pokemon-cloud::before {
+.holo-stage::before {
   content: '';
   position: absolute;
   inset: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   pointer-events: none;
-  z-index: 2;
+  z-index: 4;
 }
 
-.pokemon-cloud::after {
+.holo-stage::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -256,42 +256,200 @@
     linear-gradient(180deg, transparent 62%, rgba(0, 0, 0, 0.38));
   background-size: 34px 34px, 34px 34px, auto;
   pointer-events: none;
-  z-index: 1;
-}
-
-.pokemon-cloud canvas {
-  position: relative;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  min-height: 560px;
-}
-
-.cloud-caption {
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-  display: grid;
-  gap: 5px;
-  min-width: 176px;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  color: #f8f1dc;
-  background: rgba(10, 12, 18, 0.86);
-  box-shadow: var(--shadow-soft);
   z-index: 3;
 }
 
-.cloud-caption span {
-  display: block;
-  color: #f8f1dc;
-  font: 900 24px/1 var(--display);
+.holo-aura {
+  position: absolute;
+  inset: 12%;
+  background:
+    conic-gradient(from 20deg, rgba(255, 255, 255, 0.02), rgba(255, 216, 77, 0.18), rgba(79, 177, 255, 0.12), rgba(219, 42, 42, 0.16), rgba(255, 255, 255, 0.02));
+  filter: blur(28px);
+  opacity: 0.8;
+  z-index: 0;
+  animation: holoAura 9s linear infinite;
 }
 
-.cloud-caption small {
+.holo-deck {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  min-height: 560px;
+  transform-style: preserve-3d;
+}
+
+.holo-card {
+  position: absolute;
+  width: clamp(158px, 21vw, 230px);
+  padding: 0;
+  color: white;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  animation: holoFloat 6.5s ease-in-out infinite;
+}
+
+.holo-card-inner {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.44), 0 0 36px color-mix(in srgb, var(--card-accent), transparent 68%);
+  transform-style: preserve-3d;
+}
+
+.holo-card-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(115deg, transparent 0 26%, rgba(255, 255, 255, 0.55) 34%, transparent 43%),
+    repeating-linear-gradient(90deg, transparent 0 13px, rgba(255, 255, 255, 0.08) 14px 15px);
+  mix-blend-mode: screen;
+  opacity: 0.58;
+  transform: translateX(-42%);
+  animation: holoSweep 4.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.holo-card .card-art {
+  min-height: clamp(240px, 32vw, 330px);
+}
+
+.holo-card-copy {
+  position: absolute;
+  inset: auto 10px 10px;
+  z-index: 4;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  background: rgba(6, 8, 12, 0.72);
+  backdrop-filter: blur(14px);
+}
+
+.holo-card-copy b {
+  font: 900 20px/1 var(--display);
+}
+
+.holo-card-copy small {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 12px;
+}
+
+.holo-card-copy strong {
+  font: 900 14px/1 var(--ui);
+}
+
+.holo-card-1 {
+  left: 36%;
+  top: 10%;
+  z-index: 5;
+  transform: translateZ(160px) rotateY(-10deg) rotateZ(-2deg);
+}
+
+.holo-card-2 {
+  left: 12%;
+  top: 22%;
+  z-index: 3;
+  transform: translateZ(40px) rotateY(18deg) rotateZ(-8deg) scale(0.88);
+  animation-delay: -1.6s;
+}
+
+.holo-card-3 {
+  right: 8%;
+  top: 26%;
+  z-index: 4;
+  transform: translateZ(70px) rotateY(-20deg) rotateZ(8deg) scale(0.9);
+  animation-delay: -3s;
+}
+
+.holo-card-4 {
+  left: 26%;
+  bottom: 8%;
+  z-index: 2;
+  transform: translateZ(-40px) rotateY(12deg) rotateZ(6deg) scale(0.72);
+  opacity: 0.82;
+  animation-delay: -2.2s;
+}
+
+.holo-card-5 {
+  right: 28%;
+  bottom: 5%;
+  z-index: 1;
+  transform: translateZ(-70px) rotateY(-14deg) rotateZ(-7deg) scale(0.68);
+  opacity: 0.72;
+  animation-delay: -4s;
+}
+
+.holo-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.holo-particles i {
+  position: absolute;
+  left: calc((var(--i) * 37) % 100 * 1%);
+  top: calc((var(--i) * 53) % 100 * 1%);
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.8);
+  animation: holoParticle 5s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.28s);
+}
+
+.holo-panel {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 5;
+  display: grid;
+  gap: 6px;
+  min-width: 210px;
+  padding: 14px 16px;
+  color: #f8f1dc;
+  border: 1px solid var(--line);
+  background: rgba(10, 12, 18, 0.86);
+  box-shadow: var(--shadow-soft);
+}
+
+.holo-panel span {
   color: rgba(248, 241, 220, 0.64);
   font: 800 11px/1 var(--ui);
   text-transform: uppercase;
+}
+
+.holo-panel strong {
+  font: 900 22px/1 var(--display);
+}
+
+@keyframes holoFloat {
+  0%, 100% { margin-top: 0; }
+  50% { margin-top: -16px; }
+}
+
+@keyframes holoSweep {
+  0%, 100% { transform: translateX(-58%) rotate(0deg); }
+  50% { transform: translateX(55%) rotate(4deg); }
+}
+
+@keyframes holoAura {
+  to { transform: rotate(1turn); }
+}
+
+@keyframes holoParticle {
+  0%, 100% {
+    opacity: 0.16;
+    transform: translate3d(0, 0, 0) scale(0.8);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate3d(18px, -22px, 0) scale(1.6);
+  }
 }
 
 .home-strip {
@@ -1507,13 +1665,13 @@ td:nth-child(2) {
     min-height: auto;
   }
 
-  .pokemon-cloud {
+  .holo-stage {
     min-height: 460px;
     border-left: 0;
     border-top: 1px solid var(--line);
   }
 
-  .pokemon-cloud canvas {
+  .holo-deck {
     min-height: 460px;
   }
 
@@ -1650,9 +1808,33 @@ td:nth-child(2) {
     font-size: 44px;
   }
 
-  .pokemon-cloud,
-  .pokemon-cloud canvas {
+  .holo-stage,
+  .holo-deck {
     min-height: 380px;
+  }
+
+  .holo-card {
+    width: 142px;
+  }
+
+  .holo-card .card-art {
+    min-height: 210px;
+  }
+
+  .holo-card-copy {
+    inset: auto 8px 8px;
+    padding: 8px;
+  }
+
+  .holo-card-copy b {
+    font-size: 17px;
+  }
+
+  .holo-panel {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    min-width: 0;
   }
 
   .home-card-link {

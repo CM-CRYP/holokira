@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   BarChart3,
   Boxes,
@@ -378,273 +378,42 @@ function addHours(date, hours) {
   return new Date(date.getTime() + Number(hours || 48) * 60 * 60 * 1000).toISOString()
 }
 
-const creatureForms = [
-  { name: 'Pikachu', family: 'electric', color: '#ffd84d', accent: '#ff5f57', size: 1 },
-]
-
-function drawEllipse(ctx, x, y, rx, ry, color, rotation = 0) {
-  ctx.fillStyle = color
-  ctx.beginPath()
-  ctx.ellipse(x, y, rx, ry, rotation, 0, Math.PI * 2)
-  ctx.fill()
-}
-
-function drawStroke(ctx, points, color, width) {
-  ctx.strokeStyle = color
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  ctx.lineWidth = width
-  ctx.beginPath()
-  points.forEach(([x, y], index) => {
-    if (index === 0) ctx.moveTo(x, y)
-    else ctx.lineTo(x, y)
-  })
-  ctx.stroke()
-}
-
-function drawLightning(ctx, x, y, scale, color, alpha = 1) {
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.scale(scale, scale)
-  ctx.globalAlpha = alpha
-  ctx.fillStyle = color
-  ctx.beginPath()
-  ctx.moveTo(18, 0)
-  ctx.lineTo(-18, 62)
-  ctx.lineTo(10, 58)
-  ctx.lineTo(-14, 124)
-  ctx.lineTo(48, 42)
-  ctx.lineTo(16, 48)
-  ctx.closePath()
-  ctx.fill()
-  ctx.restore()
-}
-
-function drawHoloCard(ctx, x, y, width, height, rotation, color, alpha) {
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.rotate(rotation)
-  ctx.globalAlpha = alpha
-  ctx.strokeStyle = color
-  ctx.lineWidth = 2
-  ctx.strokeRect(-width / 2, -height / 2, width, height)
-  ctx.beginPath()
-  ctx.moveTo(-width * 0.28, -height * 0.2)
-  ctx.lineTo(width * 0.28, -height * 0.2)
-  ctx.moveTo(-width * 0.28, height * 0.06)
-  ctx.lineTo(width * 0.28, height * 0.06)
-  ctx.stroke()
-  ctx.restore()
-}
-
-function drawElectric(ctx, form) {
-  const c = form.color
-  const a = form.accent
-  drawEllipse(ctx, 360, 472, 118, 158, c, -0.08)
-  drawEllipse(ctx, 360, 296, 118, 102, c)
-  drawStroke(ctx, [[283, 226], [230, 82], [284, 132], [324, 240]], c, 48)
-  drawStroke(ctx, [[437, 226], [492, 82], [438, 132], [396, 240]], c, 48)
-  drawEllipse(ctx, 286, 332, 42, 33, a)
-  drawEllipse(ctx, 434, 332, 42, 33, a)
-  drawEllipse(ctx, 322, 285, 16, 23, '#10131c')
-  drawEllipse(ctx, 398, 285, 16, 23, '#10131c')
-  drawStroke(ctx, [[464, 445], [586, 374], [516, 318], [648, 252]], c, 40)
-  drawEllipse(ctx, 305, 635, 48, 38, c, -0.2)
-  drawEllipse(ctx, 414, 635, 48, 38, c, 0.2)
-}
-
-function drawCreature(ctx, form) {
-  ctx.save()
-  ctx.translate(382, 410)
-  ctx.scale(form.size, form.size)
-  ctx.translate(-382, -410)
-  drawElectric(ctx, form)
-  ctx.restore()
-}
-
-function renderCreatureTarget(form, pointCount) {
-  const size = 760
-  const mask = document.createElement('canvas')
-  mask.width = size
-  mask.height = size
-  const ctx = mask.getContext('2d', { willReadFrequently: true })
-  ctx.clearRect(0, 0, size, size)
-  drawCreature(ctx, form)
-  const image = ctx.getImageData(0, 0, size, size)
-  const pixels = []
-
-  for (let y = 10; y < size - 10; y += 3) {
-    for (let x = 10; x < size - 10; x += 3) {
-      const index = (y * size + x) * 4
-      if (image.data[index + 3] < 60) continue
-      const nearEmpty =
-        image.data[index - 12 + 3] < 40 ||
-        image.data[index + 12 + 3] < 40 ||
-        image.data[index - size * 12 + 3] < 40 ||
-        image.data[index + size * 12 + 3] < 40
-      pixels.push({
-        x: x / size,
-        y: y / size,
-        color: `rgb(${image.data[index]}, ${image.data[index + 1]}, ${image.data[index + 2]})`,
-        edge: nearEmpty,
-      })
-    }
-  }
-
-  const edgePixels = pixels.filter((point) => point.edge)
-
-  return Array.from({ length: pointCount }, () => {
-    const pool = Math.random() > 0.58 && edgePixels.length ? edgePixels : pixels
-    return pool[Math.floor(Math.random() * pool.length)] || pixels[Math.floor(Math.random() * pixels.length)]
-  })
-}
-
-function PokemonPointCloud() {
-  const canvasRef = useRef(null)
-  const labelRef = useRef(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    const context = canvas.getContext('2d')
-    const pointCount = 1180
-    const targetCache = new Map()
-    const points = Array.from({ length: pointCount }, () => ({
-      x: Math.random(),
-      y: Math.random(),
-      tx: Math.random(),
-      ty: Math.random(),
-      color: '#ffffff',
-      edge: false,
-      vx: 0,
-      vy: 0,
-      size: 0.85 + Math.random() * 1.55,
-      drift: Math.random() * Math.PI * 2,
-    }))
-    let frame = 0
-    let raf = 0
-
-    function fit() {
-      const rect = canvas.getBoundingClientRect()
-      const ratio = window.devicePixelRatio || 1
-      canvas.width = Math.max(1, Math.floor(rect.width * ratio))
-      canvas.height = Math.max(1, Math.floor(rect.height * ratio))
-      context.setTransform(ratio, 0, 0, ratio, 0, 0)
-    }
-
-    function getTarget(form) {
-      if (!targetCache.has(form.name)) {
-        targetCache.set(form.name, renderCreatureTarget(form, pointCount))
-      }
-      return targetCache.get(form.name)
-    }
-
-    function setTarget() {
-      const form = creatureForms[0]
-      const targets = getTarget(form)
-      if (labelRef.current) labelRef.current.textContent = form.name
-      points.forEach((point, index) => {
-        const target = targets[index % targets.length]
-        point.tx = target.x
-        point.ty = target.y
-        point.color = target.edge ? '#fff8db' : target.color
-        point.edge = target.edge
-      })
-    }
-
-    function draw() {
-      const rect = canvas.getBoundingClientRect()
-      const activeForm = creatureForms[0]
-      context.clearRect(0, 0, rect.width, rect.height)
-      const gradient = context.createRadialGradient(
-        rect.width * 0.5,
-        rect.height * 0.45,
-        20,
-        rect.width * 0.5,
-        rect.height * 0.48,
-        rect.width * 0.58,
-      )
-      gradient.addColorStop(0, `${activeForm.color}24`)
-      gradient.addColorStop(0.45, `${activeForm.accent}16`)
-      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
-      context.fillStyle = gradient
-      context.fillRect(0, 0, rect.width, rect.height)
-
-      drawHoloCard(context, rect.width * 0.18, rect.height * 0.24, 78, 116, -0.2, '#ffd84d', 0.18)
-      drawHoloCard(context, rect.width * 0.82, rect.height * 0.28, 76, 112, 0.24, '#ffef9c', 0.14)
-      drawHoloCard(context, rect.width * 0.76, rect.height * 0.72, 86, 126, -0.12, '#ffffff', 0.1)
-      drawLightning(context, rect.width * 0.12, rect.height * 0.58, 0.8, '#ffd84d', 0.18)
-      drawLightning(context, rect.width * 0.83, rect.height * 0.5, 0.72, '#ffd84d', 0.16)
-
-      const creatureScale = Math.min(rect.width, rect.height) / 760
-      context.save()
-      context.translate((rect.width - 760 * creatureScale) / 2, (rect.height - 760 * creatureScale) / 2)
-      context.scale(creatureScale, creatureScale)
-      context.globalAlpha = 0.16
-      context.shadowBlur = 32
-      context.shadowColor = activeForm.color
-      drawCreature(context, activeForm)
-      context.restore()
-
-      context.globalAlpha = 0.15
-      context.strokeStyle = activeForm.color
-      for (let i = 0; i < points.length; i += 28) {
-        const point = points[i]
-        const next = points[i + 7]
-        if (!next) continue
-        const dx = point.x - next.x
-        const dy = point.y - next.y
-        if (Math.hypot(dx, dy) > 0.08) continue
-        context.beginPath()
-        context.moveTo(point.x * rect.width, point.y * rect.height)
-        context.lineTo(next.x * rect.width, next.y * rect.height)
-        context.stroke()
-      }
-      context.globalAlpha = 1
-
-      points.forEach((point) => {
-        const pulse = Math.sin(frame * 0.02 + point.drift) * (point.edge ? 0.002 : 0.0045)
-        point.vx += (point.tx + pulse - point.x) * 0.024
-        point.vy += (point.ty - pulse - point.y) * 0.024
-        point.vx *= 0.84
-        point.vy *= 0.84
-        point.x += point.vx
-        point.y += point.vy
-
-        const x = point.x * rect.width
-        const y = point.y * rect.height
-        const glow = Math.max(0.2, 1 - Math.hypot(point.tx - point.x, point.ty - point.y) * 5)
-        context.beginPath()
-        context.fillStyle = point.color
-        context.shadowBlur = point.edge ? 16 : 8
-        context.shadowColor = point.edge ? '#fff1ad' : activeForm.color
-        context.globalAlpha = point.edge ? 0.72 + glow * 0.28 : 0.5 + glow * 0.42
-        context.arc(x, y, point.size + glow * (point.edge ? 1.35 : 0.95), 0, Math.PI * 2)
-        context.fill()
-      })
-      context.shadowBlur = 0
-      context.globalAlpha = 1
-      frame += 1
-      raf = requestAnimationFrame(draw)
-    }
-
-    fit()
-    setTarget()
-    window.addEventListener('resize', fit)
-    raf = requestAnimationFrame(draw)
-    return () => {
-      cancelAnimationFrame(raf)
-      window.removeEventListener('resize', fit)
-    }
-  }, [])
+function HoloCardShowcase({ cards, openCardPage }) {
+  const showcaseCards = cards.slice(0, 5)
 
   return (
-    <div className="pokemon-cloud" aria-label="Nuage de points Pokémon animé">
-      <canvas ref={canvasRef} />
-      <div className="cloud-caption">
-        <span ref={labelRef}>Pikachu</span>
-        <small>electric point cloud</small>
+    <section className="holo-stage" aria-label="Vitrine de cartes holographiques">
+      <div className="holo-aura" />
+      <div className="holo-particles" aria-hidden="true">
+        {Array.from({ length: 18 }).map((_, index) => (
+          <i key={index} style={{ '--i': index }} />
+        ))}
       </div>
-    </div>
+      <div className="holo-deck">
+        {showcaseCards.map((card, index) => (
+          <button
+            className={`holo-card holo-card-${index + 1}`}
+            type="button"
+            key={card.id}
+            onClick={() => openCardPage(card)}
+            style={{ '--card-accent': card.color }}
+          >
+            <span className="holo-card-inner">
+              <CardArt card={card} large />
+              <span className="holo-card-copy">
+                <b>{card.name}</b>
+                <small>{card.set}</small>
+                <strong>{formatMoney(card.price)}</strong>
+              </span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="holo-panel">
+        <span>HoloKira selection</span>
+        <strong>{showcaseCards.length} cartes à explorer</strong>
+      </div>
+    </section>
   )
 }
 
@@ -749,7 +518,7 @@ function HomeView({ cards, openCardPage, setView, site, t }) {
             </button>
           </div>
         </div>
-        <PokemonPointCloud />
+        <HoloCardShowcase cards={cards} openCardPage={openCardPage} />
       </section>
       <section className="home-strip">
         {previewCards.map((card) => (
