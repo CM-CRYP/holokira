@@ -332,6 +332,7 @@
 }
 
 .holo-card-copy b {
+  color: #f4ecdf;
   font: 900 20px/1 var(--display);
 }
 
@@ -341,6 +342,7 @@
 }
 
 .holo-card-copy strong {
+  color: #ffffff;
   font: 900 14px/1 var(--ui);
 }
 
@@ -487,6 +489,11 @@
 .home-card-link span {
   display: grid;
   gap: 5px;
+}
+
+.home-card-link strong,
+.home-card-link b {
+  color: var(--ink);
 }
 
 .home-card-link small {
@@ -636,9 +643,14 @@ textarea {
   min-height: 38px;
   color: white;
   border: 0;
-  background: var(--ink);
+  background: linear-gradient(135deg, var(--red), #b8172a);
+  box-shadow: 0 10px 24px rgba(219, 42, 42, 0.22);
   font: 800 13px/1 var(--ui);
   cursor: pointer;
+}
+
+.reserve-card-button:hover {
+  transform: translateY(-1px);
 }
 
 .reserve-card-button:disabled {
@@ -764,6 +776,7 @@ textarea {
 
 .product-info h3 {
   margin: 0 0 4px;
+  color: var(--ink);
   font: 800 18px/1.1 var(--display);
 }
 
@@ -780,6 +793,7 @@ td span,
 .product-info strong,
 .buy-row strong {
   white-space: nowrap;
+  color: var(--ink);
   font: 800 18px/1 var(--ui);
 }
 
@@ -797,8 +811,8 @@ td span,
 }
 
 .product-meta .reserved-badge {
-  color: white;
-  background: var(--ink);
+  color: var(--paper);
+  background: var(--button-ink);
 }
 
 .icon-action {
@@ -807,9 +821,9 @@ td span,
   width: 38px;
   height: 38px;
   place-items: center;
-  color: white;
+  color: var(--paper);
   border: 0;
-  background: var(--ink);
+  background: var(--button-ink);
   cursor: pointer;
 }
 
