@@ -2226,8 +2226,8 @@ function App() {
       data-theme={site.colorMode}
       style={{
         '--red': site.theme.red,
-        '--ink': site.theme.ink,
-        '--paper': site.theme.paper,
+        '--ink': site.colorMode === 'dark' ? '#ded7cd' : site.theme.ink,
+        '--paper': site.colorMode === 'dark' ? '#090b10' : site.theme.paper,
       }}
     >
       <Header

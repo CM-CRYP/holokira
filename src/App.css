@@ -5,6 +5,7 @@
   --surface-strong: rgba(255, 255, 255, 0.92);
   --field-bg: #ffffff;
   --topbar-bg: rgba(255, 255, 255, 0.9);
+  --footer-bg: rgba(255, 255, 255, 0.72);
   --button-ink: var(--ink);
   background:
     linear-gradient(90deg, rgba(17, 19, 24, 0.035) 1px, transparent 1px),
@@ -17,14 +18,15 @@
 .app-shell[data-theme='dark'] {
   --paper: #090b10;
   --paper-deep: #151821;
-  --ink: #f5f0e8;
-  --muted: #a8acb8;
+  --ink: #ded7cd;
+  --muted: #989daa;
   --line: rgba(255, 255, 255, 0.13);
   --surface: rgba(18, 21, 29, 0.86);
   --surface-strong: rgba(20, 23, 31, 0.94);
   --field-bg: rgba(255, 255, 255, 0.055);
   --topbar-bg: rgba(9, 11, 16, 0.9);
-  --button-ink: #f5f0e8;
+  --footer-bg: rgba(5, 7, 11, 0.96);
+  --button-ink: #ded7cd;
   --shadow-soft: 0 18px 48px rgba(0, 0, 0, 0.3);
   --shadow-strong: 0 20px 56px rgba(0, 0, 0, 0.45);
   background:
@@ -1665,7 +1667,8 @@ td:nth-child(2) {
   gap: 18px;
   padding: 22px clamp(18px, 4vw, 56px);
   border-top: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--footer-bg);
+  backdrop-filter: blur(18px);
 }
 
 .site-footer div {
