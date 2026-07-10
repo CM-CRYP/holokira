@@ -174,6 +174,132 @@
   padding: 28px clamp(18px, 4vw, 56px) 48px;
 }
 
+.home-page {
+  display: grid;
+  gap: 18px;
+  padding: 28px clamp(18px, 4vw, 56px) 48px;
+}
+
+.home-hero {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.86fr) minmax(420px, 1.14fr);
+  gap: clamp(18px, 4vw, 46px);
+  align-items: stretch;
+  min-height: calc(100vh - 190px);
+  border-bottom: 1px solid var(--line);
+}
+
+.home-copy {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 18px;
+  padding: 26px 0;
+}
+
+.home-copy > span {
+  color: var(--red);
+  font: 900 12px/1 var(--ui);
+  text-transform: uppercase;
+}
+
+.home-copy h1 {
+  max-width: 760px;
+  margin: 0;
+  font: 900 clamp(48px, 7vw, 96px)/0.88 var(--display);
+  letter-spacing: 0;
+}
+
+.home-copy p {
+  max-width: 620px;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pokemon-cloud {
+  position: relative;
+  min-height: 560px;
+  overflow: hidden;
+  border-left: 1px solid var(--line);
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.035)),
+    radial-gradient(circle at 50% 42%, rgba(219, 42, 42, 0.17), transparent 42%);
+}
+
+.pokemon-cloud canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 560px;
+}
+
+.cloud-caption {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.cloud-caption span {
+  font: 900 24px/1 var(--display);
+}
+
+.cloud-caption small {
+  color: var(--muted);
+  font: 800 11px/1 var(--ui);
+  text-transform: uppercase;
+}
+
+.home-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.home-card-link {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  color: var(--ink);
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+}
+
+.home-card-link .card-art {
+  min-height: 104px;
+}
+
+.home-card-link .card-orbit,
+.home-card-link .card-art-name,
+.home-card-link .card-art-lines {
+  display: none;
+}
+
+.home-card-link span {
+  display: grid;
+  gap: 5px;
+}
+
+.home-card-link small {
+  color: var(--muted);
+}
+
 .catalog,
 .simple-page,
 .admin-page {
@@ -1339,6 +1465,25 @@ td:nth-child(2) {
     grid-template-columns: 1fr;
   }
 
+  .home-hero,
+  .home-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .home-hero {
+    min-height: auto;
+  }
+
+  .pokemon-cloud {
+    min-height: 460px;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .pokemon-cloud canvas {
+    min-height: 460px;
+  }
+
   .side-stack {
     position: static;
     grid-template-columns: 1fr 1fr;
@@ -1424,6 +1569,7 @@ td:nth-child(2) {
 
 @media (max-width: 560px) {
   .shop-layout,
+  .home-page,
   .simple-page,
   .admin-page,
   .card-detail-page {
@@ -1466,8 +1612,22 @@ td:nth-child(2) {
   }
 
   .hero-copy h1,
+  .home-copy h1,
   .page-heading h1 {
     font-size: 44px;
+  }
+
+  .pokemon-cloud,
+  .pokemon-cloud canvas {
+    min-height: 380px;
+  }
+
+  .home-card-link {
+    grid-template-columns: 74px minmax(0, 1fr);
+  }
+
+  .home-card-link b {
+    grid-column: 2;
   }
 
   .admin-card-row {

@@ -140,6 +140,10 @@ export const starterSite = {
   },
   copy: {
     fr: {
+      homeEyebrow: 'Collection japonaise et européenne',
+      homeTitle: 'HoloKira ouvre le Pokédex des cartes rares',
+      homeIntro:
+        'Explore une boutique vitrine sombre, premium et vivante : les cartes se réservent sans paiement direct, puis tout se gère dans ton panel admin.',
       heroTitle: 'Cartes Pokémon premium',
       heroSubtitle:
         'Boutique européenne pour cartes gradées, singles rares et trouvailles japonaises sélectionnées à la main.',
@@ -191,6 +195,10 @@ export const starterSite = {
       footerNote: 'Expédition suivie depuis la France, protection rigide incluse.',
     },
     en: {
+      homeEyebrow: 'Japanese and European collection',
+      homeTitle: 'HoloKira opens the rare-card Pokédex',
+      homeIntro:
+        'Explore a dark, premium storefront where cards are reserved without direct payment, then managed from your admin panel.',
       heroTitle: 'Premium Pokémon cards',
       heroSubtitle:
         'A European boutique for graded cards, rare singles, and hand-picked Japanese finds.',

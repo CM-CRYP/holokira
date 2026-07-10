@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BarChart3,
   Boxes,
@@ -64,6 +64,7 @@ const cardStatuses = {
 
 const labels = {
   fr: {
+    home: 'Accueil',
     shop: 'Boutique',
     sell: 'Vendre',
     cards: 'Cartes',
@@ -109,6 +110,8 @@ const labels = {
     viewReservations: 'Voir mes réservations',
     shareCard: 'Copier le lien',
     linkCopied: 'Lien copié.',
+    enterShop: 'Entrer dans la boutique',
+    discoverCards: 'Voir les cartes',
     emptyOrders: 'Aucune réservation pour le moment.',
     loginTitle: 'Accès admin',
     loginIntro: 'Connecte-toi avec ton compte administrateur Supabase.',
@@ -148,6 +151,7 @@ const labels = {
       'Contrôle le contenu, les produits, les réservations, la langue, les couleurs et les paramètres de la boutique.',
   },
   en: {
+    home: 'Home',
     shop: 'Shop',
     sell: 'Sell',
     cards: 'Cards',
@@ -193,6 +197,8 @@ const labels = {
     viewReservations: 'View reservations',
     shareCard: 'Copy link',
     linkCopied: 'Link copied.',
+    enterShop: 'Enter the shop',
+    discoverCards: 'View cards',
     emptyOrders: 'No reservations yet.',
     loginTitle: 'Admin access',
     loginIntro: 'Sign in with your Supabase administrator account.',
@@ -335,7 +341,7 @@ function getCardHash(card) {
 
 function readHashTarget() {
   const hash = window.location.hash.replace(/^#/, '')
-  if (!hash) return { view: 'shop' }
+  if (!hash) return { view: 'home' }
   if (hash.startsWith('card/')) {
     return { view: 'cardDetail', cardId: decodeURIComponent(hash.slice(5)) }
   }
@@ -372,6 +378,299 @@ function addHours(date, hours) {
   return new Date(date.getTime() + Number(hours || 48) * 60 * 60 * 1000).toISOString()
 }
 
+function sampleEllipse(cx, cy, rx, ry, count, jitter = 0.05) {
+  return Array.from({ length: count }, () => {
+    const angle = Math.random() * Math.PI * 2
+    const radius = Math.sqrt(Math.random())
+    return {
+      x: cx + Math.cos(angle) * rx * radius * (1 + (Math.random() - 0.5) * jitter),
+      y: cy + Math.sin(angle) * ry * radius * (1 + (Math.random() - 0.5) * jitter),
+    }
+  })
+}
+
+function sampleLine(x1, y1, x2, y2, count, spread = 0.012) {
+  return Array.from({ length: count }, () => {
+    const t = Math.random()
+    return {
+      x: x1 + (x2 - x1) * t + (Math.random() - 0.5) * spread,
+      y: y1 + (y2 - y1) * t + (Math.random() - 0.5) * spread,
+    }
+  })
+}
+
+function makeCreaturePoints(parts) {
+  return parts.flatMap((part) => {
+    if (part.type === 'line') return sampleLine(...part.values)
+    return sampleEllipse(...part.values)
+  })
+}
+
+const creatureClouds = [
+  {
+    name: 'Pikachu',
+    color: '#ffd84d',
+    accent: '#ff5f57',
+    points: makeCreaturePoints([
+      { values: [0.5, 0.5, 0.15, 0.18, 180] },
+      { values: [0.5, 0.28, 0.13, 0.12, 120] },
+      { values: [0.39, 0.13, 0.035, 0.14, 50] },
+      { values: [0.61, 0.13, 0.035, 0.14, 50] },
+      { values: [0.42, 0.32, 0.035, 0.035, 26] },
+      { values: [0.58, 0.32, 0.035, 0.035, 26] },
+      { type: 'line', values: [0.64, 0.45, 0.82, 0.35, 46] },
+      { type: 'line', values: [0.82, 0.35, 0.73, 0.24, 46] },
+    ]),
+  },
+  {
+    name: 'Salamèche',
+    color: '#ff8a3d',
+    accent: '#ffd45c',
+    points: makeCreaturePoints([
+      { values: [0.5, 0.52, 0.12, 0.2, 160] },
+      { values: [0.5, 0.3, 0.11, 0.12, 110] },
+      { type: 'line', values: [0.58, 0.55, 0.78, 0.32, 80] },
+      { values: [0.81, 0.27, 0.055, 0.08, 70] },
+      { values: [0.43, 0.72, 0.04, 0.08, 35] },
+      { values: [0.58, 0.72, 0.04, 0.08, 35] },
+      { type: 'line', values: [0.38, 0.46, 0.25, 0.58, 35] },
+      { type: 'line', values: [0.62, 0.46, 0.73, 0.58, 35] },
+    ]),
+  },
+  {
+    name: 'Reptincel',
+    color: '#f35d34',
+    accent: '#ffcf4f',
+    points: makeCreaturePoints([
+      { values: [0.48, 0.52, 0.12, 0.22, 150] },
+      { values: [0.5, 0.27, 0.13, 0.11, 100] },
+      { values: [0.58, 0.17, 0.055, 0.035, 34] },
+      { type: 'line', values: [0.59, 0.53, 0.84, 0.31, 90] },
+      { values: [0.87, 0.24, 0.06, 0.09, 76] },
+      { type: 'line', values: [0.39, 0.43, 0.23, 0.36, 44] },
+      { type: 'line', values: [0.6, 0.42, 0.75, 0.37, 44] },
+      { values: [0.42, 0.75, 0.045, 0.09, 38] },
+      { values: [0.58, 0.75, 0.045, 0.09, 38] },
+    ]),
+  },
+  {
+    name: 'Dracaufeu',
+    color: '#ff6d35',
+    accent: '#4fb1ff',
+    points: makeCreaturePoints([
+      { values: [0.5, 0.55, 0.13, 0.21, 145] },
+      { values: [0.51, 0.3, 0.12, 0.1, 90] },
+      { type: 'line', values: [0.42, 0.45, 0.14, 0.26, 110] },
+      { type: 'line', values: [0.58, 0.45, 0.86, 0.26, 110] },
+      { values: [0.24, 0.34, 0.14, 0.1, 70] },
+      { values: [0.76, 0.34, 0.14, 0.1, 70] },
+      { type: 'line', values: [0.61, 0.58, 0.86, 0.72, 70] },
+      { values: [0.9, 0.76, 0.06, 0.07, 52] },
+      { values: [0.42, 0.76, 0.05, 0.08, 34] },
+      { values: [0.58, 0.76, 0.05, 0.08, 34] },
+    ]),
+  },
+  {
+    name: 'Carapuce',
+    color: '#67c7ff',
+    accent: '#d7b17f',
+    points: makeCreaturePoints([
+      { values: [0.5, 0.54, 0.14, 0.16, 145] },
+      { values: [0.5, 0.31, 0.13, 0.12, 110] },
+      { values: [0.36, 0.55, 0.05, 0.08, 38] },
+      { values: [0.64, 0.55, 0.05, 0.08, 38] },
+      { values: [0.41, 0.72, 0.055, 0.06, 36] },
+      { values: [0.59, 0.72, 0.055, 0.06, 36] },
+      { type: 'line', values: [0.62, 0.54, 0.78, 0.49, 60] },
+      { values: [0.81, 0.49, 0.045, 0.045, 36] },
+    ]),
+  },
+  {
+    name: 'Carabaffe',
+    color: '#79c9ff',
+    accent: '#f1e2c5',
+    points: makeCreaturePoints([
+      { values: [0.5, 0.53, 0.15, 0.17, 135] },
+      { values: [0.5, 0.29, 0.13, 0.12, 100] },
+      { values: [0.4, 0.17, 0.055, 0.06, 38] },
+      { values: [0.6, 0.17, 0.055, 0.06, 38] },
+      { values: [0.35, 0.55, 0.055, 0.08, 36] },
+      { values: [0.65, 0.55, 0.055, 0.08, 36] },
+      { type: 'line', values: [0.63, 0.54, 0.83, 0.47, 72] },
+      { values: [0.86, 0.46, 0.06, 0.035, 40] },
+      { values: [0.41, 0.74, 0.06, 0.06, 30] },
+      { values: [0.59, 0.74, 0.06, 0.06, 30] },
+    ]),
+  },
+  {
+    name: 'Tortank',
+    color: '#5aa9e8',
+    accent: '#d8b07f',
+    points: makeCreaturePoints([
+      { values: [0.5, 0.55, 0.19, 0.2, 160] },
+      { values: [0.5, 0.3, 0.13, 0.11, 90] },
+      { type: 'line', values: [0.38, 0.39, 0.25, 0.25, 64] },
+      { type: 'line', values: [0.62, 0.39, 0.75, 0.25, 64] },
+      { type: 'line', values: [0.24, 0.23, 0.14, 0.2, 44] },
+      { type: 'line', values: [0.76, 0.23, 0.86, 0.2, 44] },
+      { values: [0.31, 0.59, 0.075, 0.08, 42] },
+      { values: [0.69, 0.59, 0.075, 0.08, 42] },
+      { values: [0.42, 0.78, 0.07, 0.06, 34] },
+      { values: [0.58, 0.78, 0.07, 0.06, 34] },
+    ]),
+  },
+  {
+    name: 'Bulbizarre',
+    color: '#6ed7aa',
+    accent: '#89d85f',
+    points: makeCreaturePoints([
+      { values: [0.5, 0.58, 0.18, 0.14, 145] },
+      { values: [0.36, 0.44, 0.11, 0.1, 80] },
+      { values: [0.51, 0.36, 0.13, 0.1, 100] },
+      { values: [0.48, 0.25, 0.09, 0.08, 58] },
+      { values: [0.28, 0.62, 0.05, 0.05, 30] },
+      { values: [0.42, 0.71, 0.05, 0.05, 30] },
+      { values: [0.6, 0.71, 0.05, 0.05, 30] },
+      { values: [0.72, 0.62, 0.05, 0.05, 30] },
+    ]),
+  },
+  {
+    name: 'Herbizarre',
+    color: '#58c89a',
+    accent: '#d778a9',
+    points: makeCreaturePoints([
+      { values: [0.5, 0.59, 0.19, 0.14, 130] },
+      { values: [0.35, 0.44, 0.11, 0.1, 78] },
+      { values: [0.51, 0.35, 0.14, 0.1, 86] },
+      { values: [0.48, 0.22, 0.12, 0.09, 72] },
+      { values: [0.43, 0.18, 0.05, 0.08, 34] },
+      { values: [0.53, 0.18, 0.05, 0.08, 34] },
+      { values: [0.28, 0.63, 0.055, 0.05, 28] },
+      { values: [0.42, 0.73, 0.055, 0.05, 28] },
+      { values: [0.61, 0.73, 0.055, 0.05, 28] },
+      { values: [0.73, 0.63, 0.055, 0.05, 28] },
+    ]),
+  },
+  {
+    name: 'Florizarre',
+    color: '#4fc08c',
+    accent: '#e576a8',
+    points: makeCreaturePoints([
+      { values: [0.5, 0.61, 0.23, 0.15, 150] },
+      { values: [0.31, 0.47, 0.12, 0.1, 70] },
+      { values: [0.5, 0.38, 0.19, 0.11, 96] },
+      { values: [0.5, 0.2, 0.16, 0.08, 80] },
+      { values: [0.5, 0.14, 0.06, 0.12, 52] },
+      { values: [0.36, 0.18, 0.08, 0.07, 42] },
+      { values: [0.64, 0.18, 0.08, 0.07, 42] },
+      { values: [0.24, 0.66, 0.06, 0.055, 28] },
+      { values: [0.42, 0.76, 0.06, 0.055, 28] },
+      { values: [0.62, 0.76, 0.06, 0.055, 28] },
+      { values: [0.78, 0.66, 0.06, 0.055, 28] },
+    ]),
+  },
+]
+
+function PokemonPointCloud() {
+  const canvasRef = useRef(null)
+  const labelRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const context = canvas.getContext('2d')
+    const pointCount = 620
+    const points = Array.from({ length: pointCount }, () => ({
+      x: Math.random(),
+      y: Math.random(),
+      tx: Math.random(),
+      ty: Math.random(),
+      vx: 0,
+      vy: 0,
+      size: 1 + Math.random() * 1.8,
+      drift: Math.random() * Math.PI * 2,
+    }))
+    let formIndex = 0
+    let frame = 0
+    let raf = 0
+
+    function fit() {
+      const rect = canvas.getBoundingClientRect()
+      const ratio = window.devicePixelRatio || 1
+      canvas.width = Math.max(1, Math.floor(rect.width * ratio))
+      canvas.height = Math.max(1, Math.floor(rect.height * ratio))
+      context.setTransform(ratio, 0, 0, ratio, 0, 0)
+    }
+
+    function setTarget() {
+      const form = creatureClouds[formIndex]
+      const targets = form.points
+      if (labelRef.current) labelRef.current.textContent = form.name
+      points.forEach((point, index) => {
+        const target = targets[index % targets.length]
+        point.tx = target.x
+        point.ty = target.y
+      })
+      formIndex = (formIndex + 1) % creatureClouds.length
+    }
+
+    function draw() {
+      const rect = canvas.getBoundingClientRect()
+      const activeForm = creatureClouds[(formIndex + creatureClouds.length - 1) % creatureClouds.length]
+      context.clearRect(0, 0, rect.width, rect.height)
+      context.fillStyle = 'rgba(255, 255, 255, 0.035)'
+      context.fillRect(0, 0, rect.width, rect.height)
+      points.forEach((point) => {
+        const pulse = Math.sin(frame * 0.018 + point.drift) * 0.004
+        point.vx += (point.tx + pulse - point.x) * 0.018
+        point.vy += (point.ty - pulse - point.y) * 0.018
+        point.vx *= 0.86
+        point.vy *= 0.86
+        point.x += point.vx
+        point.y += point.vy
+
+        const x = point.x * rect.width
+        const y = point.y * rect.height
+        const glow = Math.max(0.2, 1 - Math.hypot(point.tx - point.x, point.ty - point.y) * 5)
+        context.beginPath()
+        context.fillStyle = activeForm.color
+        context.globalAlpha = 0.38 + glow * 0.44
+        context.arc(x, y, point.size + glow * 1.2, 0, Math.PI * 2)
+        context.fill()
+        if (Math.random() > 0.982) {
+          context.beginPath()
+          context.fillStyle = activeForm.accent
+          context.globalAlpha = 0.82
+          context.arc(x, y, point.size * 1.8, 0, Math.PI * 2)
+          context.fill()
+        }
+      })
+      context.globalAlpha = 1
+      frame += 1
+      if (frame % 170 === 0) setTarget()
+      raf = requestAnimationFrame(draw)
+    }
+
+    fit()
+    setTarget()
+    window.addEventListener('resize', fit)
+    raf = requestAnimationFrame(draw)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', fit)
+    }
+  }, [])
+
+  return (
+    <div className="pokemon-cloud" aria-label="Nuage de points Pokémon animé">
+      <canvas ref={canvasRef} />
+      <div className="cloud-caption">
+        <span ref={labelRef}>Pikachu</span>
+        <small>point cloud</small>
+      </div>
+    </div>
+  )
+}
+
 function CardArt({ card, large = false }) {
   return (
     <div
@@ -399,6 +698,7 @@ function CardArt({ card, large = false }) {
 function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }) {
   const t = labels[site.language]
   const nav = [
+    ['home', t.home],
     ['shop', t.shop],
     ['japanese', t.japanese],
     ['graded', t.graded],
@@ -412,7 +712,7 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
 
   return (
     <header className="topbar">
-      <button className="brand" type="button" onClick={() => setView('shop')}>
+      <button className="brand" type="button" onClick={() => setView('home')}>
         <span className="brand-mark">{site.brandMark}</span>
         <span>{site.brandName}</span>
       </button>
@@ -446,6 +746,47 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
         </button>
       </div>
     </header>
+  )
+}
+
+function HomeView({ cards, openCardPage, setView, site, t }) {
+  const copy = site.copy[site.language]
+  const featuredCards = cards.filter((card) => card.featured).slice(0, 3)
+  const previewCards = featuredCards.length ? featuredCards : cards.slice(0, 3)
+
+  return (
+    <main className="home-page">
+      <section className="home-hero">
+        <div className="home-copy">
+          <span>{copy.homeEyebrow}</span>
+          <h1>{copy.homeTitle}</h1>
+          <p>{copy.homeIntro}</p>
+          <div className="home-actions">
+            <button className="checkout" type="button" onClick={() => setView('shop')}>
+              <ShoppingBag size={18} />
+              {t.enterShop}
+            </button>
+            <button className="secondary-button" type="button" onClick={() => setView('cards')}>
+              <Sparkles size={17} />
+              {t.discoverCards}
+            </button>
+          </div>
+        </div>
+        <PokemonPointCloud />
+      </section>
+      <section className="home-strip">
+        {previewCards.map((card) => (
+          <button className="home-card-link" type="button" key={card.id} onClick={() => openCardPage(card)}>
+            <CardArt card={card} />
+            <span>
+              <strong>{card.name}</strong>
+              <small>{card.set}</small>
+            </span>
+            <b>{formatMoney(card.price)}</b>
+          </button>
+        ))}
+      </section>
+    </main>
   )
 }
 
@@ -1774,7 +2115,7 @@ function App() {
   })
   const [lastReservation, setLastReservation] = useState(null)
   const [selected, setSelected] = useState(() => cards[0])
-  const [view, setView] = useState('shop')
+  const [view, setView] = useState('home')
   const [query, setQuery] = useState('')
   const [type, setType] = useState(labels[site.language].all)
   const [rarity, setRarity] = useState(labels[site.language].allFeminine)
@@ -1827,6 +2168,7 @@ function App() {
         return
       }
       const allowedViews = new Set([
+        'home',
         'shop',
         'japanese',
         'graded',
@@ -2130,6 +2472,15 @@ function App() {
           setCheckoutDraft={setCheckoutDraft}
           setView={navigate}
           filters={{ query, setQuery, type, setType, rarity, setRarity }}
+          site={site}
+          t={t}
+        />
+      )}
+      {view === 'home' && (
+        <HomeView
+          cards={cards}
+          openCardPage={openCardPage}
+          setView={navigate}
           site={site}
           t={t}
         />
