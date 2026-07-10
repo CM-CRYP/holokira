@@ -622,6 +622,7 @@ textarea {
 .product-open {
   width: 100%;
   padding: 12px;
+  color: var(--ink);
   text-align: left;
   border: 0;
   background: transparent;
@@ -1227,6 +1228,7 @@ dd {
   align-items: center;
   gap: 16px;
   padding: 12px;
+  color: var(--ink);
   text-align: left;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -1247,6 +1249,11 @@ dd {
   gap: 4px;
 }
 
+.inventory-row strong,
+.inventory-row b {
+  color: var(--ink);
+}
+
 .inventory-row small,
 .inventory-row em {
   color: var(--muted);
@@ -1258,8 +1265,8 @@ dd {
   width: 36px;
   height: 36px;
   place-items: center;
-  color: white;
-  background: var(--ink);
+  color: var(--paper);
+  background: var(--button-ink);
 }
 
 .stats {
