@@ -66,12 +66,14 @@ const labels = {
   fr: {
     home: 'Accueil',
     shop: 'Boutique',
+    highlights: 'Pépites',
     sell: 'Vendre',
     cards: 'Cartes',
     about: 'À propos',
     contact: 'Contact',
     legal: 'Mentions légales',
     japanese: 'Japonaises',
+    vintageJapanese: 'Anciennes JP',
     graded: 'Gradées',
     orders: 'Réservations',
     admin: 'Admin',
@@ -153,12 +155,14 @@ const labels = {
   en: {
     home: 'Home',
     shop: 'Shop',
+    highlights: 'Highlights',
     sell: 'Sell',
     cards: 'Cards',
     about: 'About',
     contact: 'Contact',
     legal: 'Legal',
     japanese: 'Japanese',
+    vintageJapanese: 'Vintage JP',
     graded: 'Graded',
     orders: 'Orders',
     admin: 'Admin',
@@ -446,14 +450,11 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
   const nav = [
     ['home', t.home],
     ['shop', t.shop],
-    ['japanese', t.japanese],
+    ['highlights', t.highlights],
     ['graded', t.graded],
+    ['vintageJapanese', t.vintageJapanese],
     ['sell', t.sell],
     ['cards', t.cards],
-    ['about', t.about],
-    ['contact', t.contact],
-    ['legal', t.legal],
-    ['admin', t.admin],
   ]
 
   return (
@@ -787,10 +788,15 @@ function ShopView(props) {
             <h1>{copy.heroTitle}</h1>
             <p>{copy.heroSubtitle}</p>
           </div>
-          <button type="button" onClick={() => props.setView('admin')}>
-            <LayoutDashboard size={18} />
-            {copy.adminCta}
-          </button>
+          <div className="hero-actions">
+            <button type="button" onClick={() => props.setView('highlights')}>
+              <Sparkles size={18} />
+              {props.t.highlights}
+            </button>
+            <button className="secondary-button" type="button" onClick={() => props.setView('vintageJapanese')}>
+              {props.t.vintageJapanese}
+            </button>
+          </div>
         </div>
         <Filters {...props.filters} cards={props.cards} site={props.site} t={props.t} />
         <div className="product-grid">
@@ -1085,7 +1091,7 @@ function InfoPage({ type, site, t, sellDraft, setSellDraft, submitSellRequest })
     contact: {
       title: copy.contactTitle,
       intro: copy.contactIntro,
-      points: [site.contactEmail, site.supportPhone, copy.footerNote],
+      points: [site.contactEmail, copy.footerNote, copy.privacy],
     },
     legal: {
       title: copy.legalTitle,
@@ -1119,6 +1125,24 @@ function InfoPage({ type, site, t, sellDraft, setSellDraft, submitSellRequest })
         />
       )}
     </main>
+  )
+}
+
+function SiteFooter({ site, setView, t }) {
+  return (
+    <footer className="site-footer">
+      <div>
+        <strong>{site.brandName}</strong>
+        <span>{site.copy[site.language].footerNote}</span>
+      </div>
+      <nav aria-label="Navigation secondaire">
+        <button type="button" onClick={() => setView('about')}>{t.about}</button>
+        <button type="button" onClick={() => setView('contact')}>{t.contact}</button>
+        <button type="button" onClick={() => setView('legal')}>{t.legal}</button>
+        <button type="button" onClick={() => setView('admin')}>{t.admin}</button>
+      </nav>
+      <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>
+    </footer>
   )
 }
 
@@ -1569,9 +1593,6 @@ function SettingsEditor({ site, setSite }) {
         <Field label="E-mail de contact">
           <TextInput value={site.contactEmail} onChange={(value) => updateSite('contactEmail', value)} />
         </Field>
-        <Field label="Téléphone">
-          <TextInput value={site.supportPhone} onChange={(value) => updateSite('supportPhone', value)} />
-        </Field>
         <Field label="Alerte stock bas">
           <TextInput type="number" min="0" value={site.lowStockLimit} onChange={(value) => updateSite('lowStockLimit', value)} />
         </Field>
@@ -1916,8 +1937,10 @@ function App() {
       const allowedViews = new Set([
         'home',
         'shop',
+        'highlights',
         'japanese',
         'graded',
+        'vintageJapanese',
         'sell',
         'cards',
         'about',
@@ -1982,6 +2005,19 @@ function App() {
 
   const japaneseCards = useMemo(
     () => cards.filter((card) => card.language?.toUpperCase() === 'JP'),
+    [cards],
+  )
+  const highlightCards = useMemo(
+    () => cards.filter((card) => card.featured || Number(card.stock) <= Number(site.lowStockLimit) + 1),
+    [cards, site.lowStockLimit],
+  )
+  const vintageJapaneseCards = useMemo(
+    () => cards.filter((card) => {
+      const isJapanese = card.language?.toUpperCase() === 'JP'
+      const vintageSignal = /neo|archive|vault|promo|holo|old|vintage|japan|osaka|kyoto|hanami/i
+        .test(`${card.set} ${card.rarity} ${card.name}`)
+      return isJapanese && vintageSignal
+    }),
     [cards],
   )
   const gradedCards = useMemo(
@@ -2269,11 +2305,33 @@ function App() {
           t={t}
         />
       )}
+      {view === 'highlights' && (
+        <CollectionPage
+          title={site.copy[site.language].highlightsTitle}
+          intro={site.copy[site.language].highlightsIntro}
+          cards={highlightCards.length ? highlightCards : cards.slice(0, 6)}
+          openCardPage={openCardPage}
+          addToCart={addToCart}
+          site={site}
+          t={t}
+        />
+      )}
       {view === 'graded' && (
         <CollectionPage
           title={site.copy[site.language].gradedTitle}
           intro={site.copy[site.language].gradedIntro}
           cards={gradedCards}
+          openCardPage={openCardPage}
+          addToCart={addToCart}
+          site={site}
+          t={t}
+        />
+      )}
+      {view === 'vintageJapanese' && (
+        <CollectionPage
+          title={site.copy[site.language].vintageJapaneseTitle}
+          intro={site.copy[site.language].vintageJapaneseIntro}
+          cards={vintageJapaneseCards.length ? vintageJapaneseCards : japaneseCards}
           openCardPage={openCardPage}
           addToCart={addToCart}
           site={site}
@@ -2317,6 +2375,7 @@ function App() {
           backendConfig={backendConfig}
         />
       )}
+      {view !== 'admin' && <SiteFooter site={site} setView={navigate} t={t} />}
       <Toast toast={toast} />
     </div>
   )

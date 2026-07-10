@@ -122,13 +122,13 @@ export const starterCards = [
 ]
 
 export const starterSite = {
-  dataVersion: 5,
+  dataVersion: 6,
   language: 'fr',
   colorMode: 'dark',
   brandName: 'HoloKira',
   brandMark: 'HK',
-  contactEmail: 'contact@holokira.eu',
-  supportPhone: '+33 6 12 34 56 78',
+  contactEmail: 'holokira@gmail.com',
+  supportPhone: '',
   freeShippingFrom: 120,
   shippingFee: 6.9,
   lowStockLimit: 2,
@@ -147,12 +147,17 @@ export const starterSite = {
       heroTitle: 'Cartes Pokémon premium',
       heroSubtitle:
         'Boutique européenne pour cartes gradées, singles rares et trouvailles japonaises sélectionnées à la main.',
-      adminCta: "Ouvrir l'admin",
       searchPlaceholder: 'Rechercher une carte, un set ou une rareté...',
       cardsIntro: 'Vue rapide du stock disponible et des pièces à mettre en avant.',
+      highlightsTitle: 'Pépites du moment',
+      highlightsIntro:
+        'Les cartes à surveiller en priorité : pièces mises en avant, stock court et coups de cœur HoloKira.',
       japaneseTitle: 'Cartes Pokémon japonaises',
       japaneseIntro:
         'Sélection de cartes japonaises, promos, holos et pièces modernes avec état annoncé clairement.',
+      vintageJapaneseTitle: 'Cartes anciennes japonaises',
+      vintageJapaneseIntro:
+        'Une sélection orientée vintage japonais : holos, promos, archives et cartes à forte personnalité collection.',
       gradedTitle: 'Cartes Pokémon gradées',
       gradedIntro:
         'Cartes sous boîtier PSA ou équivalent, choisies pour les collectionneurs qui veulent une pièce prête à exposer.',
@@ -172,7 +177,7 @@ export const starterSite = {
       legalTitle: 'Mentions légales et conditions',
       legalIntro: 'Informations à compléter avant la mise en ligne commerciale.',
       legalNotice:
-        'Éditeur : HoloKira. Contact : contact@holokira.eu. Les informations de société devront être complétées avant publication.',
+        'Éditeur : HoloKira. Contact : holokira@gmail.com. Les informations de société devront être complétées avant publication.',
       terms:
         'Les prix sont indiqués en euros. Une réservation bloque temporairement la carte, puis le vendeur confirme les modalités par e-mail.',
       privacy:
@@ -202,12 +207,17 @@ export const starterSite = {
       heroTitle: 'Premium Pokémon cards',
       heroSubtitle:
         'A European boutique for graded cards, rare singles, and hand-picked Japanese finds.',
-      adminCta: 'Open admin',
       searchPlaceholder: 'Search for a card, set, or rarity...',
       cardsIntro: 'Quick view of available stock and highlighted pieces.',
+      highlightsTitle: 'Current highlights',
+      highlightsIntro:
+        'The cards to watch first: featured picks, low stock, and HoloKira favorites.',
       japaneseTitle: 'Japanese Pokémon cards',
       japaneseIntro:
         'A selection of Japanese cards, promos, holos, and modern pieces with clearly stated condition.',
+      vintageJapaneseTitle: 'Vintage Japanese cards',
+      vintageJapaneseIntro:
+        'A vintage-leaning Japanese selection: holos, promos, archives, and collector-focused cards.',
       gradedTitle: 'Graded Pokémon cards',
       gradedIntro:
         'PSA or equivalent graded cards selected for collectors who want display-ready pieces.',
@@ -227,7 +237,7 @@ export const starterSite = {
       legalTitle: 'Legal notice and terms',
       legalIntro: 'Information to complete before launching the shop commercially.',
       legalNotice:
-        'Publisher: HoloKira. Contact: contact@holokira.eu. Company details must be completed before publication.',
+        'Publisher: HoloKira. Contact: holokira@gmail.com. Company details must be completed before publication.',
       terms:
         'Prices are listed in euros. A reservation temporarily holds the card, then the seller confirms the next steps by email.',
       privacy:

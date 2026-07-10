@@ -223,6 +223,13 @@
   gap: 10px;
 }
 
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .holo-stage {
   position: relative;
   min-height: 560px;
@@ -1651,6 +1658,53 @@ td:nth-child(2) {
   font-weight: 800;
 }
 
+.site-footer {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  align-items: center;
+  gap: 18px;
+  padding: 22px clamp(18px, 4vw, 56px);
+  border-top: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.site-footer div {
+  display: grid;
+  gap: 5px;
+}
+
+.site-footer strong {
+  font: 900 20px/1 var(--display);
+}
+
+.site-footer span,
+.site-footer a {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.site-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.site-footer button {
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+  cursor: pointer;
+  font: 800 12px/1 var(--ui);
+}
+
+.site-footer a {
+  text-decoration: none;
+  font-weight: 800;
+}
+
 @media (max-width: 1180px) {
   .shop-layout {
     grid-template-columns: 1fr;
@@ -1715,6 +1769,15 @@ td:nth-child(2) {
   .admin-heading {
     align-items: start;
     flex-direction: column;
+  }
+
+  .site-footer {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .site-footer nav {
+    justify-content: flex-start;
   }
 
   .filters,
