@@ -89,6 +89,25 @@ export async function getBackendConfig() {
   }
 }
 
+export async function getAdminSession() {
+  if (!supabase) return null
+  const { data } = await supabase.auth.getSession()
+  return data.session
+}
+
+export async function signInAdmin({ email, password }) {
+  if (!supabase) {
+    return { session: null, error: { message: 'Supabase is not configured.' } }
+  }
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  return { session: data.session, error }
+}
+
+export async function signOutAdmin() {
+  if (!supabase) return
+  await supabase.auth.signOut()
+}
+
 export async function fetchCards() {
   if (!supabase) return []
   const { data, error } = await supabase.from('cards').select('*').order('created_at')
@@ -136,7 +155,7 @@ export async function submitReservation({ reservation }) {
     }
   }
 
-  const { error: reservationError } = await supabase.from('reservations').upsert({
+  const { error: reservationError } = await supabase.from('reservations').insert({
     id: reservation.id,
     customer_name: reservation.customer,
     customer_email: reservation.email,
@@ -155,22 +174,6 @@ export async function submitReservation({ reservation }) {
       databaseSaved: false,
       emailSent: false,
       message: `Erreur Supabase : ${reservationError.message}`,
-    }
-  }
-
-  const nextCards = reservation.lines.map((line) => ({
-    ...toCardRow(line),
-    stock: 0,
-    status: 'reserved',
-    reserved_until: reservation.reservedUntil || null,
-  }))
-
-  const { error: cardsError } = await supabase.from('cards').upsert(nextCards)
-  if (cardsError) {
-    return {
-      databaseSaved: false,
-      emailSent: false,
-      message: `Erreur cartes Supabase : ${cardsError.message}`,
     }
   }
 

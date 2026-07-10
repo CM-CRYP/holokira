@@ -34,6 +34,9 @@ import {
   fetchCards,
   fetchReservations,
   getBackendConfig,
+  getAdminSession,
+  signInAdmin,
+  signOutAdmin,
   submitReservation,
   syncCards,
   updateRemoteReservation,
@@ -98,8 +101,8 @@ const labels = {
     orderCreated: 'Réservation envoyée.',
     emptyOrders: 'Aucune réservation pour le moment.',
     loginTitle: 'Accès admin',
-    loginIntro: 'Entre le code admin pour gérer la boutique.',
-    loginError: 'Code incorrect.',
+    loginIntro: 'Connecte-toi avec ton compte administrateur Supabase.',
+    loginError: 'Connexion impossible.',
     logout: 'Déconnexion',
     customerInfo: 'Informations client',
     fullName: 'Nom complet',
@@ -175,8 +178,8 @@ const labels = {
     orderCreated: 'Reservation sent.',
     emptyOrders: 'No reservations yet.',
     loginTitle: 'Admin access',
-    loginIntro: 'Enter the admin code to manage the shop.',
-    loginError: 'Wrong code.',
+    loginIntro: 'Sign in with your Supabase administrator account.',
+    loginError: 'Unable to sign in.',
     logout: 'Log out',
     customerInfo: 'Customer details',
     fullName: 'Full name',
@@ -679,7 +682,7 @@ function ShopView(props) {
               key={card.id}
               card={card}
               selected={props.selected?.id === card.id}
-              onSelect={props.setSelected}
+              onSelect={props.openCardPage}
               onAdd={props.addToCart}
               t={props.t}
             />
@@ -704,7 +707,7 @@ function ShopView(props) {
   )
 }
 
-function CardsView({ cards, setSelected, addToCart, setView, site, t }) {
+function CardsView({ cards, openCardPage, addToCart, site, t }) {
   return (
     <main className="simple-page">
       <div className="page-heading">
@@ -717,10 +720,7 @@ function CardsView({ cards, setSelected, addToCart, setView, site, t }) {
             className={!isReservable(card) ? 'inventory-row reserved' : 'inventory-row'}
             key={card.id}
             type="button"
-            onClick={() => {
-              setSelected(card)
-              setView('shop')
-            }}
+            onClick={() => openCardPage(card)}
           >
             <CardArt card={card} />
             <span>
@@ -746,6 +746,74 @@ function CardsView({ cards, setSelected, addToCart, setView, site, t }) {
   )
 }
 
+function CardDetailPage({ card, addToCart, setView, site, t }) {
+  if (!card) {
+    return (
+      <main className="simple-page">
+        <div className="empty-state">
+          <PackageCheck size={28} />
+          <strong>Carte introuvable</strong>
+          <p>Retourne à la boutique pour choisir une carte disponible.</p>
+          <button className="checkout" type="button" onClick={() => setView('shop')}>
+            Boutique
+          </button>
+        </div>
+      </main>
+    )
+  }
+
+  const reservable = isReservable(card)
+
+  return (
+    <main className="card-detail-page">
+      <section className="card-detail-hero">
+        <CardArt card={card} large />
+        <div className="card-detail-copy">
+          <button className="text-button" type="button" onClick={() => setView('shop')}>
+            ← Retour boutique
+          </button>
+          <span className="status">{getCardStatusLabel(card, t)}</span>
+          <h1>{card.name}</h1>
+          <p>{card.set}</p>
+          <strong>{formatMoney(card.price)}</strong>
+          <button className="checkout" type="button" onClick={() => addToCart(card.id)} disabled={!reservable}>
+            <ShoppingBag size={18} />
+            {reservable ? t.buy : getCardStatusLabel(card, t)}
+          </button>
+        </div>
+      </section>
+      <section className="card-detail-grid">
+        <article>
+          <h2>Informations</h2>
+          <dl className="spec-grid">
+            <div>
+              <dt>{t.rarity}</dt>
+              <dd>{card.rarity}</dd>
+            </div>
+            <div>
+              <dt>{t.condition}</dt>
+              <dd>{card.condition}</dd>
+            </div>
+            <div>
+              <dt>{t.language}</dt>
+              <dd>{card.language}</dd>
+            </div>
+            <div>
+              <dt>{t.grade}</dt>
+              <dd>{card.grade}</dd>
+            </div>
+          </dl>
+        </article>
+        <article>
+          <h2>Descriptif</h2>
+          <p>{card.flaws || 'Aucun défaut majeur signalé. Photos réelles à ajouter avant la mise en vente définitive.'}</p>
+          <p>{site.copy[site.language].paymentNote}</p>
+        </article>
+      </section>
+    </main>
+  )
+}
+
 function CollectionPage({ title, intro, cards, setSelected, addToCart, setView, site, t }) {
   return (
     <main className="simple-page">
@@ -761,7 +829,7 @@ function CollectionPage({ title, intro, cards, setSelected, addToCart, setView, 
             selected={false}
             onSelect={(nextCard) => {
               setSelected(nextCard)
-              setView('shop')
+              setView('cardDetail')
             }}
             onAdd={addToCart}
             t={t}
@@ -1318,9 +1386,6 @@ function SettingsEditor({ site, setSite }) {
         <span>Configure la langue par défaut, le contact et la livraison.</span>
       </div>
       <div className="settings-grid">
-        <Field label="Code admin">
-          <TextInput value={site.adminPin} onChange={(value) => updateSite('adminPin', value)} />
-        </Field>
         <Field label="Langue du site">
           <select value={site.language} onChange={(event) => updateSite('language', event.target.value)}>
             <option value="fr">Français</option>
@@ -1345,16 +1410,21 @@ function SettingsEditor({ site, setSite }) {
 }
 
 function AdminLogin({ site, t, loginAdmin }) {
-  const [pin, setPin] = useState('')
+  const [email, setEmail] = useState(site.contactEmail)
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  function submitLogin(event) {
+  async function submitLogin(event) {
     event.preventDefault()
-    if (pin === site.adminPin) {
+    setIsLoading(true)
+    const result = await signInAdmin({ email, password })
+    setIsLoading(false)
+    if (result.session) {
       setError('')
       loginAdmin()
     } else {
-      setError(t.loginError)
+      setError(result.error?.message || t.loginError)
     }
   }
 
@@ -1364,13 +1434,16 @@ function AdminLogin({ site, t, loginAdmin }) {
         <Lock size={34} />
         <h1>{t.loginTitle}</h1>
         <p>{t.loginIntro}</p>
-        <Field label="Code">
-          <TextInput value={pin} onChange={setPin} />
+        <Field label={t.email}>
+          <TextInput type="email" value={email} onChange={setEmail} />
+        </Field>
+        <Field label="Mot de passe">
+          <TextInput type="password" value={password} onChange={setPassword} />
         </Field>
         {error && <p className="form-error">{error}</p>}
-        <button className="checkout" type="submit">
+        <button className="checkout" type="submit" disabled={!email || !password || isLoading}>
           <Lock size={18} />
-          Admin
+          {isLoading ? 'Connexion...' : 'Admin'}
         </button>
       </form>
     </main>
@@ -1623,12 +1696,13 @@ function App() {
     async function loadRemoteData() {
       const config = await getBackendConfig()
       setBackendConfig(config)
+      const session = await getAdminSession()
+      if (session) {
+        setIsAdminUnlocked(true)
+      }
       if (!config.databaseEnabled) return
 
-      const [remoteCards, remoteReservations] = await Promise.all([
-        fetchCards(),
-        fetchReservations(),
-      ])
+      const remoteCards = await fetchCards()
 
       if (remoteCards.length > 0) {
         const mergedCards = mergeCards(starterCards, remoteCards)
@@ -1639,7 +1713,8 @@ function App() {
         syncCards(starterCards)
       }
 
-      if (remoteReservations.length > 0) {
+      if (session) {
+        const remoteReservations = await fetchReservations()
         setOrders(remoteReservations)
         saveLocal('kc-orders', remoteReservations)
       }
@@ -1724,6 +1799,23 @@ function App() {
     setCart(next)
     saveLocal('kc-cart', next)
     flash(t.productAdded)
+  }
+
+  function openCardPage(card) {
+    setSelected(card)
+    setView('cardDetail')
+  }
+
+  async function unlockAdmin() {
+    setIsAdminUnlocked(true)
+    const remoteReservations = await fetchReservations()
+    setOrders(remoteReservations)
+    saveLocal('kc-orders', remoteReservations)
+  }
+
+  async function logoutAdmin() {
+    await signOutAdmin()
+    setIsAdminUnlocked(false)
   }
 
   function updateQty(id, qty) {
@@ -1854,6 +1946,7 @@ function App() {
           filteredCards={filteredCards}
           selected={selected}
           setSelected={setSelected}
+          openCardPage={openCardPage}
           addToCart={addToCart}
           cart={cart}
           updateQty={updateQty}
@@ -1870,7 +1963,15 @@ function App() {
       {view === 'cards' && (
         <CardsView
           cards={cards}
-          setSelected={setSelected}
+          openCardPage={openCardPage}
+          addToCart={addToCart}
+          site={site}
+          t={t}
+        />
+      )}
+      {view === 'cardDetail' && (
+        <CardDetailPage
+          card={selected}
           addToCart={addToCart}
           setView={setView}
           site={site}
@@ -1919,9 +2020,7 @@ function App() {
         <AdminLogin
           site={site}
           t={t}
-          loginAdmin={() => {
-            setIsAdminUnlocked(true)
-          }}
+          loginAdmin={unlockAdmin}
         />
       )}
       {view === 'admin' && isAdminUnlocked && (
@@ -1936,9 +2035,7 @@ function App() {
           site={site}
           setSite={setSite}
           t={t}
-          logoutAdmin={() => {
-            setIsAdminUnlocked(false)
-          }}
+          logoutAdmin={logoutAdmin}
           backendConfig={backendConfig}
         />
       )}

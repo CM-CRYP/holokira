@@ -17,19 +17,35 @@ Le panel admin permet aussi de passer une carte en `Disponible`, `Réservée` ou
 `Vendue`, de remettre une réservation en vente, d'ajouter une note privée, et
 de gérer une durée de réservation temporaire.
 
-## Admin local
+## Admin sécurisé
 
-Le code admin de départ est `1234`. Il est modifiable dans l'onglet
-`Paramètres` du panel admin.
+Le panel admin utilise Supabase Auth. Il n'y a plus de code admin public dans le
+site.
+
+Dans Supabase :
+
+1. Ouvre `Authentication`.
+2. Va dans `Users`.
+3. Clique sur `Add user`.
+4. Crée ton compte administrateur avec ton e-mail et un mot de passe fort.
+
+Ensuite, sur le site, ouvre `Admin` et connecte-toi avec ce compte. Les
+réservations et les actions admin ne sont visibles qu'après connexion.
 
 ## Supabase
 
-Le fichier [supabase-schema.sql](./supabase-schema.sql) contient les tables et
-policies nécessaires : cartes, statuts, images, défauts visibles, réservations,
-lignes de réservation, notes privées, demandes de rachat et paramètres du site.
+Le fichier [supabase-schema.sql](./supabase-schema.sql) contient les tables,
+policies et triggers nécessaires : cartes, statuts, images, défauts visibles,
+réservations, lignes de réservation, notes privées, demandes de rachat et
+paramètres du site.
 
 Dans Supabase, ouvre `SQL Editor`, colle le fichier complet, puis clique sur
 `Run`.
+
+Important : relance ce fichier après chaque changement de sécurité. Les clients
+peuvent lire les cartes et créer une réservation, mais seul un compte connecté
+avec Supabase Auth peut ajouter, modifier ou supprimer les cartes et consulter
+les réservations.
 
 Variables nécessaires côté site :
 
@@ -54,6 +70,9 @@ Ajoute ensuite les variables d'environnement dans Cloudflare Pages :
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
 ```
+
+Ne mets jamais la clé `service_role` ou `secret` dans Cloudflare Pages. Le site
+public doit uniquement recevoir la clé `anon public`.
 
 ## Lancer en local
 

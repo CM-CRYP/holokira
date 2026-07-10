@@ -127,7 +127,6 @@ export const starterSite = {
   colorMode: 'dark',
   brandName: 'HoloKira',
   brandMark: 'HK',
-  adminPin: '1234',
   contactEmail: 'contact@holokira.eu',
   supportPhone: '+33 6 12 34 56 78',
   freeShippingFrom: 120,

@@ -696,6 +696,91 @@ dd {
   padding: 36px clamp(18px, 4vw, 56px) 56px;
 }
 
+.card-detail-page {
+  display: grid;
+  gap: 18px;
+  padding: 36px clamp(18px, 4vw, 56px) 56px;
+}
+
+.card-detail-hero {
+  display: grid;
+  grid-template-columns: minmax(280px, 430px) minmax(0, 1fr);
+  gap: clamp(18px, 4vw, 44px);
+  align-items: stretch;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.card-detail-hero .card-art {
+  min-height: clamp(380px, 54vw, 560px);
+  box-shadow: var(--shadow-strong);
+}
+
+.card-detail-copy {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 16px;
+}
+
+.card-detail-copy h1 {
+  max-width: 760px;
+  margin: 0;
+  font: 900 clamp(46px, 7vw, 92px)/0.9 var(--display);
+  letter-spacing: 0;
+}
+
+.card-detail-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 19px;
+}
+
+.card-detail-copy > strong {
+  font: 900 34px/1 var(--display);
+}
+
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0;
+  color: var(--muted);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: 800 13px/1 var(--ui);
+}
+
+.text-button:hover {
+  color: var(--ink);
+}
+
+.card-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+  gap: 14px;
+}
+
+.card-detail-grid article {
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.card-detail-grid h2 {
+  margin: 0 0 14px;
+  font: 900 26px/1 var(--display);
+}
+
+.card-detail-grid p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
 .page-heading {
   padding-bottom: 22px;
   border-bottom: 1px solid var(--line);
@@ -1261,6 +1346,11 @@ td:nth-child(2) {
     grid-template-columns: 1fr;
   }
 
+  .card-detail-hero,
+  .card-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
   .admin-sidebar {
     position: static;
     display: flex;
@@ -1289,7 +1379,8 @@ td:nth-child(2) {
 @media (max-width: 560px) {
   .shop-layout,
   .simple-page,
-  .admin-page {
+  .admin-page,
+  .card-detail-page {
     padding-inline: 12px;
   }
 

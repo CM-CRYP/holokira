@@ -81,45 +81,57 @@ drop policy if exists "Public can read cards" on public.cards;
 drop policy if exists "Public can upsert cards" on public.cards;
 drop policy if exists "Public can update cards" on public.cards;
 drop policy if exists "Public can delete cards" on public.cards;
+drop policy if exists "Authenticated can upsert cards" on public.cards;
+drop policy if exists "Authenticated can update cards" on public.cards;
+drop policy if exists "Authenticated can delete cards" on public.cards;
 drop policy if exists "Public can read reservations" on public.reservations;
 drop policy if exists "Public can create reservations" on public.reservations;
 drop policy if exists "Public can update reservations" on public.reservations;
+drop policy if exists "Authenticated can read reservations" on public.reservations;
+drop policy if exists "Authenticated can update reservations" on public.reservations;
 drop policy if exists "Public can read reservation items" on public.reservation_items;
 drop policy if exists "Public can create reservation items" on public.reservation_items;
+drop policy if exists "Authenticated can read reservation items" on public.reservation_items;
 drop policy if exists "Public can create sell requests" on public.sell_requests;
 
 create policy "Public can read cards"
 on public.cards for select
 using (true);
 
-create policy "Public can upsert cards"
+create policy "Authenticated can upsert cards"
 on public.cards for insert
+to authenticated
 with check (true);
 
-create policy "Public can update cards"
+create policy "Authenticated can update cards"
 on public.cards for update
+to authenticated
 using (true)
 with check (true);
 
-create policy "Public can delete cards"
+create policy "Authenticated can delete cards"
 on public.cards for delete
+to authenticated
 using (true);
 
-create policy "Public can read reservations"
+create policy "Authenticated can read reservations"
 on public.reservations for select
+to authenticated
 using (true);
 
 create policy "Public can create reservations"
 on public.reservations for insert
 with check (true);
 
-create policy "Public can update reservations"
+create policy "Authenticated can update reservations"
 on public.reservations for update
+to authenticated
 using (true)
 with check (true);
 
-create policy "Public can read reservation items"
+create policy "Authenticated can read reservation items"
 on public.reservation_items for select
+to authenticated
 using (true);
 
 create policy "Public can create reservation items"
@@ -129,3 +141,36 @@ with check (true);
 create policy "Public can create sell requests"
 on public.sell_requests for insert
 with check (true);
+
+create or replace function public.reserve_card_from_item()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  reservation_deadline timestamptz;
+begin
+  select reserved_until into reservation_deadline
+  from public.reservations
+  where id = new.reservation_id;
+
+  update public.cards
+  set
+    status = 'reserved',
+    reserved_until = reservation_deadline,
+    stock = greatest(stock - new.quantity, 0)
+  where id = new.card_id
+    and status = 'available'
+    and stock >= new.quantity;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists reserve_card_after_reservation_item on public.reservation_items;
+
+create trigger reserve_card_after_reservation_item
+after insert on public.reservation_items
+for each row
+execute function public.reserve_card_from_item();
