@@ -324,14 +324,6 @@ function loadSellRequests() {
   return loadLocal('kc-sell-requests', starterSellRequests)
 }
 
-function mergeCards(localCards, remoteCards) {
-  const byId = new Map(localCards.map((card) => [card.id, card]))
-  remoteCards.forEach((card) => {
-    byId.set(card.id, { ...byId.get(card.id), ...card })
-  })
-  return [...byId.values()]
-}
-
 function formatMoney(value) {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
@@ -2664,14 +2656,9 @@ function App() {
 
       const remoteCards = await fetchCards()
 
-      if (remoteCards.length > 0) {
-        const mergedCards = mergeCards(starterCards, remoteCards)
-        setCards(mergedCards)
-        setSelected(mergedCards[0])
-        saveLocal('kc-cards', mergedCards)
-      } else {
-        syncCards(starterCards)
-      }
+      setCards(remoteCards)
+      setSelected(remoteCards[0] || null)
+      saveLocal('kc-cards', remoteCards)
 
       if (session) {
         const remoteReservations = await fetchReservations()
@@ -2992,9 +2979,7 @@ function App() {
     })
     if (backendConfig.databaseEnabled && reservationResult.databaseSaved) {
       const remoteCards = await fetchCards()
-      if (remoteCards.length > 0) {
-        nextCards = mergeCards(starterCards, remoteCards)
-      }
+      nextCards = remoteCards
     } else {
       persistCards(nextCards)
     }
