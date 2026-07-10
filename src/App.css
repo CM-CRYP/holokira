@@ -1314,34 +1314,6 @@ dd {
   gap: 14px;
 }
 
-.card-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-}
-
-.card-gallery figure {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 10px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
-}
-
-.card-gallery img {
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
-  background: var(--paper-deep);
-}
-
-.card-gallery figcaption {
-  color: var(--muted);
-  font: 800 11px/1 var(--ui);
-}
-
 .card-detail-grid article {
   padding: 16px;
   border: 1px solid var(--line);
