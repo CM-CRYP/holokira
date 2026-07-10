@@ -565,11 +565,9 @@ function ProductCard({ card, selected, onSelect, onAdd, t }) {
   return (
     <article className={`${selected ? 'product-card selected' : 'product-card'} ${unavailable ? 'reserved' : ''}`}>
       <button className="product-open" type="button" onClick={() => onSelect(card)}>
-        {badges.length > 0 && (
-          <span className="badge-row">
-            {badges.map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
-          </span>
-        )}
+        <span className="badge-row" aria-hidden={badges.length === 0}>
+          {badges.map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
+        </span>
         <CardArt card={card} />
         <div className="product-info">
           <div>

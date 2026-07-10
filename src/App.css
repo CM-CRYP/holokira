@@ -595,10 +595,14 @@ textarea {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+  align-items: stretch;
 }
 
 .product-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
@@ -621,6 +625,9 @@ textarea {
 
 .product-open {
   position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   width: 100%;
   padding: 12px;
   color: var(--ink);
@@ -633,6 +640,7 @@ textarea {
 .badge-row {
   display: flex;
   flex-wrap: wrap;
+  min-height: 24px;
   gap: 6px;
   margin-bottom: 8px;
 }
@@ -652,6 +660,7 @@ textarea {
 .product-actions {
   display: flex;
   gap: 8px;
+  margin-top: auto;
   padding: 0 12px 12px;
 }
 
@@ -683,6 +692,7 @@ textarea {
   position: relative;
   display: grid;
   min-height: 174px;
+  aspect-ratio: 1.58 / 1;
   overflow: hidden;
   padding: 12px;
   color: white;
@@ -793,12 +803,18 @@ textarea {
 .product-info {
   margin-top: 12px;
   align-items: start;
+  min-height: 58px;
 }
 
 .product-info h3 {
   margin: 0 0 4px;
   color: var(--ink);
   font: 800 18px/1.1 var(--display);
+}
+
+.product-info h3,
+.product-info p {
+  overflow-wrap: anywhere;
 }
 
 .product-info p,
@@ -821,6 +837,8 @@ td span,
 .product-meta {
   justify-content: flex-start;
   flex-wrap: wrap;
+  align-content: flex-start;
+  min-height: 62px;
   margin-top: 12px;
 }
 
