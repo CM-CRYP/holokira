@@ -464,10 +464,11 @@
 
 .home-card-link {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr) auto;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   padding: 12px;
+  overflow: hidden;
   color: var(--ink);
   text-align: left;
   border: 1px solid var(--line);
@@ -477,6 +478,8 @@
 }
 
 .home-card-link .card-art {
+  width: 100%;
+  min-width: 0;
   min-height: 104px;
 }
 
@@ -486,14 +489,22 @@
   display: none;
 }
 
-.home-card-link span {
+.home-card-copy {
   display: grid;
+  min-width: 0;
   gap: 5px;
 }
 
 .home-card-link strong,
 .home-card-link b {
   color: var(--ink);
+}
+
+.home-card-link strong,
+.home-card-link small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .home-card-link small {
@@ -2232,7 +2243,7 @@ td:nth-child(2) {
   }
 
   .home-card-link {
-    grid-template-columns: 74px minmax(0, 1fr);
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 
   .home-card-link b {

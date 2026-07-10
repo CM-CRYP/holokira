@@ -610,7 +610,7 @@ function HomeView({ cards, openCardPage, setView, site, t }) {
         {previewCards.map((card) => (
           <button className="home-card-link" type="button" key={card.id} onClick={() => openCardPage(card)}>
             <CardArt card={card} />
-            <span>
+            <span className="home-card-copy">
               <strong>{card.name}</strong>
               <small>{card.set}</small>
             </span>
