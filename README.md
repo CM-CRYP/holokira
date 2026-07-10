@@ -52,6 +52,10 @@ réservation et ses cartes dans une seule opération : si une carte n'est plus
 disponible, la demande est refusée proprement au lieu de créer une réservation
 incomplète.
 
+Les cartes utilisent aussi des champs de merchandising gérés depuis l'admin :
+`badge`, `tags` et `added_at`. Relance le SQL après cette mise à jour pour que
+les badges, tags et dates d'ajout soient synchronisés avec Supabase.
+
 Variables nécessaires côté site :
 
 ```env

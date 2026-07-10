@@ -79,6 +79,12 @@ const labels = {
     admin: 'Admin',
     all: 'Tous',
     allFeminine: 'Toutes',
+    sort: 'Tri',
+    sortFeatured: 'Pépites',
+    sortNewest: 'Nouveautés',
+    sortPriceAsc: 'Prix croissant',
+    sortPriceDesc: 'Prix décroissant',
+    sortRarity: 'Rareté',
     buy: 'Je réserve',
     add: 'Ajouter',
     addToCart: 'Ajouter aux réservations',
@@ -168,6 +174,12 @@ const labels = {
     admin: 'Admin',
     all: 'All',
     allFeminine: 'All',
+    sort: 'Sort',
+    sortFeatured: 'Highlights',
+    sortNewest: 'Newest',
+    sortPriceAsc: 'Price low to high',
+    sortPriceDesc: 'Price high to low',
+    sortRarity: 'Rarity',
     buy: 'Reserve',
     add: 'Add',
     addToCart: 'Add to reservations',
@@ -382,6 +394,13 @@ function addHours(date, hours) {
   return new Date(date.getTime() + Number(hours || 48) * 60 * 60 * 1000).toISOString()
 }
 
+function getCardBadges(card) {
+  return [
+    card.badge,
+    card.featured ? 'Coup de cœur' : '',
+  ].filter(Boolean).filter((badge, index, list) => list.indexOf(badge) === index)
+}
+
 function HoloCardShowcase({ cards, openCardPage }) {
   const showcaseCards = cards.slice(0, 5)
 
@@ -541,10 +560,16 @@ function ProductCard({ card, selected, onSelect, onAdd, t }) {
   const reservable = isReservable(card)
   const status = getCardStatus(card)
   const unavailable = !reservable
+  const badges = getCardBadges(card)
 
   return (
     <article className={`${selected ? 'product-card selected' : 'product-card'} ${unavailable ? 'reserved' : ''}`}>
       <button className="product-open" type="button" onClick={() => onSelect(card)}>
+        {badges.length > 0 && (
+          <span className="badge-row">
+            {badges.map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
+          </span>
+        )}
         <CardArt card={card} />
         <div className="product-info">
           <div>
@@ -562,6 +587,7 @@ function ProductCard({ card, selected, onSelect, onAdd, t }) {
           {status === 'reserved' && card.reservedUntil && (
             <span>{t.reservedUntil} {formatDateTime(card.reservedUntil)}</span>
           )}
+          {card.tags && <span>{card.tags}</span>}
         </div>
       </button>
       <div className="product-actions">
@@ -588,9 +614,22 @@ function ProductCard({ card, selected, onSelect, onAdd, t }) {
   )
 }
 
-function Filters({ query, setQuery, type, setType, rarity, setRarity, cards, site, t }) {
+function Filters({ query, setQuery, type, setType, rarity, setRarity, status, setStatus, sort, setSort, cards, site, t }) {
   const types = [t.all, ...new Set(cards.map((card) => card.type))]
   const rarities = [t.allFeminine, ...new Set(cards.map((card) => card.rarity))]
+  const statuses = [
+    [t.all, t.all],
+    ['available', t.available],
+    ['reserved', t.reserved],
+    ['sold', t.sold],
+  ]
+  const sorts = [
+    ['featured', t.sortFeatured],
+    ['newest', t.sortNewest],
+    ['priceAsc', t.sortPriceAsc],
+    ['priceDesc', t.sortPriceDesc],
+    ['rarity', t.sortRarity],
+  ]
 
   return (
     <section className="filters" aria-label="Filtres du catalogue">
@@ -615,6 +654,22 @@ function Filters({ query, setQuery, type, setType, rarity, setRarity, cards, sit
         <select value={rarity} onChange={(event) => setRarity(event.target.value)}>
           {rarities.map((option) => (
             <option key={option}>{option}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <PackageCheck size={17} />
+        <select value={status} onChange={(event) => setStatus(event.target.value)}>
+          {statuses.map(([value, label]) => (
+            <option value={value} key={value}>{label}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <BarChart3 size={17} />
+        <select value={sort} onChange={(event) => setSort(event.target.value)}>
+          {sorts.map(([value, label]) => (
+            <option value={value} key={value}>{label}</option>
           ))}
         </select>
       </label>
@@ -830,13 +885,14 @@ function ShopView(props) {
   )
 }
 
-function CardsView({ cards, openCardPage, addToCart, site, t }) {
+function CardsView({ cards, allCards, filters, openCardPage, addToCart, site, t }) {
   return (
     <main className="simple-page">
       <div className="page-heading">
         <h1>{t.cards}</h1>
         <p>{site.copy[site.language].cardsIntro}</p>
       </div>
+      {filters && <Filters {...filters} cards={allCards} site={site} t={t} />}
       <div className="inventory-list">
         {cards.map((card) => (
           <button
@@ -847,6 +903,11 @@ function CardsView({ cards, openCardPage, addToCart, site, t }) {
           >
             <CardArt card={card} />
             <span>
+              {getCardBadges(card).length > 0 && (
+                <span className="badge-row">
+                  {getCardBadges(card).map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
+                </span>
+              )}
               <strong>{card.name}</strong>
               <small>{card.set} - {card.rarity}</small>
             </span>
@@ -886,6 +947,7 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
   }
 
   const reservable = isReservable(card)
+  const badges = getCardBadges(card)
 
   return (
     <main className="card-detail-page">
@@ -895,6 +957,11 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
           <button className="text-button" type="button" onClick={() => setView('shop')}>
             ← Retour boutique
           </button>
+          {badges.length > 0 && (
+            <span className="badge-row">
+              {badges.map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
+            </span>
+          )}
           <span className="status">{getCardStatusLabel(card, t)}</span>
           <h1>{card.name}</h1>
           <p>{card.set}</p>
@@ -931,12 +998,37 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
               <dt>{t.grade}</dt>
               <dd>{card.grade}</dd>
             </div>
+            <div>
+              <dt>Date d’ajout</dt>
+              <dd>{card.addedAt ? new Date(card.addedAt).toLocaleDateString('fr-FR') : '-'}</dd>
+            </div>
+            <div>
+              <dt>Tags</dt>
+              <dd>{card.tags || '-'}</dd>
+            </div>
           </dl>
         </article>
         <article>
           <h2>Descriptif</h2>
           <p>{card.flaws || 'Aucun défaut majeur signalé. Photos réelles à ajouter avant la mise en vente définitive.'}</p>
           <p>{site.copy[site.language].paymentNote}</p>
+        </article>
+      </section>
+      <section className="trust-grid">
+        <article>
+          <Check size={18} />
+          <strong>Authenticité vérifiée</strong>
+          <p>Chaque carte est contrôlée avant publication, avec grade, langue et état indiqués clairement.</p>
+        </article>
+        <article>
+          <Eye size={18} />
+          <strong>État transparent</strong>
+          <p>Les défauts visibles sont indiqués sur la fiche pour éviter les mauvaises surprises.</p>
+        </article>
+        <article>
+          <PackageCheck size={18} />
+          <strong>Expédition protégée</strong>
+          <p>Envoi suivi depuis la France avec protection rigide adaptée aux cartes de collection.</p>
         </article>
       </section>
     </main>
@@ -1347,6 +1439,10 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     imageUrl: '',
     flaws: '',
     privateNote: '',
+    badge: '',
+    tags: '',
+    addedAt: new Date().toISOString().slice(0, 10),
+    featured: false,
     reserved: false,
   })
 
@@ -1369,7 +1465,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       stock: Number(draft.stock),
       status: 'available',
       reserved: false,
-      featured: false,
+      featured: Boolean(draft.featured),
     }
     persist([nextCard, ...cards])
     setDraft((current) => ({ ...current, name: '', set: '', price: '39.90', stock: '1' }))
@@ -1416,6 +1512,26 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
         <Field label="Couleur">
           <input type="color" value={draft.color} onChange={(event) => setDraft({ ...draft, color: event.target.value })} />
         </Field>
+        <Field label="Badge">
+          <select value={draft.badge} onChange={(event) => setDraft({ ...draft, badge: event.target.value })}>
+            <option value="">Aucun</option>
+            <option>Nouveau</option>
+            <option>Coup de cœur</option>
+          </select>
+        </Field>
+        <Field label="Tags">
+          <TextInput value={draft.tags} onChange={(value) => setDraft({ ...draft, tags: value })} />
+        </Field>
+        <Field label="Date d’ajout">
+          <TextInput type="date" value={draft.addedAt} onChange={(value) => setDraft({ ...draft, addedAt: value })} />
+        </Field>
+        <Field label="Coup de cœur">
+          <input
+            type="checkbox"
+            checked={Boolean(draft.featured)}
+            onChange={(event) => setDraft({ ...draft, featured: event.target.checked })}
+          />
+        </Field>
         <button type="submit">
           <Plus size={18} />
           {t.add}
@@ -1437,11 +1553,31 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
                 ['imageUrl', 'Image URL'],
                 ['flaws', 'Défauts visibles'],
                 ['privateNote', 'Note privée'],
+                ['tags', 'Tags'],
+                ['addedAt', 'Date d’ajout'],
               ].map(([field, label]) => (
                 <Field label={label} key={field}>
-                  <TextInput value={card[field]} onChange={(value) => updateCard(card.id, field, value)} />
+                  <TextInput
+                    type={field === 'addedAt' ? 'date' : 'text'}
+                    value={card[field] || ''}
+                    onChange={(value) => updateCard(card.id, field, value)}
+                  />
                 </Field>
               ))}
+              <Field label="Badge">
+                <select value={card.badge || ''} onChange={(event) => updateCard(card.id, 'badge', event.target.value)}>
+                  <option value="">Aucun</option>
+                  <option>Nouveau</option>
+                  <option>Coup de cœur</option>
+                </select>
+              </Field>
+              <Field label="Coup de cœur">
+                <input
+                  type="checkbox"
+                  checked={Boolean(card.featured)}
+                  onChange={(event) => updateCard(card.id, 'featured', event.target.checked)}
+                />
+              </Field>
               <Field label="Statut">
                 <select value={getCardStatus(card)} onChange={(event) => {
                   const status = event.target.value
@@ -1886,6 +2022,8 @@ function App() {
   const [query, setQuery] = useState('')
   const [type, setType] = useState(labels[site.language].all)
   const [rarity, setRarity] = useState(labels[site.language].allFeminine)
+  const [statusFilter, setStatusFilter] = useState(labels[site.language].all)
+  const [sortOrder, setSortOrder] = useState('featured')
   const [toast, setToast] = useState('')
   const t = labels[site.language]
 
@@ -1991,7 +2129,7 @@ function App() {
 
   const filteredCards = useMemo(() => {
     const normalized = query.toLowerCase().trim()
-    return cards.filter((card) => {
+    const filtered = cards.filter((card) => {
       const matchQuery = [card.name, card.set, card.rarity, card.type]
         .join(' ')
         .toLowerCase()
@@ -1999,9 +2137,18 @@ function App() {
       const matchType = [labels.fr.all, labels.en.all].includes(type) || card.type === type
       const matchRarity =
         [labels.fr.allFeminine, labels.en.allFeminine].includes(rarity) || card.rarity === rarity
-      return matchQuery && matchType && matchRarity
+      const matchStatus =
+        [labels.fr.all, labels.en.all].includes(statusFilter) || getCardStatus(card) === statusFilter
+      return matchQuery && matchType && matchRarity && matchStatus
     })
-  }, [cards, query, rarity, type])
+    return [...filtered].sort((a, b) => {
+      if (sortOrder === 'priceAsc') return Number(a.price) - Number(b.price)
+      if (sortOrder === 'priceDesc') return Number(b.price) - Number(a.price)
+      if (sortOrder === 'newest') return new Date(b.addedAt || 0) - new Date(a.addedAt || 0)
+      if (sortOrder === 'rarity') return `${a.rarity} ${a.name}`.localeCompare(`${b.rarity} ${b.name}`)
+      return Number(Boolean(b.featured || b.badge)) - Number(Boolean(a.featured || a.badge))
+    })
+  }, [cards, query, rarity, sortOrder, statusFilter, type])
 
   const japaneseCards = useMemo(
     () => cards.filter((card) => card.language?.toUpperCase() === 'JP'),
@@ -2036,6 +2183,7 @@ function App() {
     setSite(next)
     setType(labels[language].all)
     setRarity(labels[language].allFeminine)
+    setStatusFilter(labels[language].all)
     saveLocal('kc-site', next)
   }
 
@@ -2253,7 +2401,18 @@ function App() {
           checkoutDraft={checkoutDraft}
           setCheckoutDraft={setCheckoutDraft}
           setView={navigate}
-          filters={{ query, setQuery, type, setType, rarity, setRarity }}
+          filters={{
+            query,
+            setQuery,
+            type,
+            setType,
+            rarity,
+            setRarity,
+            status: statusFilter,
+            setStatus: setStatusFilter,
+            sort: sortOrder,
+            setSort: setSortOrder,
+          }}
           site={site}
           t={t}
         />
@@ -2269,7 +2428,20 @@ function App() {
       )}
       {view === 'cards' && (
         <CardsView
-          cards={cards}
+          cards={filteredCards}
+          allCards={cards}
+          filters={{
+            query,
+            setQuery,
+            type,
+            setType,
+            rarity,
+            setRarity,
+            status: statusFilter,
+            setStatus: setStatusFilter,
+            sort: sortOrder,
+            setSort: setSortOrder,
+          }}
           openCardPage={openCardPage}
           addToCart={addToCart}
           site={site}

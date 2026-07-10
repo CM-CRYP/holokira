@@ -17,6 +17,9 @@ export const starterCards = [
     flaws: 'Micro-rayures visibles uniquement sous lumière forte.',
     privateNote: '',
     featured: true,
+    badge: 'Coup de cœur',
+    tags: 'holo, feu, vitrine',
+    addedAt: '2026-07-10',
     color: '#e84842',
   },
   {
@@ -37,6 +40,9 @@ export const starterCards = [
     flaws: 'Carte propre, centrage légèrement à droite.',
     privateNote: '',
     featured: true,
+    badge: 'Nouveau',
+    tags: 'pikachu, japonais, illustration',
+    addedAt: '2026-07-10',
     color: '#f6c84f',
   },
   {
@@ -57,6 +63,9 @@ export const starterCards = [
     flaws: 'Légère trace sur le bord inférieur.',
     privateNote: '',
     featured: false,
+    badge: '',
+    tags: 'noctali, secret, gradée',
+    addedAt: '2026-07-09',
     color: '#222631',
   },
   {
@@ -77,6 +86,9 @@ export const starterCards = [
     flaws: 'Très bon état général.',
     privateNote: '',
     featured: false,
+    badge: '',
+    tags: 'plante, raw, ultra rare',
+    addedAt: '2026-07-08',
     color: '#2f9d73',
   },
   {
@@ -97,6 +109,9 @@ export const starterCards = [
     flaws: 'Boîtier gradé propre.',
     privateNote: '',
     featured: true,
+    badge: 'Coup de cœur',
+    tags: 'japonais, gradée, eau',
+    addedAt: '2026-07-07',
     color: '#367fd7',
   },
   {
@@ -117,12 +132,15 @@ export const starterCards = [
     flaws: 'Aucun défaut majeur signalé.',
     privateNote: '',
     featured: false,
+    badge: 'Nouveau',
+    tags: 'promo, psy, archive',
+    addedAt: '2026-07-10',
     color: '#e98ec8',
   },
 ]
 
 export const starterSite = {
-  dataVersion: 6,
+  dataVersion: 7,
   language: 'fr',
   colorMode: 'dark',
   brandName: 'HoloKira',

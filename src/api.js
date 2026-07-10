@@ -25,6 +25,9 @@ function toCardRow(card) {
     flaws: card.flaws || null,
     private_note: card.privateNote || null,
     featured: Boolean(card.featured),
+    badge: card.badge || null,
+    tags: card.tags || null,
+    added_at: card.addedAt || null,
     color: card.color || '#db2a2a',
   }
 }
@@ -48,6 +51,9 @@ function fromCardRow(row) {
     flaws: row.flaws || '',
     privateNote: row.private_note || '',
     featured: Boolean(row.featured),
+    badge: row.badge || '',
+    tags: row.tags || '',
+    addedAt: row.added_at || row.created_at || '',
     color: row.color,
   }
 }

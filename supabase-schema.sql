@@ -15,6 +15,9 @@ create table if not exists public.cards (
   flaws text,
   private_note text,
   featured boolean not null default false,
+  badge text,
+  tags text,
+  added_at date,
   color text not null default '#db2a2a',
   created_at timestamptz not null default now()
 );
@@ -71,6 +74,9 @@ alter table public.cards add column if not exists reserved_until timestamptz;
 alter table public.cards add column if not exists image_url text;
 alter table public.cards add column if not exists flaws text;
 alter table public.cards add column if not exists private_note text;
+alter table public.cards add column if not exists badge text;
+alter table public.cards add column if not exists tags text;
+alter table public.cards add column if not exists added_at date;
 
 alter table public.reservations add column if not exists reserved_until timestamptz;
 alter table public.reservations add column if not exists private_note text;
