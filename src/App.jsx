@@ -378,198 +378,189 @@ function addHours(date, hours) {
   return new Date(date.getTime() + Number(hours || 48) * 60 * 60 * 1000).toISOString()
 }
 
-function sampleEllipse(cx, cy, rx, ry, count, jitter = 0.05) {
-  return Array.from({ length: count }, () => {
-    const angle = Math.random() * Math.PI * 2
-    const radius = Math.sqrt(Math.random())
-    return {
-      x: cx + Math.cos(angle) * rx * radius * (1 + (Math.random() - 0.5) * jitter),
-      y: cy + Math.sin(angle) * ry * radius * (1 + (Math.random() - 0.5) * jitter),
-    }
-  })
-}
-
-function sampleLine(x1, y1, x2, y2, count, spread = 0.012) {
-  return Array.from({ length: count }, () => {
-    const t = Math.random()
-    return {
-      x: x1 + (x2 - x1) * t + (Math.random() - 0.5) * spread,
-      y: y1 + (y2 - y1) * t + (Math.random() - 0.5) * spread,
-    }
-  })
-}
-
-function makeCreaturePoints(parts) {
-  return parts.flatMap((part) => {
-    if (part.type === 'line') return sampleLine(...part.values)
-    return sampleEllipse(...part.values)
-  })
-}
-
-const creatureClouds = [
-  {
-    name: 'Pikachu',
-    color: '#ffd84d',
-    accent: '#ff5f57',
-    points: makeCreaturePoints([
-      { values: [0.5, 0.5, 0.15, 0.18, 180] },
-      { values: [0.5, 0.28, 0.13, 0.12, 120] },
-      { values: [0.39, 0.13, 0.035, 0.14, 50] },
-      { values: [0.61, 0.13, 0.035, 0.14, 50] },
-      { values: [0.42, 0.32, 0.035, 0.035, 26] },
-      { values: [0.58, 0.32, 0.035, 0.035, 26] },
-      { type: 'line', values: [0.64, 0.45, 0.82, 0.35, 46] },
-      { type: 'line', values: [0.82, 0.35, 0.73, 0.24, 46] },
-    ]),
-  },
-  {
-    name: 'Salamèche',
-    color: '#ff8a3d',
-    accent: '#ffd45c',
-    points: makeCreaturePoints([
-      { values: [0.5, 0.52, 0.12, 0.2, 160] },
-      { values: [0.5, 0.3, 0.11, 0.12, 110] },
-      { type: 'line', values: [0.58, 0.55, 0.78, 0.32, 80] },
-      { values: [0.81, 0.27, 0.055, 0.08, 70] },
-      { values: [0.43, 0.72, 0.04, 0.08, 35] },
-      { values: [0.58, 0.72, 0.04, 0.08, 35] },
-      { type: 'line', values: [0.38, 0.46, 0.25, 0.58, 35] },
-      { type: 'line', values: [0.62, 0.46, 0.73, 0.58, 35] },
-    ]),
-  },
-  {
-    name: 'Reptincel',
-    color: '#f35d34',
-    accent: '#ffcf4f',
-    points: makeCreaturePoints([
-      { values: [0.48, 0.52, 0.12, 0.22, 150] },
-      { values: [0.5, 0.27, 0.13, 0.11, 100] },
-      { values: [0.58, 0.17, 0.055, 0.035, 34] },
-      { type: 'line', values: [0.59, 0.53, 0.84, 0.31, 90] },
-      { values: [0.87, 0.24, 0.06, 0.09, 76] },
-      { type: 'line', values: [0.39, 0.43, 0.23, 0.36, 44] },
-      { type: 'line', values: [0.6, 0.42, 0.75, 0.37, 44] },
-      { values: [0.42, 0.75, 0.045, 0.09, 38] },
-      { values: [0.58, 0.75, 0.045, 0.09, 38] },
-    ]),
-  },
-  {
-    name: 'Dracaufeu',
-    color: '#ff6d35',
-    accent: '#4fb1ff',
-    points: makeCreaturePoints([
-      { values: [0.5, 0.55, 0.13, 0.21, 145] },
-      { values: [0.51, 0.3, 0.12, 0.1, 90] },
-      { type: 'line', values: [0.42, 0.45, 0.14, 0.26, 110] },
-      { type: 'line', values: [0.58, 0.45, 0.86, 0.26, 110] },
-      { values: [0.24, 0.34, 0.14, 0.1, 70] },
-      { values: [0.76, 0.34, 0.14, 0.1, 70] },
-      { type: 'line', values: [0.61, 0.58, 0.86, 0.72, 70] },
-      { values: [0.9, 0.76, 0.06, 0.07, 52] },
-      { values: [0.42, 0.76, 0.05, 0.08, 34] },
-      { values: [0.58, 0.76, 0.05, 0.08, 34] },
-    ]),
-  },
-  {
-    name: 'Carapuce',
-    color: '#67c7ff',
-    accent: '#d7b17f',
-    points: makeCreaturePoints([
-      { values: [0.5, 0.54, 0.14, 0.16, 145] },
-      { values: [0.5, 0.31, 0.13, 0.12, 110] },
-      { values: [0.36, 0.55, 0.05, 0.08, 38] },
-      { values: [0.64, 0.55, 0.05, 0.08, 38] },
-      { values: [0.41, 0.72, 0.055, 0.06, 36] },
-      { values: [0.59, 0.72, 0.055, 0.06, 36] },
-      { type: 'line', values: [0.62, 0.54, 0.78, 0.49, 60] },
-      { values: [0.81, 0.49, 0.045, 0.045, 36] },
-    ]),
-  },
-  {
-    name: 'Carabaffe',
-    color: '#79c9ff',
-    accent: '#f1e2c5',
-    points: makeCreaturePoints([
-      { values: [0.5, 0.53, 0.15, 0.17, 135] },
-      { values: [0.5, 0.29, 0.13, 0.12, 100] },
-      { values: [0.4, 0.17, 0.055, 0.06, 38] },
-      { values: [0.6, 0.17, 0.055, 0.06, 38] },
-      { values: [0.35, 0.55, 0.055, 0.08, 36] },
-      { values: [0.65, 0.55, 0.055, 0.08, 36] },
-      { type: 'line', values: [0.63, 0.54, 0.83, 0.47, 72] },
-      { values: [0.86, 0.46, 0.06, 0.035, 40] },
-      { values: [0.41, 0.74, 0.06, 0.06, 30] },
-      { values: [0.59, 0.74, 0.06, 0.06, 30] },
-    ]),
-  },
-  {
-    name: 'Tortank',
-    color: '#5aa9e8',
-    accent: '#d8b07f',
-    points: makeCreaturePoints([
-      { values: [0.5, 0.55, 0.19, 0.2, 160] },
-      { values: [0.5, 0.3, 0.13, 0.11, 90] },
-      { type: 'line', values: [0.38, 0.39, 0.25, 0.25, 64] },
-      { type: 'line', values: [0.62, 0.39, 0.75, 0.25, 64] },
-      { type: 'line', values: [0.24, 0.23, 0.14, 0.2, 44] },
-      { type: 'line', values: [0.76, 0.23, 0.86, 0.2, 44] },
-      { values: [0.31, 0.59, 0.075, 0.08, 42] },
-      { values: [0.69, 0.59, 0.075, 0.08, 42] },
-      { values: [0.42, 0.78, 0.07, 0.06, 34] },
-      { values: [0.58, 0.78, 0.07, 0.06, 34] },
-    ]),
-  },
-  {
-    name: 'Bulbizarre',
-    color: '#6ed7aa',
-    accent: '#89d85f',
-    points: makeCreaturePoints([
-      { values: [0.5, 0.58, 0.18, 0.14, 145] },
-      { values: [0.36, 0.44, 0.11, 0.1, 80] },
-      { values: [0.51, 0.36, 0.13, 0.1, 100] },
-      { values: [0.48, 0.25, 0.09, 0.08, 58] },
-      { values: [0.28, 0.62, 0.05, 0.05, 30] },
-      { values: [0.42, 0.71, 0.05, 0.05, 30] },
-      { values: [0.6, 0.71, 0.05, 0.05, 30] },
-      { values: [0.72, 0.62, 0.05, 0.05, 30] },
-    ]),
-  },
-  {
-    name: 'Herbizarre',
-    color: '#58c89a',
-    accent: '#d778a9',
-    points: makeCreaturePoints([
-      { values: [0.5, 0.59, 0.19, 0.14, 130] },
-      { values: [0.35, 0.44, 0.11, 0.1, 78] },
-      { values: [0.51, 0.35, 0.14, 0.1, 86] },
-      { values: [0.48, 0.22, 0.12, 0.09, 72] },
-      { values: [0.43, 0.18, 0.05, 0.08, 34] },
-      { values: [0.53, 0.18, 0.05, 0.08, 34] },
-      { values: [0.28, 0.63, 0.055, 0.05, 28] },
-      { values: [0.42, 0.73, 0.055, 0.05, 28] },
-      { values: [0.61, 0.73, 0.055, 0.05, 28] },
-      { values: [0.73, 0.63, 0.055, 0.05, 28] },
-    ]),
-  },
-  {
-    name: 'Florizarre',
-    color: '#4fc08c',
-    accent: '#e576a8',
-    points: makeCreaturePoints([
-      { values: [0.5, 0.61, 0.23, 0.15, 150] },
-      { values: [0.31, 0.47, 0.12, 0.1, 70] },
-      { values: [0.5, 0.38, 0.19, 0.11, 96] },
-      { values: [0.5, 0.2, 0.16, 0.08, 80] },
-      { values: [0.5, 0.14, 0.06, 0.12, 52] },
-      { values: [0.36, 0.18, 0.08, 0.07, 42] },
-      { values: [0.64, 0.18, 0.08, 0.07, 42] },
-      { values: [0.24, 0.66, 0.06, 0.055, 28] },
-      { values: [0.42, 0.76, 0.06, 0.055, 28] },
-      { values: [0.62, 0.76, 0.06, 0.055, 28] },
-      { values: [0.78, 0.66, 0.06, 0.055, 28] },
-    ]),
-  },
+const creatureForms = [
+  { name: 'Pikachu', family: 'electric', color: '#ffd84d', accent: '#ff5f57', size: 1 },
+  { name: 'Salamèche', family: 'fire', color: '#ff8a3d', accent: '#ffd45c', size: 0.88 },
+  { name: 'Reptincel', family: 'fire', color: '#f35d34', accent: '#ffcf4f', size: 1.02 },
+  { name: 'Dracaufeu', family: 'fire', color: '#ff6d35', accent: '#69c7ff', size: 1.2 },
+  { name: 'Carapuce', family: 'water', color: '#67c7ff', accent: '#d7b17f', size: 0.9 },
+  { name: 'Carabaffe', family: 'water', color: '#79c9ff', accent: '#f1e2c5', size: 1.02 },
+  { name: 'Tortank', family: 'water', color: '#5aa9e8', accent: '#d8b07f', size: 1.18 },
+  { name: 'Bulbizarre', family: 'plant', color: '#6ed7aa', accent: '#89d85f', size: 0.92 },
+  { name: 'Herbizarre', family: 'plant', color: '#58c89a', accent: '#d778a9', size: 1.04 },
+  { name: 'Florizarre', family: 'plant', color: '#4fc08c', accent: '#e576a8', size: 1.22 },
 ]
+
+function drawEllipse(ctx, x, y, rx, ry, color, rotation = 0) {
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.ellipse(x, y, rx, ry, rotation, 0, Math.PI * 2)
+  ctx.fill()
+}
+
+function drawStroke(ctx, points, color, width) {
+  ctx.strokeStyle = color
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = width
+  ctx.beginPath()
+  points.forEach(([x, y], index) => {
+    if (index === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  })
+  ctx.stroke()
+}
+
+function drawTriangle(ctx, points, color) {
+  ctx.fillStyle = color
+  ctx.beginPath()
+  points.forEach(([x, y], index) => {
+    if (index === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  })
+  ctx.closePath()
+  ctx.fill()
+}
+
+function drawElectric(ctx, form) {
+  const c = form.color
+  const a = form.accent
+  drawEllipse(ctx, 360, 472, 118, 158, c, -0.08)
+  drawEllipse(ctx, 360, 296, 118, 102, c)
+  drawStroke(ctx, [[283, 226], [230, 82], [284, 132], [324, 240]], c, 48)
+  drawStroke(ctx, [[437, 226], [492, 82], [438, 132], [396, 240]], c, 48)
+  drawEllipse(ctx, 286, 332, 42, 33, a)
+  drawEllipse(ctx, 434, 332, 42, 33, a)
+  drawEllipse(ctx, 322, 285, 16, 23, '#10131c')
+  drawEllipse(ctx, 398, 285, 16, 23, '#10131c')
+  drawStroke(ctx, [[464, 445], [586, 374], [516, 318], [648, 252]], c, 40)
+  drawEllipse(ctx, 305, 635, 48, 38, c, -0.2)
+  drawEllipse(ctx, 414, 635, 48, 38, c, 0.2)
+}
+
+function drawFire(ctx, form) {
+  const c = form.color
+  const a = form.accent
+  const big = form.name === 'Dracaufeu'
+  const mid = form.name === 'Reptincel'
+  drawEllipse(ctx, 374, 496, big ? 116 : 92, big ? 158 : 142, c, -0.06)
+  drawEllipse(ctx, 389, big ? 284 : 302, big ? 102 : 86, big ? 82 : 76, c, 0.12)
+  drawStroke(ctx, [[456, 485], [560, 380], [641, 269], [682, 186]], c, big ? 46 : 36)
+  drawEllipse(ctx, 692, 170, big ? 52 : 38, big ? 70 : 54, a, -0.5)
+  drawEllipse(ctx, 404, 598, 58, 95, '#f6d88a', -0.03)
+  drawStroke(ctx, [[316, 430], [218, 454], [158, 515]], c, mid ? 32 : 26)
+  drawStroke(ctx, [[446, 430], [526, 464], [600, 520]], c, mid ? 32 : 26)
+  drawEllipse(ctx, 322, 672, 42, 58, c)
+  drawEllipse(ctx, 432, 672, 42, 58, c)
+  if (big) {
+    drawTriangle(ctx, [[294, 376], [66, 174], [256, 252]], c)
+    drawTriangle(ctx, [[480, 376], [715, 174], [520, 252]], c)
+    drawTriangle(ctx, [[294, 360], [98, 202], [254, 274]], '#69c7ff')
+    drawTriangle(ctx, [[480, 360], [682, 202], [528, 274]], '#69c7ff')
+    drawStroke(ctx, [[348, 232], [332, 156], [376, 216]], c, 28)
+  }
+  if (mid) {
+    drawTriangle(ctx, [[390, 180], [436, 124], [424, 210]], c)
+  }
+}
+
+function drawWater(ctx, form) {
+  const c = form.color
+  const a = form.accent
+  const big = form.name === 'Tortank'
+  const mid = form.name === 'Carabaffe'
+  drawEllipse(ctx, 384, 502, big ? 146 : 108, big ? 146 : 126, a)
+  drawEllipse(ctx, 384, 500, big ? 118 : 82, big ? 118 : 96, c)
+  drawEllipse(ctx, 382, 291, big ? 96 : 88, big ? 80 : 78, c)
+  drawEllipse(ctx, 274, 488, big ? 64 : 42, big ? 60 : 54, c)
+  drawEllipse(ctx, 494, 488, big ? 64 : 42, big ? 60 : 54, c)
+  drawEllipse(ctx, 306, 662, 54, 46, c)
+  drawEllipse(ctx, 464, 662, 54, 46, c)
+  drawStroke(ctx, [[498, 512], [610, 454], [674, 404]], c, big ? 40 : 30)
+  drawEllipse(ctx, 694, 390, mid ? 56 : 38, mid ? 32 : 28, c)
+  if (mid) {
+    drawEllipse(ctx, 306, 190, 42, 52, '#f1e2c5', -0.7)
+    drawEllipse(ctx, 458, 190, 42, 52, '#f1e2c5', 0.7)
+  }
+  if (big) {
+    drawStroke(ctx, [[285, 360], [202, 225], [138, 216]], '#d8dbe2', 34)
+    drawStroke(ctx, [[482, 360], [566, 225], [630, 216]], '#d8dbe2', 34)
+    drawEllipse(ctx, 382, 520, 70, 88, '#344054')
+  }
+}
+
+function drawPlant(ctx, form) {
+  const c = form.color
+  const a = form.accent
+  const big = form.name === 'Florizarre'
+  const mid = form.name === 'Herbizarre'
+  drawEllipse(ctx, 410, 560, big ? 172 : 132, big ? 106 : 92, c, -0.02)
+  drawEllipse(ctx, 292, 442, big ? 92 : 76, big ? 76 : 64, c, -0.25)
+  drawEllipse(ctx, 420, 392, big ? 152 : 106, big ? 90 : 78, c)
+  drawEllipse(ctx, 274, 640, 48, 40, c)
+  drawEllipse(ctx, 390, 682, 50, 42, c)
+  drawEllipse(ctx, 522, 654, 50, 42, c)
+  drawEllipse(ctx, 574, 552, 46, 40, c)
+  if (big) {
+    drawEllipse(ctx, 418, 242, 150, 82, a)
+    drawEllipse(ctx, 418, 176, 64, 120, a, 0.02)
+    drawEllipse(ctx, 300, 220, 84, 58, a, -0.4)
+    drawEllipse(ctx, 538, 220, 84, 58, a, 0.4)
+    drawStroke(ctx, [[418, 366], [418, 258], [418, 160]], '#f2d35a', 24)
+  } else {
+    drawEllipse(ctx, 418, mid ? 250 : 292, mid ? 114 : 86, mid ? 76 : 62, mid ? a : '#89d85f')
+    drawTriangle(ctx, [[418, mid ? 136 : 206], [348, mid ? 254 : 304], [492, mid ? 254 : 304]], mid ? a : '#89d85f')
+  }
+}
+
+function drawCreature(ctx, form) {
+  ctx.save()
+  ctx.translate(360, 390)
+  ctx.scale(form.size, form.size)
+  ctx.translate(-360, -390)
+  if (form.family === 'electric') drawElectric(ctx, form)
+  if (form.family === 'fire') drawFire(ctx, form)
+  if (form.family === 'water') drawWater(ctx, form)
+  if (form.family === 'plant') drawPlant(ctx, form)
+  ctx.restore()
+}
+
+function renderCreatureTarget(form, pointCount) {
+  const size = 760
+  const mask = document.createElement('canvas')
+  mask.width = size
+  mask.height = size
+  const ctx = mask.getContext('2d', { willReadFrequently: true })
+  ctx.clearRect(0, 0, size, size)
+  drawCreature(ctx, form)
+  const image = ctx.getImageData(0, 0, size, size)
+  const pixels = []
+
+  for (let y = 10; y < size - 10; y += 3) {
+    for (let x = 10; x < size - 10; x += 3) {
+      const index = (y * size + x) * 4
+      if (image.data[index + 3] < 60) continue
+      const nearEmpty =
+        image.data[index - 12 + 3] < 40 ||
+        image.data[index + 12 + 3] < 40 ||
+        image.data[index - size * 12 + 3] < 40 ||
+        image.data[index + size * 12 + 3] < 40
+      pixels.push({
+        x: x / size,
+        y: y / size,
+        color: `rgb(${image.data[index]}, ${image.data[index + 1]}, ${image.data[index + 2]})`,
+        edge: nearEmpty,
+      })
+    }
+  }
+
+  const edgePixels = pixels.filter((point) => point.edge)
+
+  return Array.from({ length: pointCount }, () => {
+    const pool = Math.random() > 0.38 && edgePixels.length ? edgePixels : pixels
+    return pool[Math.floor(Math.random() * pool.length)] || pixels[Math.floor(Math.random() * pixels.length)]
+  })
+}
 
 function PokemonPointCloud() {
   const canvasRef = useRef(null)
@@ -578,15 +569,18 @@ function PokemonPointCloud() {
   useEffect(() => {
     const canvas = canvasRef.current
     const context = canvas.getContext('2d')
-    const pointCount = 620
+    const pointCount = 1180
+    const targetCache = new Map()
     const points = Array.from({ length: pointCount }, () => ({
       x: Math.random(),
       y: Math.random(),
       tx: Math.random(),
       ty: Math.random(),
+      color: '#ffffff',
+      edge: false,
       vx: 0,
       vy: 0,
-      size: 1 + Math.random() * 1.8,
+      size: 0.85 + Math.random() * 1.55,
       drift: Math.random() * Math.PI * 2,
     }))
     let formIndex = 0
@@ -601,30 +595,67 @@ function PokemonPointCloud() {
       context.setTransform(ratio, 0, 0, ratio, 0, 0)
     }
 
+    function getTarget(form) {
+      if (!targetCache.has(form.name)) {
+        targetCache.set(form.name, renderCreatureTarget(form, pointCount))
+      }
+      return targetCache.get(form.name)
+    }
+
     function setTarget() {
-      const form = creatureClouds[formIndex]
-      const targets = form.points
+      const form = creatureForms[formIndex]
+      const targets = getTarget(form)
       if (labelRef.current) labelRef.current.textContent = form.name
       points.forEach((point, index) => {
         const target = targets[index % targets.length]
         point.tx = target.x
         point.ty = target.y
+        point.color = target.edge ? '#fff8db' : target.color
+        point.edge = target.edge
       })
-      formIndex = (formIndex + 1) % creatureClouds.length
+      formIndex = (formIndex + 1) % creatureForms.length
     }
 
     function draw() {
       const rect = canvas.getBoundingClientRect()
-      const activeForm = creatureClouds[(formIndex + creatureClouds.length - 1) % creatureClouds.length]
+      const activeForm = creatureForms[(formIndex + creatureForms.length - 1) % creatureForms.length]
       context.clearRect(0, 0, rect.width, rect.height)
-      context.fillStyle = 'rgba(255, 255, 255, 0.035)'
+      const gradient = context.createRadialGradient(
+        rect.width * 0.5,
+        rect.height * 0.45,
+        20,
+        rect.width * 0.5,
+        rect.height * 0.48,
+        rect.width * 0.58,
+      )
+      gradient.addColorStop(0, `${activeForm.color}24`)
+      gradient.addColorStop(0.45, `${activeForm.accent}16`)
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+      context.fillStyle = gradient
       context.fillRect(0, 0, rect.width, rect.height)
+
+      context.globalAlpha = 0.15
+      context.strokeStyle = activeForm.color
+      for (let i = 0; i < points.length; i += 28) {
+        const point = points[i]
+        const next = points[i + 7]
+        if (!next) continue
+        const dx = point.x - next.x
+        const dy = point.y - next.y
+        if (Math.hypot(dx, dy) > 0.08) continue
+        context.beginPath()
+        context.moveTo(point.x * rect.width, point.y * rect.height)
+        context.lineTo(next.x * rect.width, next.y * rect.height)
+        context.stroke()
+      }
+      context.globalAlpha = 1
+
       points.forEach((point) => {
-        const pulse = Math.sin(frame * 0.018 + point.drift) * 0.004
-        point.vx += (point.tx + pulse - point.x) * 0.018
-        point.vy += (point.ty - pulse - point.y) * 0.018
-        point.vx *= 0.86
-        point.vy *= 0.86
+        const pulse = Math.sin(frame * 0.02 + point.drift) * (point.edge ? 0.002 : 0.0045)
+        point.vx += (point.tx + pulse - point.x) * 0.024
+        point.vy += (point.ty - pulse - point.y) * 0.024
+        point.vx *= 0.84
+        point.vy *= 0.84
         point.x += point.vx
         point.y += point.vy
 
@@ -632,21 +663,17 @@ function PokemonPointCloud() {
         const y = point.y * rect.height
         const glow = Math.max(0.2, 1 - Math.hypot(point.tx - point.x, point.ty - point.y) * 5)
         context.beginPath()
-        context.fillStyle = activeForm.color
-        context.globalAlpha = 0.38 + glow * 0.44
-        context.arc(x, y, point.size + glow * 1.2, 0, Math.PI * 2)
+        context.fillStyle = point.color
+        context.shadowBlur = point.edge ? 16 : 8
+        context.shadowColor = point.edge ? '#fff1ad' : activeForm.color
+        context.globalAlpha = point.edge ? 0.72 + glow * 0.28 : 0.5 + glow * 0.42
+        context.arc(x, y, point.size + glow * (point.edge ? 1.35 : 0.95), 0, Math.PI * 2)
         context.fill()
-        if (Math.random() > 0.982) {
-          context.beginPath()
-          context.fillStyle = activeForm.accent
-          context.globalAlpha = 0.82
-          context.arc(x, y, point.size * 1.8, 0, Math.PI * 2)
-          context.fill()
-        }
       })
+      context.shadowBlur = 0
       context.globalAlpha = 1
       frame += 1
-      if (frame % 170 === 0) setTarget()
+      if (frame % 220 === 0) setTarget()
       raf = requestAnimationFrame(draw)
     }
 
