@@ -892,37 +892,44 @@ function CardsView({ cards, allCards, filters, openCardPage, addToCart, site, t 
       </div>
       {filters && <Filters {...filters} cards={allCards} site={site} t={t} />}
       <div className="inventory-list">
-        {cards.map((card) => (
-          <button
-            className={!isReservable(card) ? 'inventory-row reserved' : 'inventory-row'}
-            key={card.id}
-            type="button"
-            onClick={() => openCardPage(card)}
-          >
-            <CardArt card={card} />
-            <span>
-              {getCardBadges(card).length > 0 && (
-                <span className="badge-row">
-                  {getCardBadges(card).map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
-                </span>
-              )}
-              <strong>{card.name}</strong>
-              <small>{card.set} - {card.rarity}</small>
-            </span>
-            <b>{formatMoney(card.price)}</b>
-            <em>{isReservable(card) ? `${card.stock} en stock` : getCardStatusLabel(card, t)}</em>
-            <i
-              aria-disabled={!isReservable(card)}
-              onClick={(event) => {
-                event.stopPropagation()
-                if (!isReservable(card)) return
-                addToCart(card.id)
-              }}
+        {cards.map((card) => {
+          const badges = getCardBadges(card)
+
+          return (
+            <button
+              className={!isReservable(card) ? 'inventory-row reserved' : 'inventory-row'}
+              key={card.id}
+              type="button"
+              onClick={() => openCardPage(card)}
             >
-              <Plus size={16} />
-            </i>
-          </button>
-        ))}
+              <CardArt card={card} />
+              <span className="inventory-copy">
+                {badges.length > 0 && (
+                  <span className="inventory-badges">
+                    {badges.map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
+                  </span>
+                )}
+                <strong>{card.name}</strong>
+                <small>{card.set} - {card.rarity}</small>
+              </span>
+              <span className="inventory-price">{formatMoney(card.price)}</span>
+              <span className="inventory-stock">
+                {isReservable(card) ? `${card.stock} en stock` : getCardStatusLabel(card, t)}
+              </span>
+              <span
+                className="inventory-add"
+                aria-disabled={!isReservable(card)}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  if (!isReservable(card)) return
+                  addToCart(card.id)
+                }}
+              >
+                <Plus size={16} />
+              </span>
+            </button>
+          )
+        })}
       </div>
     </main>
   )

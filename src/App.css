@@ -1291,10 +1291,12 @@ dd {
 
 .inventory-row {
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr) auto auto 42px;
+  grid-template-columns: 120px minmax(0, 1fr) minmax(96px, auto) minmax(92px, auto) 44px;
   align-items: center;
   gap: 16px;
   padding: 12px;
+  min-height: 126px;
+  overflow: hidden;
   color: var(--ink);
   text-align: left;
   border: 1px solid var(--line);
@@ -1303,6 +1305,8 @@ dd {
 }
 
 .inventory-row .card-art {
+  width: 120px;
+  max-width: 100%;
   min-height: 96px;
 }
 
@@ -1311,29 +1315,69 @@ dd {
   height: 38px;
 }
 
-.inventory-row span {
+.inventory-copy {
   display: grid;
-  gap: 4px;
+  align-content: center;
+  min-width: 0;
+  gap: 5px;
+}
+
+.inventory-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.inventory-row .card-badge {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+}
+
+.inventory-copy strong {
+  overflow-wrap: anywhere;
+  font: 900 18px/1.05 var(--display);
+}
+
+.inventory-copy small {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .inventory-row strong,
-.inventory-row b {
+.inventory-price {
   color: var(--ink);
 }
 
-.inventory-row small,
-.inventory-row em {
-  color: var(--muted);
-  font-style: normal;
+.inventory-price {
+  justify-self: end;
+  font: 900 16px/1 var(--ui);
+  white-space: nowrap;
 }
 
-.inventory-row i {
+.inventory-stock {
+  justify-self: start;
+  color: var(--muted);
+  font: 700 14px/1.2 var(--ui);
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.inventory-add {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   color: var(--paper);
   background: var(--button-ink);
+}
+
+.inventory-add[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .stats {
@@ -1892,17 +1936,33 @@ td:nth-child(2) {
   }
 
   .inventory-row {
-    grid-template-columns: 74px minmax(0, 1fr) auto;
+    grid-template-columns: 82px minmax(0, 1fr) 44px;
+    gap: 12px;
   }
 
-  .inventory-row b,
-  .inventory-row em {
+  .inventory-row .card-art {
+    width: 82px;
+    min-height: 76px;
+  }
+
+  .inventory-copy {
+    grid-row: 1 / span 2;
+  }
+
+  .inventory-copy strong {
+    font-size: 16px;
+  }
+
+  .inventory-price,
+  .inventory-stock {
     grid-column: 2;
+    justify-self: start;
   }
 
-  .inventory-row i {
+  .inventory-add {
     grid-column: 3;
-    grid-row: 1 / span 3;
+    grid-row: 1 / span 2;
+    align-self: center;
   }
 }
 
