@@ -12,6 +12,7 @@ create table if not exists public.cards (
   status text not null default 'available',
   reserved_until timestamptz,
   image_url text,
+  image_urls jsonb not null default '[]'::jsonb,
   flaws text,
   private_note text,
   featured boolean not null default false,
@@ -72,6 +73,7 @@ alter table public.site_settings enable row level security;
 alter table public.cards add column if not exists status text not null default 'available';
 alter table public.cards add column if not exists reserved_until timestamptz;
 alter table public.cards add column if not exists image_url text;
+alter table public.cards add column if not exists image_urls jsonb not null default '[]'::jsonb;
 alter table public.cards add column if not exists flaws text;
 alter table public.cards add column if not exists private_note text;
 alter table public.cards add column if not exists badge text;
@@ -82,6 +84,12 @@ alter table public.reservations add column if not exists reserved_until timestam
 alter table public.reservations add column if not exists private_note text;
 alter table public.reservations add column if not exists email_sent boolean not null default false;
 alter table public.reservations alter column status set default 'Nouvelle';
+
+update public.cards
+set image_urls = jsonb_build_array(image_url)
+where image_url is not null
+  and image_url <> ''
+  and image_urls = '[]'::jsonb;
 
 update public.reservations
 set status = case status

@@ -410,6 +410,11 @@ function isReservable(card) {
   return getCardStatus(card) === 'available' && Number(card.stock) > 0
 }
 
+function getCardImages(card) {
+  const images = Array.isArray(card.imageUrls) ? card.imageUrls : []
+  return [...images, card.imageUrl].filter(Boolean).filter((image, index, list) => list.indexOf(image) === index)
+}
+
 function formatDateTime(value) {
   if (!value) return ''
   return new Intl.DateTimeFormat('fr-FR', {
@@ -500,12 +505,14 @@ function HoloCardShowcase({ cards, openCardPage }) {
 }
 
 function CardArt({ card, large = false }) {
+  const primaryImage = getCardImages(card)[0]
+
   return (
     <div
       className={large ? 'card-art card-art-large' : 'card-art'}
       style={{ '--card-accent': card.color }}
     >
-      {card.imageUrl && <img src={card.imageUrl} alt={card.name} loading="lazy" decoding="async" />}
+      {primaryImage && <img src={primaryImage} alt={card.name} loading="lazy" decoding="async" />}
       <div className="card-art-top">
         <span>{card.language}</span>
         <strong>{card.grade}</strong>
@@ -1105,6 +1112,7 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
 
   const reservable = isReservable(card)
   const badges = getCardBadges(card)
+  const images = getCardImages(card)
 
   return (
     <main className="card-detail-page">
@@ -1135,6 +1143,16 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
           </div>
         </div>
       </section>
+      {images.length > 1 && (
+        <section className="card-gallery" aria-label="Photos de la carte">
+          {images.map((image, index) => (
+            <figure key={image}>
+              <img src={image} alt={`${card.name} - photo ${index + 1}`} loading="lazy" decoding="async" />
+              <figcaption>{index === 0 ? 'Photo principale' : `Photo ${index + 1}`}</figcaption>
+            </figure>
+          ))}
+        </section>
+      )}
       <section className="card-detail-grid">
         <article>
           <h2>Informations</h2>
@@ -1496,43 +1514,60 @@ function imageFileToDataUrl(file) {
 
 function ImageUploader({ value, onChange, name }) {
   const [error, setError] = useState('')
+  const images = Array.isArray(value) ? value : [value].filter(Boolean)
 
   async function uploadImage(event) {
-    const file = event.target.files?.[0]
+    const files = [...(event.target.files || [])]
     event.target.value = ''
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
+    if (files.length === 0) return
+    if (files.some((file) => !file.type.startsWith('image/'))) {
       setError('Choisis un fichier image.')
       return
     }
     try {
       setError('')
-      const dataUrl = await imageFileToDataUrl(file)
-      onChange(dataUrl)
+      const dataUrls = await Promise.all(files.map((file) => imageFileToDataUrl(file)))
+      onChange([...images, ...dataUrls])
     } catch (uploadError) {
       setError(uploadError.message)
     }
   }
 
+  function removeImage(indexToRemove) {
+    onChange(images.filter((_, index) => index !== indexToRemove))
+  }
+
   return (
     <div className="image-uploader">
-      <div className="image-uploader-preview">
-        {value ? <img src={value} alt={name || 'Aperçu carte'} /> : <span>Aucune image</span>}
+      <div className={images.length > 0 ? 'image-uploader-preview has-images' : 'image-uploader-preview'}>
+        {images.length > 0 ? (
+          images.map((image, index) => (
+            <figure key={image}>
+              <img src={image} alt={`${name || 'Carte'} ${index + 1}`} />
+              <figcaption>{index === 0 ? 'Principale' : `Photo ${index + 1}`}</figcaption>
+              <button type="button" onClick={() => removeImage(index)}>
+                <Trash2 size={13} />
+              </button>
+            </figure>
+          ))
+        ) : (
+          <span>Aucune image</span>
+        )}
       </div>
       <div className="image-uploader-actions">
         <label className="file-button">
           <Upload size={15} />
-          Importer depuis mon PC
-          <input type="file" accept="image/*" onChange={uploadImage} />
+          Importer une ou plusieurs photos
+          <input type="file" accept="image/*" multiple onChange={uploadImage} />
         </label>
-        {value && (
-          <button type="button" onClick={() => onChange('')}>
+        {images.length > 0 && (
+          <button type="button" onClick={() => onChange([])}>
             <Trash2 size={14} />
-            Retirer
+            Tout retirer
           </button>
         )}
       </div>
-      <small>Image compressée automatiquement pour le site.</small>
+      <small>Photos compressées automatiquement. La première photo est utilisée comme image principale.</small>
       {error && <small className="form-error">{error}</small>}
     </div>
   )
@@ -1703,6 +1738,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     color: '#e84842',
     status: 'available',
     imageUrl: '',
+    imageUrls: [],
     flaws: '',
     privateNote: '',
     badge: '',
@@ -1718,7 +1754,13 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
 
   function updateCard(id, field, value) {
     const numeric = ['price', 'stock'].includes(field)
-    persist(cards.map((card) => (card.id === id ? { ...card, [field]: numeric ? Number(value) : value } : card)))
+    persist(cards.map((card) => {
+      if (card.id !== id) return card
+      if (field === 'imageUrls') {
+        return { ...card, imageUrls: value, imageUrl: value[0] || '' }
+      }
+      return { ...card, [field]: numeric ? Number(value) : value }
+    }))
   }
 
   function addCard(event) {
@@ -1729,6 +1771,8 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       id: `kc-${Date.now()}`,
       price: Number(draft.price),
       stock: Number(draft.stock),
+      imageUrl: getCardImages(draft)[0] || '',
+      imageUrls: getCardImages(draft),
       status: 'available',
       reserved: false,
       featured: Boolean(draft.featured),
@@ -1741,6 +1785,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       price: '39.90',
       stock: '1',
       imageUrl: '',
+      imageUrls: [],
       flaws: '',
       privateNote: '',
       tags: '',
@@ -1804,9 +1849,9 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
         </Field>
         <Field label="Image">
           <ImageUploader
-            value={draft.imageUrl}
+            value={getCardImages(draft)}
             name={draft.name}
-            onChange={(value) => setDraft({ ...draft, imageUrl: value })}
+            onChange={(value) => setDraft({ ...draft, imageUrls: value, imageUrl: value[0] || '' })}
           />
         </Field>
         <Field label="Coup de cœur">
@@ -1849,9 +1894,9 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
               ))}
               <Field label="Image">
                 <ImageUploader
-                  value={card.imageUrl || ''}
+                  value={getCardImages(card)}
                   name={card.name}
-                  onChange={(value) => updateCard(card.id, 'imageUrl', value)}
+                  onChange={(value) => updateCard(card.id, 'imageUrls', value)}
                 />
               </Field>
               <Field label="Badge">
@@ -2407,7 +2452,7 @@ function App() {
           description,
           brand: site.brandName,
           category: 'Pokémon card',
-          image: selected.imageUrl || `${origin}/favicon.svg`,
+          image: getCardImages(selected).length ? getCardImages(selected) : `${origin}/favicon.svg`,
           offers: {
             '@type': 'Offer',
             priceCurrency: 'EUR',

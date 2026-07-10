@@ -7,7 +7,14 @@ export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null
 
+function getCardImages(card) {
+  const images = Array.isArray(card.imageUrls) ? card.imageUrls : []
+  return [...images, card.imageUrl].filter(Boolean).filter((image, index, list) => list.indexOf(image) === index)
+}
+
 function toCardRow(card) {
+  const images = getCardImages(card)
+
   return {
     id: card.id,
     name: card.name,
@@ -21,7 +28,8 @@ function toCardRow(card) {
     stock: Number(card.stock) || 0,
     status: card.status || (card.reserved ? 'reserved' : 'available'),
     reserved_until: card.reservedUntil || null,
-    image_url: card.imageUrl || null,
+    image_url: images[0] || null,
+    image_urls: images,
     flaws: card.flaws || null,
     private_note: card.privateNote || null,
     featured: Boolean(card.featured),
@@ -33,6 +41,10 @@ function toCardRow(card) {
 }
 
 function fromCardRow(row) {
+  const imageUrls = Array.isArray(row.image_urls)
+    ? row.image_urls
+    : [row.image_url].filter(Boolean)
+
   return {
     id: row.id,
     name: row.name,
@@ -47,7 +59,8 @@ function fromCardRow(row) {
     status: row.status,
     reserved: row.status === 'reserved',
     reservedUntil: row.reserved_until || '',
-    imageUrl: row.image_url || '',
+    imageUrl: imageUrls[0] || row.image_url || '',
+    imageUrls,
     flaws: row.flaws || '',
     privateNote: row.private_note || '',
     featured: Boolean(row.featured),
