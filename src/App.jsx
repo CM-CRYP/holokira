@@ -33,13 +33,16 @@ import {
   deleteRemoteCard,
   fetchCards,
   fetchReservations,
+  fetchSellRequests,
   getBackendConfig,
   getAdminSession,
   signInAdmin,
   signOutAdmin,
   submitReservation,
+  submitSellRequest as submitRemoteSellRequest,
   syncCards,
   updateRemoteReservation,
+  updateRemoteSellRequest,
 } from './api'
 import './App.css'
 
@@ -99,6 +102,13 @@ const labels = {
     productAdded: 'Carte ajoutée à tes réservations.',
     lowStockWarning: 'Cette carte est indisponible ou déjà réservée.',
     orderCreated: 'Réservation envoyée.',
+    reservationError: 'La réservation n’a pas pu être enregistrée. Réessaie dans un instant.',
+    reservationSuccessTitle: 'Réservation reçue',
+    reservationSuccessIntro: 'Ta demande est enregistrée. Garde cette référence pour nos échanges.',
+    continueShopping: 'Continuer la visite',
+    viewReservations: 'Voir mes réservations',
+    shareCard: 'Copier le lien',
+    linkCopied: 'Lien copié.',
     emptyOrders: 'Aucune réservation pour le moment.',
     loginTitle: 'Accès admin',
     loginIntro: 'Connecte-toi avec ton compte administrateur Supabase.',
@@ -176,6 +186,13 @@ const labels = {
     productAdded: 'Card added to your reservations.',
     lowStockWarning: 'This card is unavailable or already reserved.',
     orderCreated: 'Reservation sent.',
+    reservationError: 'The reservation could not be saved. Please try again in a moment.',
+    reservationSuccessTitle: 'Reservation received',
+    reservationSuccessIntro: 'Your request is saved. Keep this reference for our conversation.',
+    continueShopping: 'Continue browsing',
+    viewReservations: 'View reservations',
+    shareCard: 'Copy link',
+    linkCopied: 'Link copied.',
     emptyOrders: 'No reservations yet.',
     loginTitle: 'Admin access',
     loginIntro: 'Sign in with your Supabase administrator account.',
@@ -310,6 +327,19 @@ function normalizeStatus(status) {
     Expédiée: 'Confirmée',
   }
   return replacements[status] ?? status
+}
+
+function getCardHash(card) {
+  return card ? `#card/${encodeURIComponent(card.id)}` : '#shop'
+}
+
+function readHashTarget() {
+  const hash = window.location.hash.replace(/^#/, '')
+  if (!hash) return { view: 'shop' }
+  if (hash.startsWith('card/')) {
+    return { view: 'cardDetail', cardId: decodeURIComponent(hash.slice(5)) }
+  }
+  return { view: hash }
 }
 
 function getCardStatus(card) {
@@ -746,7 +776,7 @@ function CardsView({ cards, openCardPage, addToCart, site, t }) {
   )
 }
 
-function CardDetailPage({ card, addToCart, setView, site, t }) {
+function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
   if (!card) {
     return (
       <main className="simple-page">
@@ -776,10 +806,16 @@ function CardDetailPage({ card, addToCart, setView, site, t }) {
           <h1>{card.name}</h1>
           <p>{card.set}</p>
           <strong>{formatMoney(card.price)}</strong>
-          <button className="checkout" type="button" onClick={() => addToCart(card.id)} disabled={!reservable}>
-            <ShoppingBag size={18} />
-            {reservable ? t.buy : getCardStatusLabel(card, t)}
-          </button>
+          <div className="card-detail-actions">
+            <button className="checkout" type="button" onClick={() => addToCart(card.id)} disabled={!reservable}>
+              <ShoppingBag size={18} />
+              {reservable ? t.buy : getCardStatusLabel(card, t)}
+            </button>
+            <button className="secondary-button" type="button" onClick={() => copyCardLink(card)}>
+              <Copy size={17} />
+              {t.shareCard}
+            </button>
+          </div>
         </div>
       </section>
       <section className="card-detail-grid">
@@ -814,7 +850,61 @@ function CardDetailPage({ card, addToCart, setView, site, t }) {
   )
 }
 
-function CollectionPage({ title, intro, cards, setSelected, addToCart, setView, site, t }) {
+function ReservationSuccessPage({ reservation, setView, site, t }) {
+  if (!reservation) {
+    return (
+      <main className="simple-page">
+        <div className="empty-state">
+          <PackageCheck size={28} />
+          <strong>{t.orders}</strong>
+          <p>{site.copy[site.language].emptyOrders}</p>
+          <button className="checkout" type="button" onClick={() => setView('shop')}>
+            {t.continueShopping}
+          </button>
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <main className="simple-page">
+      <section className="confirmation-panel">
+        <PackageCheck size={34} />
+        <span>{reservation.id}</span>
+        <h1>{t.reservationSuccessTitle}</h1>
+        <p>{t.reservationSuccessIntro}</p>
+        <dl className="spec-grid">
+          <div>
+            <dt>{t.customer}</dt>
+            <dd>{reservation.customer}</dd>
+          </div>
+          <div>
+            <dt>{t.total}</dt>
+            <dd>{formatMoney(reservation.total)}</dd>
+          </div>
+          <div>
+            <dt>{t.items}</dt>
+            <dd>{reservation.items}</dd>
+          </div>
+          <div>
+            <dt>{t.reservedUntil}</dt>
+            <dd>{formatDateTime(reservation.reservedUntil)}</dd>
+          </div>
+        </dl>
+        <div className="confirmation-actions">
+          <button className="checkout" type="button" onClick={() => setView('shop')}>
+            {t.continueShopping}
+          </button>
+          <button className="secondary-button" type="button" onClick={() => setView('orders')}>
+            {t.viewReservations}
+          </button>
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function CollectionPage({ title, intro, cards, openCardPage, addToCart, site, t }) {
   return (
     <main className="simple-page">
       <div className="page-heading">
@@ -827,10 +917,7 @@ function CollectionPage({ title, intro, cards, setSelected, addToCart, setView, 
             key={card.id}
             card={card}
             selected={false}
-            onSelect={(nextCard) => {
-              setSelected(nextCard)
-              setView('cardDetail')
-            }}
+            onSelect={openCardPage}
             onAdd={addToCart}
             t={t}
           />
@@ -1534,6 +1621,7 @@ function AdminView({
     )
     setSellRequests(next)
     saveLocal('kc-sell-requests', next)
+    updateRemoteSellRequest(id, { status })
   }
 
   function resetAll() {
@@ -1684,6 +1772,7 @@ function App() {
     emailEnabled: false,
     databaseEnabled: false,
   })
+  const [lastReservation, setLastReservation] = useState(null)
   const [selected, setSelected] = useState(() => cards[0])
   const [view, setView] = useState('shop')
   const [query, setQuery] = useState('')
@@ -1717,11 +1806,60 @@ function App() {
         const remoteReservations = await fetchReservations()
         setOrders(remoteReservations)
         saveLocal('kc-orders', remoteReservations)
+        const remoteSellRequests = await fetchSellRequests()
+        setSellRequests(remoteSellRequests)
+        saveLocal('kc-sell-requests', remoteSellRequests)
       }
     }
 
     loadRemoteData()
   }, [])
+
+  useEffect(() => {
+    function applyHashTarget() {
+      const target = readHashTarget()
+      if (target.view === 'cardDetail') {
+        const card = cards.find((item) => item.id === target.cardId)
+        if (card) {
+          setSelected(card)
+          setView('cardDetail')
+        }
+        return
+      }
+      const allowedViews = new Set([
+        'shop',
+        'japanese',
+        'graded',
+        'sell',
+        'cards',
+        'about',
+        'contact',
+        'legal',
+        'orders',
+        'reservationSuccess',
+        'admin',
+      ])
+      if (allowedViews.has(target.view)) {
+        setView(target.view)
+      }
+    }
+
+    applyHashTarget()
+    window.addEventListener('hashchange', applyHashTarget)
+    return () => window.removeEventListener('hashchange', applyHashTarget)
+  }, [cards])
+
+  useEffect(() => {
+    const copy = site.copy[site.language]
+    const pageTitle = view === 'cardDetail' && selected
+      ? `${selected.name} - ${site.brandName}`
+      : `${site.brandName} - ${copy.heroTitle}`
+    const pageDescription = view === 'cardDetail' && selected
+      ? `${selected.name}, ${selected.set}, ${selected.rarity}, ${formatMoney(selected.price)}.`
+      : copy.heroSubtitle
+    document.title = pageTitle
+    document.querySelector('meta[name="description"]')?.setAttribute('content', pageDescription)
+  }, [site, selected, view])
 
   function persistCards(next) {
     setCards(next)
@@ -1801,9 +1939,23 @@ function App() {
     flash(t.productAdded)
   }
 
+  function navigate(viewName) {
+    setView(viewName)
+    if (viewName !== 'cardDetail') {
+      window.history.replaceState(null, '', `#${viewName}`)
+    }
+  }
+
   function openCardPage(card) {
     setSelected(card)
     setView('cardDetail')
+    window.history.replaceState(null, '', getCardHash(card))
+  }
+
+  async function copyCardLink(card) {
+    const url = `${window.location.origin}${window.location.pathname}${getCardHash(card)}`
+    await navigator.clipboard?.writeText(url)
+    flash(t.linkCopied)
   }
 
   async function unlockAdmin() {
@@ -1811,6 +1963,9 @@ function App() {
     const remoteReservations = await fetchReservations()
     setOrders(remoteReservations)
     saveLocal('kc-orders', remoteReservations)
+    const remoteSellRequests = await fetchSellRequests()
+    setSellRequests(remoteSellRequests)
+    saveLocal('kc-sell-requests', remoteSellRequests)
   }
 
   async function logoutAdmin() {
@@ -1835,13 +1990,18 @@ function App() {
     saveLocal('kc-cart', next)
   }
 
-  function submitSellRequest(event) {
+  async function submitSellRequest(event) {
     event.preventDefault()
     const request = {
       ...sellDraft,
       id: `RACHAT-${Math.floor(1000 + Math.random() * 9000)}`,
       status: 'Nouvelle',
       date: new Date().toISOString().slice(0, 10),
+    }
+    const result = await submitRemoteSellRequest(request)
+    if (backendConfig.databaseEnabled && !result.databaseSaved) {
+      flash(result.message)
+      return
     }
     const next = [request, ...sellRequests]
     setSellRequests(next)
@@ -1892,12 +2052,16 @@ function App() {
       sellerEmail: site.contactEmail,
       siteName: site.brandName,
     })
+    if (backendConfig.databaseEnabled && !reservationResult.databaseSaved) {
+      flash(reservationResult.message || t.reservationError)
+      return
+    }
     const nextOrder = {
       ...order,
       emailSent: Boolean(reservationResult.emailSent),
       notificationNote: reservationResult.message,
     }
-    const nextCards = cards.map((card) => {
+    let nextCards = cards.map((card) => {
       const line = lines.find((item) => item.id === card.id)
       return line
         ? {
@@ -1909,15 +2073,25 @@ function App() {
           }
         : card
     })
+    if (backendConfig.databaseEnabled && reservationResult.databaseSaved) {
+      const remoteCards = await fetchCards()
+      if (remoteCards.length > 0) {
+        nextCards = mergeCards(starterCards, remoteCards)
+      }
+    } else {
+      persistCards(nextCards)
+    }
     const nextOrders = [nextOrder, ...orders]
-    persistCards(nextCards)
+    setCards(nextCards)
+    saveLocal('kc-cards', nextCards)
     setOrders(nextOrders)
+    setLastReservation(nextOrder)
     setCart([])
     setCheckoutDraft(defaultCheckout)
     saveLocal('kc-orders', nextOrders)
     saveLocal('kc-cart', [])
     flash(`${t.orderCreated} ${nextOrder.id}`)
-    setView('orders')
+    navigate('reservationSuccess')
   }
 
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0)
@@ -1934,7 +2108,7 @@ function App() {
     >
       <Header
         view={view}
-        setView={setView}
+        setView={navigate}
         cartCount={cartCount}
         site={site}
         setLanguage={setLanguage}
@@ -1954,7 +2128,7 @@ function App() {
           checkout={checkout}
           checkoutDraft={checkoutDraft}
           setCheckoutDraft={setCheckoutDraft}
-          setView={setView}
+          setView={navigate}
           filters={{ query, setQuery, type, setType, rarity, setRarity }}
           site={site}
           t={t}
@@ -1973,7 +2147,16 @@ function App() {
         <CardDetailPage
           card={selected}
           addToCart={addToCart}
-          setView={setView}
+          setView={navigate}
+          site={site}
+          t={t}
+          copyCardLink={copyCardLink}
+        />
+      )}
+      {view === 'reservationSuccess' && (
+        <ReservationSuccessPage
+          reservation={lastReservation}
+          setView={navigate}
           site={site}
           t={t}
         />
@@ -1983,9 +2166,8 @@ function App() {
           title={site.copy[site.language].japaneseTitle}
           intro={site.copy[site.language].japaneseIntro}
           cards={japaneseCards}
-          setSelected={setSelected}
+          openCardPage={openCardPage}
           addToCart={addToCart}
-          setView={setView}
           site={site}
           t={t}
         />
@@ -1995,9 +2177,8 @@ function App() {
           title={site.copy[site.language].gradedTitle}
           intro={site.copy[site.language].gradedIntro}
           cards={gradedCards}
-          setSelected={setSelected}
+          openCardPage={openCardPage}
           addToCart={addToCart}
-          setView={setView}
           site={site}
           t={t}
         />

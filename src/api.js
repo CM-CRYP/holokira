@@ -82,6 +82,33 @@ function fromReservationRow(row) {
   }
 }
 
+function toSellRequestRow(request) {
+  return {
+    id: request.id,
+    full_name: request.fullName,
+    email: request.email,
+    phone: request.phone || null,
+    card_list: request.cardList,
+    condition: request.condition || null,
+    expected_price: request.expectedPrice || null,
+    status: request.status || 'Nouvelle',
+  }
+}
+
+function fromSellRequestRow(row) {
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    email: row.email,
+    phone: row.phone || '',
+    cardList: row.card_list,
+    condition: row.condition || '',
+    expectedPrice: row.expected_price || '',
+    status: row.status,
+    date: row.created_at?.slice(0, 10) || '',
+  }
+}
+
 export async function getBackendConfig() {
   return {
     emailEnabled: false,
@@ -137,6 +164,16 @@ export async function fetchReservations() {
   return data.map(fromReservationRow)
 }
 
+export async function fetchSellRequests() {
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('sell_requests')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) return []
+  return data.map(fromSellRequestRow)
+}
+
 export async function updateRemoteReservation(id, patch) {
   if (!supabase) return { saved: false }
   const row = {}
@@ -144,6 +181,29 @@ export async function updateRemoteReservation(id, patch) {
   if (patch.privateNote !== undefined) row.private_note = patch.privateNote
   const { error } = await supabase.from('reservations').update(row).eq('id', id)
   return { saved: !error, error }
+}
+
+export async function updateRemoteSellRequest(id, patch) {
+  if (!supabase) return { saved: false }
+  const row = {}
+  if (patch.status !== undefined) row.status = patch.status
+  const { error } = await supabase.from('sell_requests').update(row).eq('id', id)
+  return { saved: !error, error }
+}
+
+export async function submitSellRequest(request) {
+  if (!supabase) {
+    return {
+      databaseSaved: false,
+      message: 'Demande enregistrée localement. Configure Supabase pour la synchroniser.',
+    }
+  }
+  const { error } = await supabase.from('sell_requests').insert(toSellRequestRow(request))
+  return {
+    databaseSaved: !error,
+    message: error ? `Erreur Supabase : ${error.message}` : 'Demande enregistrée dans Supabase.',
+    error,
+  }
 }
 
 export async function submitReservation({ reservation }) {
@@ -155,7 +215,7 @@ export async function submitReservation({ reservation }) {
     }
   }
 
-  const { error: reservationError } = await supabase.from('reservations').insert({
+  const reservationRow = {
     id: reservation.id,
     customer_name: reservation.customer,
     customer_email: reservation.email,
@@ -167,14 +227,6 @@ export async function submitReservation({ reservation }) {
     reserved_until: reservation.reservedUntil || null,
     private_note: reservation.privateNote || null,
     email_sent: false,
-  })
-
-  if (reservationError) {
-    return {
-      databaseSaved: false,
-      emailSent: false,
-      message: `Erreur Supabase : ${reservationError.message}`,
-    }
   }
 
   const itemRows = reservation.lines.map((line) => ({
@@ -183,6 +235,37 @@ export async function submitReservation({ reservation }) {
     quantity: Number(line.qty) || 1,
     unit_price: Number(line.price) || 0,
   }))
+
+  const { error: rpcError } = await supabase.rpc('create_reservation', {
+    reservation_payload: reservationRow,
+    reservation_items_payload: itemRows,
+  })
+
+  if (!rpcError) {
+    return {
+      databaseSaved: true,
+      emailSent: false,
+      message: 'Réservation enregistrée dans Supabase.',
+    }
+  }
+
+  if (rpcError.code !== 'PGRST202') {
+    return {
+      databaseSaved: false,
+      emailSent: false,
+      message: `Erreur Supabase : ${rpcError.message}`,
+    }
+  }
+
+  const { error: reservationError } = await supabase.from('reservations').insert(reservationRow)
+
+  if (reservationError) {
+    return {
+      databaseSaved: false,
+      emailSent: false,
+      message: `Erreur Supabase : ${reservationError.message}`,
+    }
+  }
 
   const { error: itemsError } = await supabase.from('reservation_items').insert(itemRows)
   if (itemsError) {

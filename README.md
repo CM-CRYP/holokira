@@ -47,6 +47,11 @@ peuvent lire les cartes et créer une réservation, mais seul un compte connect�
 avec Supabase Auth peut ajouter, modifier ou supprimer les cartes et consulter
 les réservations.
 
+Le schéma ajoute aussi la fonction `create_reservation`. Elle enregistre la
+réservation et ses cartes dans une seule opération : si une carte n'est plus
+disponible, la demande est refusée proprement au lieu de créer une réservation
+incomplète.
+
 Variables nécessaires côté site :
 
 ```env

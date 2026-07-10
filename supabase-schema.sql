@@ -93,6 +93,8 @@ drop policy if exists "Public can read reservation items" on public.reservation_
 drop policy if exists "Public can create reservation items" on public.reservation_items;
 drop policy if exists "Authenticated can read reservation items" on public.reservation_items;
 drop policy if exists "Public can create sell requests" on public.sell_requests;
+drop policy if exists "Authenticated can read sell requests" on public.sell_requests;
+drop policy if exists "Authenticated can update sell requests" on public.sell_requests;
 
 create policy "Public can read cards"
 on public.cards for select
@@ -142,6 +144,17 @@ create policy "Public can create sell requests"
 on public.sell_requests for insert
 with check (true);
 
+create policy "Authenticated can read sell requests"
+on public.sell_requests for select
+to authenticated
+using (true);
+
+create policy "Authenticated can update sell requests"
+on public.sell_requests for update
+to authenticated
+using (true)
+with check (true);
+
 create or replace function public.reserve_card_from_item()
 returns trigger
 language plpgsql
@@ -150,6 +163,7 @@ set search_path = public
 as $$
 declare
   reservation_deadline timestamptz;
+  updated_cards integer;
 begin
   select reserved_until into reservation_deadline
   from public.reservations
@@ -164,6 +178,12 @@ begin
     and status = 'available'
     and stock >= new.quantity;
 
+  get diagnostics updated_cards = row_count;
+
+  if updated_cards = 0 then
+    raise exception 'Card % is no longer available for reservation', new.card_id;
+  end if;
+
   return new;
 end;
 $$;
@@ -174,3 +194,68 @@ create trigger reserve_card_after_reservation_item
 after insert on public.reservation_items
 for each row
 execute function public.reserve_card_from_item();
+
+create or replace function public.create_reservation(
+  reservation_payload jsonb,
+  reservation_items_payload jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  item record;
+begin
+  insert into public.reservations (
+    id,
+    customer_name,
+    customer_email,
+    customer_phone,
+    customer_message,
+    total,
+    items_count,
+    status,
+    reserved_until,
+    private_note,
+    email_sent
+  )
+  values (
+    reservation_payload->>'id',
+    reservation_payload->>'customer_name',
+    reservation_payload->>'customer_email',
+    nullif(reservation_payload->>'customer_phone', ''),
+    reservation_payload->>'customer_message',
+    (reservation_payload->>'total')::numeric,
+    (reservation_payload->>'items_count')::integer,
+    coalesce(reservation_payload->>'status', 'Nouvelle réservation'),
+    nullif(reservation_payload->>'reserved_until', '')::timestamptz,
+    nullif(reservation_payload->>'private_note', ''),
+    coalesce((reservation_payload->>'email_sent')::boolean, false)
+  );
+
+  for item in
+    select *
+    from jsonb_to_recordset(reservation_items_payload) as x(
+      card_id text,
+      quantity integer,
+      unit_price numeric
+    )
+  loop
+    insert into public.reservation_items (
+      reservation_id,
+      card_id,
+      quantity,
+      unit_price
+    )
+    values (
+      reservation_payload->>'id',
+      item.card_id,
+      item.quantity,
+      item.unit_price
+    );
+  end loop;
+end;
+$$;
+
+grant execute on function public.create_reservation(jsonb, jsonb) to anon, authenticated;

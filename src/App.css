@@ -54,6 +54,7 @@
 .cart-pill,
 .language-switch,
 .theme-toggle,
+.secondary-button,
 .nav-tabs button,
 .hero-copy button,
 .buy-row button,
@@ -94,6 +95,7 @@
 .nav-tabs button,
 .cart-pill,
 .language-switch,
+.secondary-button,
 .hero-copy button,
 .buy-row button,
 .checkout,
@@ -130,6 +132,14 @@
 .theme-toggle {
   min-height: 38px;
   padding: 0 10px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+}
+
+.secondary-button {
+  min-height: 44px;
+  padding: 0 14px;
   color: var(--ink);
   border: 1px solid var(--line);
   background: var(--field-bg);
@@ -740,6 +750,13 @@ dd {
   font: 900 34px/1 var(--display);
 }
 
+.card-detail-actions,
+.confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .text-button {
   display: inline-flex;
   align-items: center;
@@ -779,6 +796,35 @@ dd {
   color: var(--muted);
   font-size: 15px;
   line-height: 1.55;
+}
+
+.confirmation-panel {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  max-width: 860px;
+  padding: clamp(20px, 4vw, 34px);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.confirmation-panel > span {
+  padding: 7px 10px;
+  color: white;
+  background: var(--ink);
+  font: 900 13px/1 var(--ui);
+}
+
+.confirmation-panel h1 {
+  margin: 0;
+  font: 900 clamp(38px, 6vw, 70px)/0.92 var(--display);
+}
+
+.confirmation-panel p {
+  max-width: 620px;
+  color: var(--muted);
+  font-size: 17px;
 }
 
 .page-heading {
