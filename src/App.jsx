@@ -359,6 +359,7 @@ function getCardSearchText(card) {
   return [
     card.name,
     card.set,
+    card.description,
     card.rarity,
     card.type,
     card.condition,
@@ -373,10 +374,10 @@ function getCollectionSignals(card) {
   const haystack = getCardSearchText(card)
   const grade = `${card.grade || ''}`.toLowerCase()
   return {
-    japanese: card.language?.toUpperCase() === 'JP',
-    graded: grade && grade !== 'raw',
-    vintage: /neo|archive|vault|promo|old|vintage|japan|osaka|kyoto|hanami|ancienne/i.test(haystack),
-    promo: /promo/i.test(haystack),
+    japanese: Boolean(card.isJapanese || card.language?.toUpperCase() === 'JP'),
+    graded: Boolean(card.isGraded || (grade && grade !== 'raw')),
+    vintage: Boolean(card.isVintage || /neo|archive|vault|promo|old|vintage|japan|osaka|kyoto|hanami|ancienne/i.test(haystack)),
+    promo: Boolean(card.isPromo || /promo/i.test(haystack)),
     favorite: Boolean(card.featured || card.badge),
   }
 }
@@ -1187,7 +1188,8 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
         </article>
         <article>
           <h2>Descriptif</h2>
-          <p>{card.flaws || 'Aucun défaut majeur signalé. Photos réelles à ajouter avant la mise en vente définitive.'}</p>
+          <p>{card.description || 'Description détaillée à compléter depuis le panel admin.'}</p>
+          <p>{card.flaws || 'Aucun défaut majeur signalé.'}</p>
           <p>{site.copy[site.language].paymentNote}</p>
         </article>
       </section>
@@ -1462,9 +1464,9 @@ function StatCard({ icon: Icon, label, value, tone }) {
   )
 }
 
-function Field({ label, children }) {
+function Field({ label, children, className = '' }) {
   return (
-    <div className="field">
+    <div className={`field ${className}`.trim()}>
       <span>{label}</span>
       {children}
     </div>
@@ -1588,6 +1590,30 @@ function ImageUploader({ value, onChange, name }) {
       </div>
       <small>Photos compressées automatiquement. La première photo est utilisée comme image principale.</small>
       {error && <small className="form-error">{error}</small>}
+    </div>
+  )
+}
+
+function CardClassificationEditor({ card, onChange }) {
+  const options = [
+    ['isJapanese', 'Carte japonaise'],
+    ['isVintage', 'Carte ancienne / vintage'],
+    ['isGraded', 'Carte gradée'],
+    ['isPromo', 'Promo'],
+  ]
+
+  return (
+    <div className="checkbox-grid">
+      {options.map(([field, label]) => (
+        <label className="check-field" key={field}>
+          <input
+            type="checkbox"
+            checked={Boolean(card[field])}
+            onChange={(event) => onChange(field, event.target.checked)}
+          />
+          <span>{label}</span>
+        </label>
+      ))}
     </div>
   )
 }
@@ -1758,12 +1784,17 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     status: 'available',
     imageUrl: '',
     imageUrls: [],
+    description: '',
     flaws: '',
     privateNote: '',
     badge: '',
     tags: '',
     addedAt: new Date().toISOString().slice(0, 10),
     featured: false,
+    isJapanese: false,
+    isVintage: false,
+    isGraded: false,
+    isPromo: false,
     reserved: false,
   })
 
@@ -1805,6 +1836,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       stock: '1',
       imageUrl: '',
       imageUrls: [],
+      description: '',
       flaws: '',
       privateNote: '',
       tags: '',
@@ -1866,6 +1898,13 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
         <Field label="Date d’ajout">
           <TextInput type="date" value={draft.addedAt} onChange={(value) => setDraft({ ...draft, addedAt: value })} />
         </Field>
+        <Field label="Descriptif public" className="field-wide field-tall">
+          <textarea
+            value={draft.description}
+            placeholder="Exemple : Carte japonaise en très bel état, idéale pour collection Salamèche..."
+            onChange={(event) => setDraft({ ...draft, description: event.target.value })}
+          />
+        </Field>
         <Field label="Image">
           <ImageUploader
             value={getCardImages(draft)}
@@ -1878,6 +1917,12 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
             type="checkbox"
             checked={Boolean(draft.featured)}
             onChange={(event) => setDraft({ ...draft, featured: event.target.checked })}
+          />
+        </Field>
+        <Field label="Classement" className="field-wide">
+          <CardClassificationEditor
+            card={draft}
+            onChange={(field, value) => setDraft({ ...draft, [field]: value })}
           />
         </Field>
         <button type="submit">
@@ -1898,8 +1943,6 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
                 ['condition', 'État'],
                 ['language', 'Langue'],
                 ['grade', 'Grade'],
-                ['flaws', 'Défauts visibles'],
-                ['privateNote', 'Note privée'],
                 ['tags', 'Tags'],
                 ['addedAt', 'Date d’ajout'],
               ].map(([field, label]) => (
@@ -1911,6 +1954,27 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
                   />
                 </Field>
               ))}
+              <Field label="Descriptif public" className="field-wide field-tall">
+                <textarea
+                  value={card.description || ''}
+                  placeholder="Texte visible sur la fiche carte."
+                  onChange={(event) => updateCard(card.id, 'description', event.target.value)}
+                />
+              </Field>
+              <Field label="Défauts visibles" className="field-wide field-tall">
+                <textarea
+                  value={card.flaws || ''}
+                  placeholder="Rayure, coin blanc, centrage, défaut du boîtier..."
+                  onChange={(event) => updateCard(card.id, 'flaws', event.target.value)}
+                />
+              </Field>
+              <Field label="Note privée" className="field-wide field-tall">
+                <textarea
+                  value={card.privateNote || ''}
+                  placeholder="Visible uniquement dans ton admin."
+                  onChange={(event) => updateCard(card.id, 'privateNote', event.target.value)}
+                />
+              </Field>
               <Field label="Image">
                 <ImageUploader
                   value={getCardImages(card)}
@@ -1930,6 +1994,12 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
                   type="checkbox"
                   checked={Boolean(card.featured)}
                   onChange={(event) => updateCard(card.id, 'featured', event.target.checked)}
+                />
+              </Field>
+              <Field label="Classement" className="field-wide">
+                <CardClassificationEditor
+                  card={card}
+                  onChange={(field, value) => updateCard(card.id, field, value)}
                 />
               </Field>
               <Field label="Statut">
@@ -2450,7 +2520,7 @@ function App() {
       ? `${selected.name} | ${site.brandName}`
       : `${pageTitles[view] || site.brandName} | ${site.brandName}`
     const description = view === 'cardDetail' && selected
-      ? `${selected.name}, ${selected.rarity}, ${selected.condition}, ${selected.language}, ${selected.grade}. Réservation sans paiement en ligne.`
+      ? selected.description || `${selected.name}, ${selected.rarity}, ${selected.condition}, ${selected.language}, ${selected.grade}. Réservation sans paiement en ligne.`
       : copy.heroSubtitle
 
     document.documentElement.lang = site.language
@@ -2638,7 +2708,7 @@ function App() {
   ])
 
   const japaneseCards = useMemo(
-    () => cards.filter((card) => card.language?.toUpperCase() === 'JP'),
+    () => cards.filter((card) => getCollectionSignals(card).japanese),
     [cards],
   )
   const highlightCards = useMemo(
@@ -2647,15 +2717,13 @@ function App() {
   )
   const vintageJapaneseCards = useMemo(
     () => cards.filter((card) => {
-      const isJapanese = card.language?.toUpperCase() === 'JP'
-      const vintageSignal = /neo|archive|vault|promo|holo|old|vintage|japan|osaka|kyoto|hanami/i
-        .test(`${card.set} ${card.rarity} ${card.name}`)
-      return isJapanese && vintageSignal
+      const signals = getCollectionSignals(card)
+      return signals.japanese && signals.vintage
     }),
     [cards],
   )
   const gradedCards = useMemo(
-    () => cards.filter((card) => card.grade && card.grade.toLowerCase() !== 'raw'),
+    () => cards.filter((card) => getCollectionSignals(card).graded),
     [cards],
   )
 
