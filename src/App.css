@@ -166,7 +166,7 @@
 
 .shop-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
   gap: 22px;
   padding: 28px clamp(18px, 4vw, 56px) 48px;
 }
@@ -780,6 +780,16 @@ textarea {
   gap: 12px;
 }
 
+.buy-row {
+  flex-wrap: wrap;
+}
+
+.buy-row button {
+  flex: 1 1 180px;
+  min-width: 0;
+  justify-content: center;
+}
+
 .card-art-top {
   align-items: flex-start;
   font: 800 12px/1 var(--ui);
@@ -907,6 +917,7 @@ td span,
   display: grid;
   align-content: start;
   gap: 14px;
+  min-width: 0;
   position: sticky;
   top: 82px;
 }
@@ -925,7 +936,19 @@ td span,
 
 .detail-panel,
 .cart-panel {
+  min-width: 0;
+  overflow: hidden;
   padding: 14px;
+}
+
+.detail-panel .card-art-large {
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+}
+
+.detail-panel .card-art-large img {
+  object-fit: contain;
 }
 
 .detail-copy h2,
@@ -935,6 +958,10 @@ td span,
 .admin-orders h2 {
   margin: 16px 0 6px;
   font: 800 24px/1 var(--display);
+}
+
+.detail-copy h2 {
+  overflow-wrap: anywhere;
 }
 
 .spec-grid {
