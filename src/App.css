@@ -720,8 +720,8 @@ textarea {
 .card-art {
   position: relative;
   display: grid;
-  min-height: 174px;
-  aspect-ratio: 1.58 / 1;
+  min-height: 220px;
+  aspect-ratio: 1.42 / 1;
   overflow: hidden;
   padding: 12px;
   color: white;
@@ -737,15 +737,17 @@ textarea {
   width: 100%;
   height: 100%;
   background: var(--paper-deep);
-  object-fit: cover;
+  object-fit: contain;
   z-index: 0;
 }
 
-.card-art:has(img)::after {
+.card-art-photo::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.72));
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.16), transparent 32%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.54), transparent 38%);
   z-index: 1;
 }
 
@@ -754,7 +756,7 @@ textarea {
   z-index: 2;
 }
 
-.card-art::before {
+.card-art-placeholder::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -814,6 +816,14 @@ textarea {
 .card-art-name {
   align-self: end;
   font: 800 20px/1 var(--display);
+}
+
+.card-art-photo .card-art-name {
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 9px;
+  background: rgba(0, 0, 0, 0.48);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.72);
 }
 
 .card-art-lines {

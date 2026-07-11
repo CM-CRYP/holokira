@@ -508,10 +508,15 @@ function HoloCardShowcase({ cards, openCardPage }) {
 
 function CardArt({ card, large = false }) {
   const primaryImage = getCardImages(card)[0]
+  const hasPhoto = Boolean(primaryImage)
 
   return (
     <div
-      className={large ? 'card-art card-art-large' : 'card-art'}
+      className={[
+        'card-art',
+        large ? 'card-art-large' : '',
+        hasPhoto ? 'card-art-photo' : 'card-art-placeholder',
+      ].filter(Boolean).join(' ')}
       style={{ '--card-accent': card.color }}
     >
       {primaryImage && <img src={primaryImage} alt={card.name} loading="lazy" decoding="async" />}
@@ -519,15 +524,19 @@ function CardArt({ card, large = false }) {
         <span>{card.language}</span>
         <strong>{card.grade}</strong>
       </div>
-      <div className="card-orbit">
-        <Sparkles size={large ? 42 : 30} strokeWidth={1.7} />
-      </div>
+      {!hasPhoto && (
+        <div className="card-orbit">
+          <Sparkles size={large ? 42 : 30} strokeWidth={1.7} />
+        </div>
+      )}
       <div className="card-art-name">{card.name.split(' ')[0]}</div>
-      <div className="card-art-lines">
-        <i />
-        <i />
-        <i />
-      </div>
+      {!hasPhoto && (
+        <div className="card-art-lines">
+          <i />
+          <i />
+          <i />
+        </div>
+      )}
     </div>
   )
 }
