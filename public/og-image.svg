@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="HoloKira">
+  <rect width="1200" height="630" fill="#090b10"/>
+  <path d="M0 0h1200v630H0z" fill="url(#bg)"/>
+  <rect x="80" y="80" width="1040" height="470" fill="none" stroke="#2a2f3a"/>
+  <text x="110" y="225" fill="#eee6da" font-family="Arial, sans-serif" font-size="92" font-weight="900">HoloKira</text>
+  <text x="112" y="305" fill="#aeb9d6" font-family="Arial, sans-serif" font-size="34" font-weight="700">Cartes Pokemon premium</text>
+  <text x="112" y="360" fill="#aeb9d6" font-family="Arial, sans-serif" font-size="28">Reservation sans paiement direct</text>
+  <g transform="translate(760 130) rotate(-8)">
+    <rect width="250" height="350" rx="16" fill="#151922" stroke="#db2a2a" stroke-width="4"/>
+    <rect x="24" y="28" width="202" height="205" fill="#222836"/>
+    <path d="M50 260h150M50 286h110M50 312h70" stroke="#eee6da" stroke-width="12"/>
+  </g>
+  <defs>
+    <radialGradient id="bg" cx="70%" cy="40%" r="70%">
+      <stop stop-color="#3b1118"/>
+      <stop offset=".45" stop-color="#101827"/>
+      <stop offset="1" stop-color="#090b10"/>
+    </radialGradient>
+  </defs>
+</svg>

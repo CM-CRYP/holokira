@@ -16,6 +16,7 @@ create table if not exists public.cards (
   description text,
   flaws text,
   private_note text,
+  negotiable boolean not null default false,
   featured boolean not null default false,
   is_japanese boolean not null default false,
   is_vintage boolean not null default false,
@@ -90,6 +91,7 @@ alter table public.cards add column if not exists image_urls jsonb not null defa
 alter table public.cards add column if not exists description text;
 alter table public.cards add column if not exists flaws text;
 alter table public.cards add column if not exists private_note text;
+alter table public.cards add column if not exists negotiable boolean not null default false;
 alter table public.cards add column if not exists is_japanese boolean not null default false;
 alter table public.cards add column if not exists is_vintage boolean not null default false;
 alter table public.cards add column if not exists is_graded boolean not null default false;

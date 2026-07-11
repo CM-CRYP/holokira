@@ -1336,6 +1336,16 @@ dd {
   font: 900 34px/1 var(--display);
 }
 
+.price-mode {
+  width: max-content;
+  max-width: 100%;
+  padding: 7px 9px;
+  color: var(--ink);
+  background: var(--field-bg);
+  font: 900 12px/1 var(--ui);
+  text-transform: uppercase;
+}
+
 .card-detail-actions,
 .confirmation-actions {
   display: flex;
@@ -1423,6 +1433,49 @@ dd {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.45;
+}
+
+.reservation-guide {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.guide-grid article {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 140px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.guide-grid svg {
+  color: var(--red);
+}
+
+.guide-grid strong {
+  font: 900 14px/1.1 var(--ui);
+}
+
+.guide-grid p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.legacy-detail-trust {
+  display: none;
 }
 
 .confirmation-panel {
@@ -1517,7 +1570,7 @@ dd {
 
 .inventory-row {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr) minmax(96px, auto) minmax(92px, auto) 44px;
+  grid-template-columns: 120px minmax(0, 1fr) minmax(96px, auto) minmax(92px, auto) 44px 44px;
   align-items: center;
   gap: 16px;
   padding: 12px;
@@ -1594,7 +1647,8 @@ dd {
   white-space: nowrap;
 }
 
-.inventory-add {
+.inventory-add,
+.inventory-share {
   display: grid;
   width: 44px;
   height: 44px;
@@ -1606,6 +1660,12 @@ dd {
 .inventory-add[aria-disabled="true"] {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.inventory-share {
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: var(--field-bg);
 }
 
 .stats {
@@ -1953,6 +2013,44 @@ dd {
 .product-editor-list {
   display: grid;
   gap: 12px;
+}
+
+.product-admin-toolbar {
+  margin: 16px 0 12px;
+}
+
+.admin-product-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(120px, 150px);
+  gap: 10px;
+  margin: 0 0 14px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.admin-product-strip button {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px;
+  color: var(--ink);
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.admin-product-strip .card-art {
+  min-height: 94px;
+  aspect-ratio: 4 / 3;
+}
+
+.admin-product-strip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 900 12px/1 var(--ui);
 }
 
 .admin-save-bar {
@@ -2336,6 +2434,10 @@ td:nth-child(2) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .guide-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .wide-form,
   .editable-grid,
   .settings-grid {
@@ -2412,7 +2514,7 @@ td:nth-child(2) {
   }
 
   .inventory-row {
-    grid-template-columns: 82px minmax(0, 1fr) 44px;
+    grid-template-columns: 82px minmax(0, 1fr) 44px 44px;
     gap: 12px;
   }
 
@@ -2440,6 +2542,12 @@ td:nth-child(2) {
     grid-row: 1 / span 2;
     align-self: center;
   }
+
+  .inventory-share {
+    grid-column: 4;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
 }
 
 @media (max-width: 560px) {
@@ -2455,6 +2563,10 @@ td:nth-child(2) {
     grid-template-columns: auto 1fr;
     padding-inline: 12px;
     gap: 12px;
+  }
+
+  .guide-grid {
+    grid-template-columns: 1fr;
   }
 
   .top-actions {

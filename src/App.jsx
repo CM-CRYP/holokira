@@ -73,6 +73,7 @@ const labels = {
     highlights: 'Pépites',
     sell: 'Vendre',
     cards: 'Toutes les cartes',
+    arrivals: 'Arrivages',
     about: 'À propos',
     contact: 'Contact',
     legal: 'Mentions légales',
@@ -168,6 +169,7 @@ const labels = {
     highlights: 'Highlights',
     sell: 'Sell',
     cards: 'All cards',
+    arrivals: 'New arrivals',
     about: 'About',
     contact: 'Contact',
     legal: 'Legal',
@@ -381,8 +383,25 @@ function getCollectionSignals(card) {
   }
 }
 
-function getCardHash(card) {
-  return card ? `#card/${encodeURIComponent(card.id)}` : '#shop'
+function slugify(value) {
+  return `${value || ''}`
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function getCardPath(card) {
+  if (!card) return '/#shop'
+  const slug = slugify(`${card.name}-${card.set}`) || 'carte'
+  return `/carte/${encodeURIComponent(card.id)}/${slug}`
+}
+
+function readPathTarget() {
+  const match = window.location.pathname.match(/^\/carte\/([^/]+)/)
+  if (!match) return null
+  return { view: 'cardDetail', cardId: decodeURIComponent(match[1]) }
 }
 
 function readHashTarget() {
@@ -461,7 +480,10 @@ function setStructuredData(data) {
 }
 
 function getCardBadges(card) {
+  const status = getCardStatus(card)
   return [
+    status === 'reserved' ? 'Réservée' : '',
+    status === 'sold' ? 'Vendue' : '',
     card.badge,
     card.featured ? 'Coup de cœur' : '',
   ].filter(Boolean).filter((badge, index, list) => list.indexOf(badge) === index)
@@ -546,6 +568,7 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
   const nav = [
     ['home', t.home],
     ['shop', t.shop],
+    ['arrivals', t.arrivals],
     ['highlights', t.highlights],
     ['graded', t.graded],
     ['vintageJapanese', t.vintageJapanese],
@@ -629,11 +652,13 @@ function HomeView({ cards, openCardPage, setView, site, t }) {
           </button>
         ))}
       </section>
+      <TrustSection site={site} />
+      <ReservationGuide site={site} />
     </main>
   )
 }
 
-function ProductCard({ card, selected, onSelect, onAdd, t }) {
+function ProductCard({ card, selected, onSelect, onAdd, onShare, t }) {
   const reservable = isReservable(card)
   const status = getCardStatus(card)
   const unavailable = !reservable
@@ -662,6 +687,7 @@ function ProductCard({ card, selected, onSelect, onAdd, t }) {
           {status === 'reserved' && card.reservedUntil && (
             <span>{t.reservedUntil} {formatDateTime(card.reservedUntil)}</span>
           )}
+          {card.negotiable && <span>Prix négociable</span>}
           {card.tags && <span>{card.tags}</span>}
         </div>
       </button>
@@ -678,11 +704,10 @@ function ProductCard({ card, selected, onSelect, onAdd, t }) {
         <button
           className="icon-action"
           type="button"
-          onClick={() => onAdd(card.id)}
-          disabled={!reservable}
-          title={t.addToCart}
+          onClick={() => onShare(card)}
+          title={t.shareCard}
         >
-          <Plus size={18} />
+          <Copy size={17} />
         </button>
       </div>
     </article>
@@ -1028,11 +1053,13 @@ function ShopView(props) {
               selected={props.selected?.id === card.id}
               onSelect={props.openCardPage}
               onAdd={props.addToCart}
+              onShare={props.copyCardLink}
               t={props.t}
             />
           ))}
         </div>
         <TrustSection site={props.site} />
+        <ReservationGuide site={props.site} />
       </section>
       <section className="side-stack">
         <DetailPanel card={props.selected} onAdd={props.addToCart} t={props.t} />
@@ -1052,7 +1079,7 @@ function ShopView(props) {
   )
 }
 
-function CardsView({ cards, allCards, filters, openCardPage, addToCart, site, t }) {
+function CardsView({ cards, allCards, filters, openCardPage, addToCart, copyCardLink, site, t }) {
   return (
     <main className="simple-page">
       <div className="page-heading">
@@ -1096,6 +1123,16 @@ function CardsView({ cards, allCards, filters, openCardPage, addToCart, site, t 
                 }}
               >
                 <Plus size={16} />
+              </span>
+              <span
+                className="inventory-share"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  copyCardLink(card)
+                }}
+                title={t.shareCard}
+              >
+                <Copy size={16} />
               </span>
             </button>
           )
@@ -1142,6 +1179,7 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
           <h1>{card.name}</h1>
           <p>{card.set}</p>
           <strong>{formatMoney(card.price)}</strong>
+          <span className="price-mode">{card.negotiable ? 'Prix négociable' : 'Prix ferme'}</span>
           <div className="card-detail-actions">
             <button className="checkout" type="button" onClick={() => addToCart(card.id)} disabled={!reservable}>
               <ShoppingBag size={18} />
@@ -1182,6 +1220,10 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
               <dt>Tags</dt>
               <dd>{card.tags || '-'}</dd>
             </div>
+            <div>
+              <dt>Prix</dt>
+              <dd>{card.negotiable ? 'Négociable' : 'Ferme'}</dd>
+            </div>
           </dl>
         </article>
         <article>
@@ -1191,7 +1233,7 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
           <p>{site.copy[site.language].paymentNote}</p>
         </article>
       </section>
-      <section className="trust-grid">
+      <section className="trust-grid legacy-detail-trust" aria-hidden="true">
         <article>
           <Check size={18} />
           <strong>Authenticité vérifiée</strong>
@@ -1208,6 +1250,8 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
           <p>Envoi suivi depuis la France avec protection rigide adaptée aux cartes de collection.</p>
         </article>
       </section>
+      <TrustSection site={site} />
+      <ReservationGuide site={site} />
     </main>
   )
 }
@@ -1266,7 +1310,7 @@ function ReservationSuccessPage({ reservation, setView, site, t }) {
   )
 }
 
-function CollectionPage({ title, intro, cards, openCardPage, addToCart, site, t }) {
+function CollectionPage({ title, intro, cards, openCardPage, addToCart, copyCardLink, site, t }) {
   return (
     <main className="simple-page">
       <div className="page-heading">
@@ -1281,6 +1325,7 @@ function CollectionPage({ title, intro, cards, openCardPage, addToCart, site, t 
             selected={false}
             onSelect={openCardPage}
             onAdd={addToCart}
+            onShare={copyCardLink}
             t={t}
           />
         ))}
@@ -1375,6 +1420,43 @@ function TrustSection({ site }) {
         {items.map(([title, text]) => (
           <article key={title}>
             <Check size={18} />
+            <strong>{title}</strong>
+            <p>{text}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ReservationGuide({ site }) {
+  const isFr = site.language === 'fr'
+  const items = isFr
+    ? [
+        ['Délai de réponse', 'Réponse généralement sous 24 à 48 h après ta demande.'],
+        ['Paiement après validation', 'Aucun paiement direct sur le site. Le moyen de paiement est confirmé avec le vendeur.'],
+        ['Expédition', 'Envoi suivi depuis la France avec protection rigide adaptée aux cartes.'],
+        ['Assurance', 'Assurance possible selon la valeur et le transporteur choisi.'],
+        ['Remise en main propre', 'Possible uniquement après accord avec le vendeur.'],
+      ]
+    : [
+        ['Response time', 'Usually within 24 to 48 hours after your request.'],
+        ['Payment after approval', 'No direct website payment. Payment method is confirmed with the seller.'],
+        ['Shipping', 'Tracked shipping from France with rigid card protection.'],
+        ['Insurance', 'Insurance available depending on value and selected carrier.'],
+        ['Local pickup', 'Available only after seller approval.'],
+      ]
+
+  return (
+    <section className="reservation-guide">
+      <div className="panel-title">
+        <h2>{isFr ? 'Réservation claire' : 'Clear reservation'}</h2>
+        <span>{site.copy[site.language].paymentMode}</span>
+      </div>
+      <div className="guide-grid">
+        {items.map(([title, text]) => (
+          <article key={title}>
+            <PackageCheck size={18} />
             <strong>{title}</strong>
             <p>{text}</p>
           </article>
@@ -1897,6 +1979,10 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [productQuery, setProductQuery] = useState('')
+  const [productStatus, setProductStatus] = useState('all')
+  const [productCategory, setProductCategory] = useState('all')
+  const [productSort, setProductSort] = useState('newest')
   const [draft, setDraft] = useState({
     name: '',
     set: '',
@@ -1923,7 +2009,26 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     isGraded: false,
     isPromo: false,
     reserved: false,
+    negotiable: false,
   })
+
+  const visibleDraftCards = useMemo(() => {
+    const normalized = productQuery.toLowerCase().trim()
+    return [...draftCards]
+      .filter((card) => {
+        const signals = getCollectionSignals(card)
+        const matchQuery = !normalized || getCardSearchText(card).includes(normalized)
+        const matchStatus = productStatus === 'all' || getCardStatus(card) === productStatus
+        const matchCategory = productCategory === 'all' || Boolean(signals[productCategory])
+        return matchQuery && matchStatus && matchCategory
+      })
+      .sort((a, b) => {
+        if (productSort === 'priceDesc') return Number(b.price) - Number(a.price)
+        if (productSort === 'priceAsc') return Number(a.price) - Number(b.price)
+        if (productSort === 'name') return `${a.name}`.localeCompare(`${b.name}`)
+        return new Date(b.addedAt || 0) - new Date(a.addedAt || 0)
+      })
+  }, [draftCards, productCategory, productQuery, productSort, productStatus])
 
   useEffect(() => {
     if (!hasUnsavedChanges) {
@@ -1977,6 +2082,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       privateNote: '',
       tags: '',
       badge: '',
+      negotiable: false,
     }))
   }
 
@@ -2117,6 +2223,13 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
             onChange={(event) => setDraft({ ...draft, featured: event.target.checked })}
           />
         </Field>
+        <Field label="Prix négociable">
+          <input
+            type="checkbox"
+            checked={Boolean(draft.negotiable)}
+            onChange={(event) => setDraft({ ...draft, negotiable: event.target.checked })}
+          />
+        </Field>
         <Field label="Classement" className="field-wide">
           <CardClassificationEditor
             card={draft}
@@ -2128,8 +2241,55 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
           {t.add}
         </button>
       </form>
+      <div className="admin-toolbar product-admin-toolbar">
+        <label className="searchbox">
+          <Search size={18} />
+          <input
+            value={productQuery}
+            onChange={(event) => setProductQuery(event.target.value)}
+            placeholder="Rechercher nom, set, rareté, tag..."
+          />
+        </label>
+        <label>
+          <PackageCheck size={17} />
+          <select value={productStatus} onChange={(event) => setProductStatus(event.target.value)}>
+            <option value="all">Tous les statuts</option>
+            {Object.entries(cardStatuses).map(([value, label]) => (
+              <option value={value} key={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <Boxes size={17} />
+          <select value={productCategory} onChange={(event) => setProductCategory(event.target.value)}>
+            <option value="all">Toutes les catégories</option>
+            <option value="japanese">Japonaises</option>
+            <option value="graded">Gradées</option>
+            <option value="vintage">Anciennes / vintage</option>
+            <option value="promo">Promo</option>
+            <option value="favorite">Coup de cœur</option>
+          </select>
+        </label>
+        <label>
+          <SlidersHorizontal size={17} />
+          <select value={productSort} onChange={(event) => setProductSort(event.target.value)}>
+            <option value="newest">Plus récentes</option>
+            <option value="name">Nom A-Z</option>
+            <option value="priceDesc">Prix décroissant</option>
+            <option value="priceAsc">Prix croissant</option>
+          </select>
+        </label>
+      </div>
+      <div className="admin-product-strip" aria-label="Aperçu rapide des produits">
+        {visibleDraftCards.slice(0, 12).map((card) => (
+          <button type="button" key={card.id} onClick={() => setProductQuery(card.name)}>
+            <CardArt card={card} />
+            <span>{card.name}</span>
+          </button>
+        ))}
+      </div>
       <div className="product-editor-list">
-        {draftCards.map((card) => (
+        {visibleDraftCards.map((card) => (
           <article className="editable-product" key={card.id}>
             <CardArt card={card} />
             <div className="editable-grid">
@@ -2198,6 +2358,13 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
                 <CardClassificationEditor
                   card={card}
                   onChange={(field, value) => updateCard(card.id, field, value)}
+                />
+              </Field>
+              <Field label="Prix négociable">
+                <input
+                  type="checkbox"
+                  checked={Boolean(card.negotiable)}
+                  onChange={(event) => updateCard(card.id, 'negotiable', event.target.checked)}
                 />
               </Field>
               <Field label="Statut">
@@ -2699,10 +2866,13 @@ function App() {
   useEffect(() => {
     const copy = site.copy[site.language]
     const origin = window.location.origin
-    const canonical = `${origin}${window.location.pathname}${window.location.hash || '#home'}`
+    const canonical = view === 'cardDetail' && selected
+      ? `${origin}${getCardPath(selected)}`
+      : `${origin}${view === 'home' ? '/' : `/#${view}`}`
     const pageTitles = {
       home: copy.homeTitle,
       shop: copy.heroTitle,
+      arrivals: site.language === 'fr' ? 'Arrivages et nouveautés' : 'New arrivals',
       cards: t.cards,
       highlights: copy.highlightsTitle,
       japanese: copy.japaneseTitle,
@@ -2720,6 +2890,9 @@ function App() {
     const description = view === 'cardDetail' && selected
       ? selected.description || `${selected.name}, ${selected.rarity}, ${selected.condition}, ${selected.language}, ${selected.grade}. Réservation sans paiement en ligne.`
       : copy.heroSubtitle
+    const shareImage = view === 'cardDetail' && selected && getCardImages(selected)[0]
+      ? getCardImages(selected)[0]
+      : `${origin}/og-image.svg`
 
     document.documentElement.lang = site.language
     document.title = title
@@ -2728,7 +2901,9 @@ function App() {
     setMetaTag('meta[property="og:description"]', { property: 'og:description', content: description })
     setMetaTag('meta[property="og:type"]', { property: 'og:type', content: view === 'cardDetail' ? 'product' : 'website' })
     setMetaTag('meta[property="og:url"]', { property: 'og:url', content: canonical })
+    setMetaTag('meta[property="og:image"]', { property: 'og:image', content: shareImage })
     setMetaTag('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' })
+    setMetaTag('meta[name="twitter:image"]', { name: 'twitter:image', content: shareImage })
     setLinkTag('canonical', canonical)
 
     const structuredData = view === 'cardDetail' && selected
@@ -2739,7 +2914,15 @@ function App() {
           description,
           brand: site.brandName,
           category: 'Pokémon card',
+          sku: selected.id,
           image: getCardImages(selected).length ? getCardImages(selected) : `${origin}/favicon.svg`,
+          additionalProperty: [
+            { '@type': 'PropertyValue', name: 'Rareté', value: selected.rarity },
+            { '@type': 'PropertyValue', name: 'État', value: selected.condition },
+            { '@type': 'PropertyValue', name: 'Langue', value: selected.language },
+            { '@type': 'PropertyValue', name: 'Grade', value: selected.grade },
+            { '@type': 'PropertyValue', name: 'Prix négociable', value: selected.negotiable ? 'Oui' : 'Non' },
+          ],
           offers: {
             '@type': 'Offer',
             priceCurrency: 'EUR',
@@ -2793,7 +2976,7 @@ function App() {
 
   useEffect(() => {
     function applyHashTarget() {
-      const target = readHashTarget()
+      const target = readPathTarget() || readHashTarget()
       if (target.view === 'cardDetail') {
         const card = cards.find((item) => item.id === target.cardId)
         if (card) {
@@ -2805,6 +2988,7 @@ function App() {
       const allowedViews = new Set([
         'home',
         'shop',
+        'arrivals',
         'highlights',
         'japanese',
         'graded',
@@ -2825,7 +3009,11 @@ function App() {
 
     applyHashTarget()
     window.addEventListener('hashchange', applyHashTarget)
-    return () => window.removeEventListener('hashchange', applyHashTarget)
+    window.addEventListener('popstate', applyHashTarget)
+    return () => {
+      window.removeEventListener('hashchange', applyHashTarget)
+      window.removeEventListener('popstate', applyHashTarget)
+    }
   }, [cards])
 
   async function persistCards(next) {
@@ -2921,6 +3109,10 @@ function App() {
     () => cards.filter((card) => getCollectionSignals(card).graded),
     [cards],
   )
+  const arrivalCards = useMemo(
+    () => [...cards].sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0)).slice(0, 24),
+    [cards],
+  )
 
   function flash(message) {
     setToast(message)
@@ -2965,19 +3157,18 @@ function App() {
 
   function navigate(viewName) {
     setView(viewName)
-    if (viewName !== 'cardDetail') {
-      window.history.replaceState(null, '', `#${viewName}`)
-    }
+    const target = viewName === 'home' ? '/' : `/#${viewName}`
+    window.history.pushState(null, '', target)
   }
 
   function openCardPage(card) {
     setSelected(card)
     setView('cardDetail')
-    window.history.replaceState(null, '', getCardHash(card))
+    window.history.pushState(null, '', getCardPath(card))
   }
 
   async function copyCardLink(card) {
-    const url = `${window.location.origin}${window.location.pathname}${getCardHash(card)}`
+    const url = `${window.location.origin}${getCardPath(card)}`
     await navigator.clipboard?.writeText(url)
     flash(t.linkCopied)
   }
@@ -3144,6 +3335,7 @@ function App() {
           setSelected={setSelected}
           openCardPage={openCardPage}
           addToCart={addToCart}
+          copyCardLink={copyCardLink}
           cart={cart}
           updateQty={updateQty}
           removeItem={removeItem}
@@ -3218,6 +3410,21 @@ function App() {
           }}
           openCardPage={openCardPage}
           addToCart={addToCart}
+          copyCardLink={copyCardLink}
+          site={site}
+          t={t}
+        />
+      )}
+      {view === 'arrivals' && (
+        <CollectionPage
+          title={site.language === 'fr' ? 'Arrivages et nouveautés' : 'New arrivals'}
+          intro={site.language === 'fr'
+            ? 'Les dernières cartes ajoutées à la vitrine, classées par date d’arrivée.'
+            : 'Latest cards added to the showcase, sorted by arrival date.'}
+          cards={arrivalCards}
+          openCardPage={openCardPage}
+          addToCart={addToCart}
+          copyCardLink={copyCardLink}
           site={site}
           t={t}
         />
@@ -3247,6 +3454,7 @@ function App() {
           cards={japaneseCards}
           openCardPage={openCardPage}
           addToCart={addToCart}
+          copyCardLink={copyCardLink}
           site={site}
           t={t}
         />
@@ -3258,6 +3466,7 @@ function App() {
           cards={highlightCards.length ? highlightCards : cards.slice(0, 6)}
           openCardPage={openCardPage}
           addToCart={addToCart}
+          copyCardLink={copyCardLink}
           site={site}
           t={t}
         />
@@ -3269,6 +3478,7 @@ function App() {
           cards={gradedCards}
           openCardPage={openCardPage}
           addToCart={addToCart}
+          copyCardLink={copyCardLink}
           site={site}
           t={t}
         />
@@ -3280,6 +3490,7 @@ function App() {
           cards={vintageJapaneseCards.length ? vintageJapaneseCards : japaneseCards}
           openCardPage={openCardPage}
           addToCart={addToCart}
+          copyCardLink={copyCardLink}
           site={site}
           t={t}
         />
