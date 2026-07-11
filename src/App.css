@@ -282,7 +282,7 @@
 
 .holo-card {
   position: absolute;
-  width: clamp(158px, 21vw, 230px);
+  width: clamp(150px, 17vw, 210px);
   padding: 0;
   color: white;
   border: 0;
@@ -317,7 +317,22 @@
 }
 
 .holo-card .card-art {
-  min-height: clamp(240px, 32vw, 330px);
+  min-height: 0;
+  aspect-ratio: 3 / 4;
+}
+
+.holo-card .card-art img {
+  object-fit: cover;
+}
+
+.holo-card .card-art-photo::after {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent 34%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.5), transparent 44%);
+}
+
+.holo-card .card-art-name {
+  display: none;
 }
 
 .holo-card-copy {
@@ -347,31 +362,31 @@
 }
 
 .holo-card-1 {
-  left: 36%;
-  top: 10%;
+  left: 42%;
+  top: 8%;
   z-index: 5;
   transform: translateZ(160px) rotateY(-10deg) rotateZ(-2deg);
 }
 
 .holo-card-2 {
-  left: 12%;
-  top: 22%;
+  left: 18%;
+  top: 24%;
   z-index: 3;
   transform: translateZ(40px) rotateY(18deg) rotateZ(-8deg) scale(0.88);
   animation-delay: -1.6s;
 }
 
 .holo-card-3 {
-  right: 8%;
-  top: 26%;
+  right: 14%;
+  top: 22%;
   z-index: 4;
   transform: translateZ(70px) rotateY(-20deg) rotateZ(8deg) scale(0.9);
   animation-delay: -3s;
 }
 
 .holo-card-4 {
-  left: 26%;
-  bottom: 8%;
+  left: 28%;
+  bottom: 11%;
   z-index: 2;
   transform: translateZ(-40px) rotateY(12deg) rotateZ(6deg) scale(0.72);
   opacity: 0.82;
@@ -379,8 +394,8 @@
 }
 
 .holo-card-5 {
-  right: 28%;
-  bottom: 5%;
+  right: 30%;
+  bottom: 10%;
   z-index: 1;
   transform: translateZ(-70px) rotateY(-14deg) rotateZ(-7deg) scale(0.68);
   opacity: 0.72;
