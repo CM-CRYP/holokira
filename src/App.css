@@ -779,6 +779,17 @@ textarea {
   text-transform: uppercase;
 }
 
+.card-badge:nth-child(2n) {
+  background: linear-gradient(135deg, #222733, #11151d);
+  box-shadow: none;
+}
+
+.card-badge:nth-child(3n) {
+  color: var(--ink);
+  background: var(--button-ink);
+  box-shadow: none;
+}
+
 .product-actions {
   display: flex;
   gap: 8px;
@@ -1431,6 +1442,52 @@ dd {
   gap: 10px;
 }
 
+.card-story-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.72fr);
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.card-story-panel > div:first-child {
+  display: grid;
+  gap: 8px;
+}
+
+.card-story-panel span {
+  color: var(--muted);
+  font: 900 11px/1 var(--ui);
+  text-transform: uppercase;
+}
+
+.card-story-panel h2 {
+  margin: 0;
+  font: 900 28px/1 var(--display);
+}
+
+.card-story-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.story-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 8px;
+}
+
+.story-facts span {
+  padding: 9px 10px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: var(--field-bg);
+}
+
 .text-button {
   display: inline-flex;
   align-items: center;
@@ -1941,6 +1998,32 @@ dd {
   min-height: 116px;
 }
 
+.smart-import-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--paper-deep);
+}
+
+.smart-import-actions.compact {
+  padding: 10px;
+}
+
+.smart-import-actions .secondary-button {
+  min-height: 38px;
+}
+
+.smart-import-actions span {
+  min-width: 180px;
+  flex: 1;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .image-uploader {
   display: grid;
   gap: 8px;
@@ -2433,7 +2516,7 @@ td:nth-child(2) {
 
 .site-footer {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto auto;
+  grid-template-columns: minmax(220px, 1fr) auto auto auto;
   align-items: center;
   gap: 18px;
   padding: 22px clamp(18px, 4vw, 56px);
@@ -2462,6 +2545,10 @@ td:nth-child(2) {
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
+}
+
+.site-footer .footer-collections {
+  justify-content: flex-start;
 }
 
 .site-footer button {
@@ -2582,7 +2669,8 @@ td:nth-child(2) {
   }
 
   .card-detail-hero,
-  .card-detail-grid {
+  .card-detail-grid,
+  .card-story-panel {
     grid-template-columns: 1fr;
   }
 

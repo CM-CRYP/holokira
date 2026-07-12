@@ -62,8 +62,25 @@ const adminTabs = [
 
 const cardStatuses = {
   available: 'Disponible',
-  reserved: 'RÃ©servÃ©e',
+  reserved: 'Réservée',
   sold: 'Vendue',
+}
+
+const seoRoutes = {
+  seoVintage: '/cartes-pokemon-japonaises-vintage',
+  seoPromo: '/cartes-pokemon-promo-japonaises',
+  seoVending: '/cartes-pokemon-vending-series',
+  seoDracaufeu: '/cartes-pokemon-dracaufeu',
+}
+
+const typeColors = {
+  Feu: '#db2a2a',
+  Plante: '#2f9d5a',
+  Electrique: '#d9a927',
+  Normal: '#8b8f98',
+  Eau: '#2e73c9',
+  Psy: '#8a5ed8',
+  Combat: '#a95f3d',
 }
 
 const labels = {
@@ -371,15 +388,122 @@ function getCardSearchText(card) {
   ].join(' ').toLowerCase()
 }
 
+function includesAny(value, needles) {
+  const text = `${value || ''}`.toLowerCase()
+  return needles.some((needle) => text.includes(needle))
+}
+
 function getCollectionSignals(card) {
   const haystack = getCardSearchText(card)
   const grade = `${card.grade || ''}`.toLowerCase()
   return {
-    japanese: Boolean(card.isJapanese || card.language?.toUpperCase() === 'JP'),
+    japanese: Boolean(card.isJapanese || /jp|japonais|japanese/i.test(`${card.language || ''}`)),
     graded: Boolean(card.isGraded || (grade && grade !== 'raw')),
     vintage: Boolean(card.isVintage || /base set|fossil|jungle|neo|premium file|expansion sheet|vending|old back|carddass|topsun|southern islands|gym|rocket|e-series|ex era|delta species|delta|archive|vault|promo|old|vintage|ancienne/i.test(haystack)),
-    promo: Boolean(card.isPromo || /promo/i.test(haystack)),
+    promo: Boolean(card.isPromo || /promo|quick starter|coro|s-p|illustration grand prix/i.test(haystack)),
     favorite: Boolean(card.featured || card.badge),
+  }
+}
+
+function getCardBadgeSignals(card) {
+  const haystack = getCardSearchText(card)
+  const signals = getCollectionSignals(card)
+  return {
+    ...signals,
+    nonGlossy: Boolean(/non[-\s]?glossy|quick starter gift/i.test(haystack)),
+    vending: Boolean(/vending|expansion sheet/i.test(haystack)),
+    dracaufeu: Boolean(/dracaufeu|charizard|lizardon/i.test(haystack)),
+  }
+}
+
+function getConditionBadge(condition) {
+  const value = `${condition || ''}`.trim()
+  const normalized = value.toLowerCase()
+  const known = ['near mint', 'mint', 'excellent+', 'excellent', 'light played', 'good+', 'good', 'played']
+  const match = known.find((item) => normalized === item || normalized.includes(item))
+  if (!match) return ''
+  if (match === 'near mint') return 'Near Mint'
+  if (match === 'light played') return 'Light Played'
+  return match.replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function inferCardType(card) {
+  const haystack = getCardSearchText(card)
+  if (includesAny(haystack, ['dracaufeu', 'charizard', 'lizardon', 'ho-oh', 'houou', 'salameche', 'salamèche', 'reptincel'])) return 'Feu'
+  if (includesAny(haystack, ['bulbizarre', 'bulbasaur', 'florizarre', 'herbizarre'])) return 'Plante'
+  if (includesAny(haystack, ['magneti', 'magnéti', 'magnemite', 'pikachu', 'voltali'])) return 'Electrique'
+  if (includesAny(haystack, ['tortank', 'carapuce', 'aquali'])) return 'Eau'
+  if (includesAny(haystack, ['mentali', 'mew', 'noctali'])) return 'Psy'
+  if (includesAny(haystack, ['rapasdepic', 'piafabec', 'spearow', 'fearow', 'max revive', 'trainer'])) return 'Normal'
+  return ''
+}
+
+function normalizeTags(value) {
+  return [...new Set(`${value || ''}`
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean))]
+}
+
+function getSmartTags(card, signals) {
+  const tags = normalizeTags(card.tags)
+  const condition = getConditionBadge(card.condition)
+  const additions = [
+    signals.japanese ? 'Japonais' : '',
+    signals.vintage ? 'Vintage JP' : '',
+    signals.promo ? 'Promo' : '',
+    signals.vending ? 'Vending' : '',
+    signals.nonGlossy ? 'Non-glossy' : '',
+    signals.dracaufeu ? 'Dracaufeu' : '',
+    condition,
+    card.set,
+  ].filter(Boolean)
+  return [...new Set([...tags, ...additions])].join(', ')
+}
+
+function buildSmartDescription(card, signals) {
+  const name = `${card.name || 'Carte Pokémon'}`.trim()
+  const set = `${card.set || ''}`.trim()
+  const condition = `${card.condition || ''}`.trim()
+  const origin = [
+    signals.japanese ? 'version japonaise' : '',
+    signals.vintage ? 'vintage' : '',
+    signals.promo ? 'promo' : '',
+    signals.vending ? 'Expansion Sheet / Vending Series' : '',
+    signals.nonGlossy ? 'non-glossy' : '',
+  ].filter(Boolean).join(', ')
+
+  return [
+    `Carte Pokémon ${name}${set ? ` - ${set}` : ''}.`,
+    [origin, condition ? `état ${condition}` : 'état à compléter'].filter(Boolean).join(', '),
+    'Photos réelles disponibles sur la fiche. Réservation sans paiement direct, validation avec le vendeur avant finalisation.',
+  ].join('\n')
+}
+
+function autocompleteCardDraft(card) {
+  const haystack = getCardSearchText(card)
+  const signals = getCardBadgeSignals(card)
+  const japanese = signals.japanese || includesAny(haystack, ['japonais', 'japanese', 'expansion sheet', 'vending', 'quick starter', 'coro', 's-p'])
+  const promo = signals.promo || includesAny(haystack, ['promo', 'quick starter', 'coro', 's-p', 'illustration grand prix'])
+  const vintage = signals.vintage || includesAny(haystack, ['vending', 'expansion sheet', 'old back', 'quick starter gift', 'neo', 'fossil', 'jungle'])
+  const inferredType = inferCardType(card)
+  const currentType = `${card.type || ''}`.trim()
+  const nextType = currentType && currentType !== 'Feu' ? currentType : (inferredType || currentType || 'Normal')
+  const nextSignals = { ...signals, japanese, promo, vintage }
+  const nextDescription = `${card.description || ''}`.trim() || buildSmartDescription(card, nextSignals)
+
+  return {
+    ...card,
+    type: nextType,
+    color: card.color || typeColors[nextType] || '#db2a2a',
+    language: card.language || (japanese ? 'Japonais' : 'FR'),
+    rarity: card.rarity || (promo ? 'Promo' : 'À compléter'),
+    grade: card.grade || 'Raw',
+    isJapanese: Boolean(card.isJapanese || japanese),
+    isVintage: Boolean(card.isVintage || vintage),
+    isPromo: Boolean(card.isPromo || promo),
+    description: nextDescription,
+    tags: getSmartTags({ ...card, type: nextType, description: nextDescription }, nextSignals),
   }
 }
 
@@ -425,6 +549,25 @@ function getPageSeo({ view, selected, site, t, cards }) {
     contact: copy.contactTitle,
     legal: copy.legalTitle,
     orders: t.orders,
+    seoVintage: isFr ? 'Cartes Pokémon japonaises vintage' : 'Vintage Japanese Pokemon cards',
+    seoPromo: isFr ? 'Cartes Pokémon promo japonaises' : 'Japanese Pokemon promo cards',
+    seoVending: isFr ? 'Cartes Pokémon Vending Series' : 'Pokemon Vending Series cards',
+    seoDracaufeu: isFr ? 'Cartes Pokémon Dracaufeu japonaises' : 'Japanese Charizard Pokemon cards',
+  }
+
+  const collectionDescriptions = {
+    seoVintage: isFr
+      ? 'Sélection de cartes Pokémon japonaises vintage : Expansion Sheet, Vending Series, anciennes promos et pièces japonaises recherchées, avec photos réelles et réservation sans paiement direct.'
+      : 'Selection of vintage Japanese Pokemon cards, including Expansion Sheet, Vending Series, old promos and collectible Japanese pieces with real photos and no direct checkout.',
+    seoPromo: isFr
+      ? 'Cartes Pokémon promo japonaises disponibles à la réservation : promos CoroCoro, Quick Starter Gift, Illustration Grand Prix et autres éditions spéciales.'
+      : 'Japanese Pokemon promo cards available for reservation: CoroCoro, Quick Starter Gift, Illustration Grand Prix and other special releases.',
+    seoVending: isFr
+      ? 'Cartes Pokémon Expansion Sheet et Vending Series japonaises, sélectionnées avec photos réelles, état visible et réservation simple.'
+      : 'Japanese Pokemon Expansion Sheet and Vending Series cards, selected with real photos, clear condition and simple reservation.',
+    seoDracaufeu: isFr
+      ? 'Cartes Pokémon Dracaufeu et Charizard japonaises : promos, anciennes éditions et cartes de collection à réserver sans paiement direct.'
+      : 'Japanese Dracaufeu and Charizard Pokemon cards: promos, vintage releases and collectible cards available for reservation.',
   }
 
   if (view === 'cardDetail' && selected) {
@@ -444,7 +587,7 @@ function getPageSeo({ view, selected, site, t, cards }) {
 
   return {
     title: `${pageTitles[view] || site.brandName} | ${site.brandName}`,
-    description,
+    description: collectionDescriptions[view] || description,
     keywords: inventory.keywords,
   }
 }
@@ -464,7 +607,14 @@ function getCardPath(card) {
   return `/carte/${encodeURIComponent(card.id)}/${slug}`
 }
 
+function getViewPath(viewName) {
+  if (seoRoutes[viewName]) return seoRoutes[viewName]
+  return viewName === 'home' ? '/' : `/#${viewName}`
+}
+
 function readPathTarget() {
+  const seoView = Object.entries(seoRoutes).find(([, path]) => path === window.location.pathname)?.[0]
+  if (seoView) return { view: seoView }
   const match = window.location.pathname.match(/^\/carte\/([^/]+)/)
   if (!match) return null
   return { view: 'cardDetail', cardId: decodeURIComponent(match[1]) }
@@ -547,12 +697,46 @@ function setStructuredData(data) {
 
 function getCardBadges(card) {
   const status = getCardStatus(card)
+  const signals = getCardBadgeSignals(card)
+  const condition = getConditionBadge(card.condition)
   return [
-    status === 'reserved' ? 'RÃ©servÃ©e' : '',
+    status === 'reserved' ? 'Réservée' : '',
     status === 'sold' ? 'Vendue' : '',
+    signals.promo ? 'Promo' : '',
+    signals.vintage && signals.japanese ? 'Vintage JP' : '',
+    signals.nonGlossy ? 'Non-glossy' : '',
+    signals.vending ? 'Vending' : '',
+    signals.graded ? 'Gradée' : '',
+    condition,
     card.badge,
-    card.featured ? 'Coup de cÅ“ur' : '',
+    card.featured ? 'Coup de cœur' : '',
   ].filter(Boolean).filter((badge, index, list) => list.indexOf(badge) === index)
+}
+
+function getCardStory(card) {
+  const signals = getCardBadgeSignals(card)
+  const text = getCardSearchText(card)
+  const year = text.match(/\b(19|20)\d{2}\b/)?.[0]
+  const facts = [
+    card.set ? `Origine : ${card.set}` : '',
+    year ? `Année : ${year}` : '',
+    signals.japanese ? 'Version japonaise' : '',
+    signals.vintage ? 'Carte vintage' : '',
+    signals.promo ? 'Édition promo' : '',
+    signals.vending ? 'Expansion Sheet / Vending' : '',
+    signals.nonGlossy ? 'Non-glossy' : '',
+  ].filter(Boolean)
+  const collectorAngle = [
+    signals.dracaufeu ? 'Dracaufeu reste une recherche forte chez les collectionneurs, surtout en version japonaise.' : '',
+    signals.vending ? 'Les cartes Expansion Sheet / Vending ont une identité très différente des séries classiques, ce qui les rend faciles à mettre en avant dans une collection.' : '',
+    signals.promo ? 'Les promos japonaises sont intéressantes car elles viennent souvent de distributions limitées, événements ou produits spécifiques.' : '',
+    signals.vintage ? 'Le côté vintage ajoute une vraie valeur de collection, surtout avec des photos réelles et un état clairement documenté.' : '',
+  ].filter(Boolean)[0]
+
+  return {
+    facts,
+    text: collectorAngle || 'Cette carte est présentée avec photos réelles, état indiqué et réservation sans paiement direct, pour décider tranquillement avant validation avec le vendeur.',
+  }
 }
 
 function HoloCardShowcase({ cards, openCardPage }) {
@@ -1252,6 +1436,7 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
   const reservable = isReservable(card)
   const badges = getCardBadges(card)
   const images = getCardImages(card)
+  const story = getCardStory(card)
 
   return (
     <main className="card-detail-page">
@@ -1282,6 +1467,18 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
             </button>
           </div>
         </div>
+      </section>
+      <section className="card-story-panel">
+        <div>
+          <span>Collection</span>
+          <h2>Pourquoi cette carte est intéressante</h2>
+          <p>{story.text}</p>
+        </div>
+        {story.facts.length > 0 && (
+          <div className="story-facts">
+            {story.facts.map((fact) => <span key={fact}>{fact}</span>)}
+          </div>
+        )}
       </section>
       <section className="card-detail-grid">
         <article>
@@ -1671,6 +1868,12 @@ function SiteFooter({ site, setView, t }) {
         <strong>{site.brandName}</strong>
         <span>{site.copy[site.language].footerNote}</span>
       </div>
+      <nav className="footer-collections" aria-label="Collections Pokémon">
+        <button type="button" onClick={() => setView('seoVintage')}>Vintage JP</button>
+        <button type="button" onClick={() => setView('seoPromo')}>Promos JP</button>
+        <button type="button" onClick={() => setView('seoVending')}>Vending Series</button>
+        <button type="button" onClick={() => setView('seoDracaufeu')}>Dracaufeu</button>
+      </nav>
       <nav aria-label="Navigation secondaire">
         <button type="button" onClick={() => setView('about')}>{t.about}</button>
         <button type="button" onClick={() => setView('contact')}>{t.contact}</button>
@@ -2077,12 +2280,12 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
   const [draft, setDraft] = useState({
     name: '',
     set: '',
-    rarity: 'Holo rare',
-    type: 'Feu',
-    condition: 'Near Mint',
-    language: 'FR',
+    rarity: '',
+    type: '',
+    condition: '',
+    language: 'Japonais',
     grade: 'Raw',
-    price: '39.90',
+    price: '',
     stock: '1',
     color: '#e84842',
     status: 'available',
@@ -2147,24 +2350,32 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
 
   function addCard(event) {
     event.preventDefault()
-    if (!draft.name.trim() || !draft.set.trim()) return
-    const nextCard = {
+    if (!draft.name.trim()) return
+    const preparedDraft = autocompleteCardDraft({
       ...draft,
+      set: draft.set.trim() || 'À compléter',
+    })
+    const nextCard = {
+      ...preparedDraft,
       id: `kc-${Date.now()}`,
-      price: Number(draft.price),
-      stock: Number(draft.stock),
-      imageUrl: getCardImages(draft)[0] || '',
-      imageUrls: getCardImages(draft),
+      price: Number(preparedDraft.price),
+      stock: Number(preparedDraft.stock),
+      imageUrl: getCardImages(preparedDraft)[0] || '',
+      imageUrls: getCardImages(preparedDraft),
       status: 'available',
       reserved: false,
-      featured: Boolean(draft.featured),
+      featured: Boolean(preparedDraft.featured),
     }
     markEdited([nextCard, ...draftCards])
     setDraft((current) => ({
       ...current,
       name: '',
       set: '',
-      price: '39.90',
+      rarity: '',
+      type: '',
+      condition: '',
+      language: 'Japonais',
+      price: '',
       stock: '1',
       imageUrl: '',
       imageUrls: [],
@@ -2327,6 +2538,13 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
             onChange={(field, value) => setDraft({ ...draft, [field]: value })}
           />
         </Field>
+        <div className="smart-import-actions field-wide">
+          <button type="button" className="secondary-button" onClick={() => setDraft(autocompleteCardDraft(draft))}>
+            <Sparkles size={17} />
+            Préparer la fiche
+          </button>
+          <span>Génère description, tags, badges et classement à partir du nom, set, prix, état et photos.</span>
+        </div>
         <button type="submit">
           <Plus size={18} />
           {t.add}
@@ -2493,6 +2711,17 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
               <Field label="Couleur">
                 <input type="color" value={card.color} onChange={(event) => updateCard(card.id, 'color', event.target.value)} />
               </Field>
+              <div className="smart-import-actions field-wide compact">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => markEdited(draftCards.map((item) => (item.id === card.id ? autocompleteCardDraft(item) : item)))}
+                >
+                  <Sparkles size={16} />
+                  Optimiser cette fiche
+                </button>
+                <span>Complète automatiquement les tags, le descriptif et le classement sans toucher aux photos.</span>
+              </div>
             </div>
             <button className="danger-button" type="button" onClick={() => removeCard(card.id)}>
               <Trash2 size={16} />
@@ -2959,7 +3188,7 @@ function App() {
     const pageSeo = getPageSeo({ view, selected, site, t, cards })
     const canonical = view === 'cardDetail' && selected
       ? `${origin}${getCardPath(selected)}`
-      : `${origin}${view === 'home' ? '/' : `/#${view}`}`
+      : `${origin}${getViewPath(view)}`
     const title = pageSeo.title
     const description = pageSeo.description
     const shareImage = view === 'cardDetail' && selected && getCardImages(selected)[0]
@@ -3091,6 +3320,10 @@ function App() {
         'orders',
         'reservationSuccess',
         'admin',
+        'seoVintage',
+        'seoPromo',
+        'seoVending',
+        'seoDracaufeu',
       ])
       if (allowedViews.has(target.view)) {
         setView(target.view)
@@ -3203,6 +3436,28 @@ function App() {
     () => [...cards].sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0)).slice(0, 24),
     [cards],
   )
+  const seoVintageCards = useMemo(
+    () => cards.filter((card) => {
+      const signals = getCardBadgeSignals(card)
+      return signals.japanese && signals.vintage
+    }),
+    [cards],
+  )
+  const seoPromoCards = useMemo(
+    () => cards.filter((card) => {
+      const signals = getCardBadgeSignals(card)
+      return signals.japanese && signals.promo
+    }),
+    [cards],
+  )
+  const seoVendingCards = useMemo(
+    () => cards.filter((card) => getCardBadgeSignals(card).vending),
+    [cards],
+  )
+  const seoDracaufeuCards = useMemo(
+    () => cards.filter((card) => getCardBadgeSignals(card).dracaufeu),
+    [cards],
+  )
 
   function flash(message) {
     setToast(message)
@@ -3247,8 +3502,7 @@ function App() {
 
   function navigate(viewName) {
     setView(viewName)
-    const target = viewName === 'home' ? '/' : `/#${viewName}`
-    window.history.pushState(null, '', target)
+    window.history.pushState(null, '', getViewPath(viewName))
   }
 
   function openCardPage(card) {
@@ -3578,6 +3832,54 @@ function App() {
           title={site.copy[site.language].vintageJapaneseTitle}
           intro={site.copy[site.language].vintageJapaneseIntro}
           cards={vintageJapaneseCards.length ? vintageJapaneseCards : japaneseCards}
+          openCardPage={openCardPage}
+          addToCart={addToCart}
+          copyCardLink={copyCardLink}
+          site={site}
+          t={t}
+        />
+      )}
+      {view === 'seoVintage' && (
+        <CollectionPage
+          title="Cartes Pokémon japonaises vintage"
+          intro="Sélection de cartes japonaises anciennes, Expansion Sheet, promos et pièces vintage avec photos réelles."
+          cards={seoVintageCards}
+          openCardPage={openCardPage}
+          addToCart={addToCart}
+          copyCardLink={copyCardLink}
+          site={site}
+          t={t}
+        />
+      )}
+      {view === 'seoPromo' && (
+        <CollectionPage
+          title="Cartes Pokémon promo japonaises"
+          intro="Promos japonaises, éditions spéciales, CoroCoro, Quick Starter Gift et cartes événementielles."
+          cards={seoPromoCards}
+          openCardPage={openCardPage}
+          addToCart={addToCart}
+          copyCardLink={copyCardLink}
+          site={site}
+          t={t}
+        />
+      )}
+      {view === 'seoVending' && (
+        <CollectionPage
+          title="Cartes Pokémon Vending Series"
+          intro="Cartes Expansion Sheet et Vending Series japonaises, appréciées pour leurs illustrations et leur format historique."
+          cards={seoVendingCards}
+          openCardPage={openCardPage}
+          addToCart={addToCart}
+          copyCardLink={copyCardLink}
+          site={site}
+          t={t}
+        />
+      )}
+      {view === 'seoDracaufeu' && (
+        <CollectionPage
+          title="Cartes Pokémon Dracaufeu"
+          intro="Dracaufeu, Charizard et Lizardon : promos japonaises, cartes modernes et pièces de collection."
+          cards={seoDracaufeuCards}
           openCardPage={openCardPage}
           addToCart={addToCart}
           copyCardLink={copyCardLink}
