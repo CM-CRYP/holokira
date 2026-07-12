@@ -477,6 +477,84 @@
   gap: 12px;
 }
 
+.home-focus {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(360px, 1.15fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.home-focus > div:first-child {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.home-focus span,
+.home-copy span {
+  color: var(--muted);
+  font: 900 12px/1 var(--ui);
+  text-transform: uppercase;
+}
+
+.home-focus h2 {
+  max-width: 720px;
+  margin: 0;
+  font: 900 clamp(30px, 4vw, 52px)/0.96 var(--display);
+}
+
+.home-focus p {
+  max-width: 720px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.focus-card-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.focus-card-list button {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  color: var(--ink);
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.focus-card-list .card-art {
+  min-height: 145px;
+  aspect-ratio: 3 / 4;
+}
+
+.focus-card-list .card-art img {
+  object-fit: cover;
+}
+
+.focus-card-list strong,
+.focus-card-list span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-card-list strong {
+  font: 900 15px/1.05 var(--display);
+}
+
 .home-card-link {
   display: grid;
   grid-template-columns: 140px minmax(0, 1fr) auto;
@@ -2407,6 +2485,7 @@ td:nth-child(2) {
   }
 
   .home-hero,
+  .home-focus,
   .home-strip {
     grid-template-columns: 1fr;
   }
@@ -2431,6 +2510,10 @@ td:nth-child(2) {
   }
 
   .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .focus-card-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -2567,6 +2650,10 @@ td:nth-child(2) {
 
   .guide-grid {
     grid-template-columns: 1fr;
+  }
+
+  .focus-card-list {
+    grid-template-columns: 1fr 1fr;
   }
 
   .top-actions {

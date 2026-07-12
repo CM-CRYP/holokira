@@ -17,15 +17,15 @@
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://holokira2.contactholokira.workers.dev/#highlights</loc>
-    <priority>0.8</priority>
+    <loc>https://holokira2.contactholokira.workers.dev/#vintageJapanese</loc>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://holokira2.contactholokira.workers.dev/#japanese</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://holokira2.contactholokira.workers.dev/#vintageJapanese</loc>
+    <loc>https://holokira2.contactholokira.workers.dev/#highlights</loc>
     <priority>0.8</priority>
   </url>
   <url>
@@ -43,5 +43,70 @@
   <url>
     <loc>https://holokira2.contactholokira.workers.dev/#contact</loc>
     <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783873612336/grodoudou-lumineux-darkness-and-to-light</loc>
+    <lastmod>2026-07-12</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783872723325/mentali-et-deoxys-gx-tag-team-smm</loc>
+    <lastmod>2026-07-12</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783873004847/pierre-lune-expansion-sheet</loc>
+    <lastmod>2026-07-12</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783872328556/reshiram-et-dracaufeu-gx-tag-team-sm12a</loc>
+    <lastmod>2026-07-12</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783804054557/sauvegarde-d-energie-no-rarity</loc>
+    <lastmod>2026-07-11</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783803798980/magmar-carapuce-deck</loc>
+    <lastmod>2026-07-11</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783803491482/hypnomade-fossil</loc>
+    <lastmod>2026-07-11</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783803649444/gravalanche-expansion-sheet</loc>
+    <lastmod>2026-07-11</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783802913764/roucool-expansion-sheet</loc>
+    <lastmod>2026-07-11</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783802467253/aligatueur-holo-neo-premium-file</loc>
+    <lastmod>2026-07-11</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783802229700/mew-holo-fossil</loc>
+    <lastmod>2026-07-11</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783768860850/mentali-espece-delta</loc>
+    <lastmod>2026-07-11</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783713678378/salameche-charmander-expansion-sheet</loc>
+    <lastmod>2026-07-10</lastmod>
+    <priority>0.8</priority>
   </url>
 </urlset>

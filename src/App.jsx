@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -54,15 +54,15 @@ const adminTabs = [
   ['overview', "Vue d'ensemble", LayoutDashboard],
   ['content', 'Contenu', Edit3],
   ['products', 'Produits', Boxes],
-  ['orders', 'Réservations', PackageCheck],
+  ['orders', 'RÃ©servations', PackageCheck],
   ['sellRequests', 'Rachats', FileText],
   ['appearance', 'Apparence', Palette],
-  ['settings', 'Paramètres', Settings],
+  ['settings', 'ParamÃ¨tres', Settings],
 ]
 
 const cardStatuses = {
   available: 'Disponible',
-  reserved: 'Réservée',
+  reserved: 'RÃ©servÃ©e',
   sold: 'Vendue',
 }
 
@@ -70,98 +70,98 @@ const labels = {
   fr: {
     home: 'Accueil',
     shop: 'Boutique',
-    highlights: 'Pépites',
+    highlights: 'PÃ©pites',
     sell: 'Vendre',
     cards: 'Toutes les cartes',
     arrivals: 'Arrivages',
-    about: 'À propos',
+    about: 'Ã€ propos',
     contact: 'Contact',
-    legal: 'Mentions légales',
+    legal: 'Mentions lÃ©gales',
     japanese: 'Japonaises',
     vintageJapanese: 'Anciennes JP',
-    graded: 'Gradées',
-    orders: 'Réservations',
+    graded: 'GradÃ©es',
+    orders: 'RÃ©servations',
     admin: 'Admin',
     all: 'Tous',
     allFeminine: 'Toutes',
     sort: 'Tri',
-    sortFeatured: 'Pépites',
-    sortNewest: 'Nouveautés',
+    sortFeatured: 'PÃ©pites',
+    sortNewest: 'NouveautÃ©s',
     sortPriceAsc: 'Prix croissant',
-    sortPriceDesc: 'Prix décroissant',
-    sortRarity: 'Rareté',
-    buy: 'Je réserve',
+    sortPriceDesc: 'Prix dÃ©croissant',
+    sortRarity: 'RaretÃ©',
+    buy: 'Je rÃ©serve',
     add: 'Ajouter',
-    addToCart: 'Ajouter aux réservations',
-    cart: 'Réservations',
+    addToCart: 'Ajouter aux rÃ©servations',
+    cart: 'RÃ©servations',
     checkout: 'Envoyer ma demande',
     remove: 'Retirer',
     subtotal: 'Sous-total',
     shipping: 'Livraison',
     free: 'Offerte',
     total: 'Total',
-    rarity: 'Rareté',
-    condition: 'État',
+    rarity: 'RaretÃ©',
+    condition: 'Ã‰tat',
     language: 'Langue',
     grade: 'Grade',
     stock: 'Stock',
     lowStock: 'Stock bas',
-    sales: 'Montant réservé',
+    sales: 'Montant rÃ©servÃ©',
     status: 'Statut',
     customer: 'Client',
     date: 'Date',
     items: 'Articles',
-    reset: 'Réinitialiser',
+    reset: 'RÃ©initialiser',
     save: 'Enregistrer',
-    productAdded: 'Carte ajoutée à tes réservations.',
-    lowStockWarning: 'Cette carte est indisponible ou déjà réservée.',
-    orderCreated: 'Réservation envoyée.',
-    reservationError: 'La réservation n’a pas pu être enregistrée. Réessaie dans un instant.',
-    reservationSuccessTitle: 'Réservation reçue',
-    reservationSuccessIntro: 'Ta demande est enregistrée. Garde cette référence pour nos échanges.',
+    productAdded: 'Carte ajoutÃ©e Ã  tes rÃ©servations.',
+    lowStockWarning: 'Cette carte est indisponible ou dÃ©jÃ  rÃ©servÃ©e.',
+    orderCreated: 'RÃ©servation envoyÃ©e.',
+    reservationError: 'La rÃ©servation nâ€™a pas pu Ãªtre enregistrÃ©e. RÃ©essaie dans un instant.',
+    reservationSuccessTitle: 'RÃ©servation reÃ§ue',
+    reservationSuccessIntro: 'Ta demande est enregistrÃ©e. Garde cette rÃ©fÃ©rence pour nos Ã©changes.',
     continueShopping: 'Continuer la visite',
-    viewReservations: 'Voir mes réservations',
+    viewReservations: 'Voir mes rÃ©servations',
     shareCard: 'Copier le lien',
-    linkCopied: 'Lien copié.',
+    linkCopied: 'Lien copiÃ©.',
     enterShop: 'Entrer dans la boutique',
     discoverCards: 'Voir les cartes',
-    emptyOrders: 'Aucune réservation pour le moment.',
-    loginTitle: 'Accès admin',
+    emptyOrders: 'Aucune rÃ©servation pour le moment.',
+    loginTitle: 'AccÃ¨s admin',
     loginIntro: 'Connecte-toi avec ton compte administrateur Supabase.',
     loginError: 'Connexion impossible.',
-    logout: 'Déconnexion',
+    logout: 'DÃ©connexion',
     customerInfo: 'Informations client',
     fullName: 'Nom complet',
     email: 'E-mail',
-    phone: 'Téléphone',
+    phone: 'TÃ©lÃ©phone',
     address: 'Adresse',
     city: 'Ville',
     postalCode: 'Code postal',
     country: 'Pays',
     sellerMessage: 'Message pour le vendeur',
-    reserved: 'Réservée',
+    reserved: 'RÃ©servÃ©e',
     sold: 'Vendue',
     available: 'Disponible',
-    reservedUntil: 'Réservée jusqu’au',
+    reservedUntil: 'RÃ©servÃ©e jusquâ€™au',
     release: 'Remettre en vente',
-    privateNote: 'Note privée',
-    reply: 'Répondre',
+    privateNote: 'Note privÃ©e',
+    reply: 'RÃ©pondre',
     copyEmail: 'Copier e-mail',
     darkMode: 'Mode sombre',
     lightMode: 'Mode clair',
-    reservationPending: 'Nouvelle réservation',
-    paymentPending: 'Réservée',
+    reservationPending: 'Nouvelle rÃ©servation',
+    paymentPending: 'RÃ©servÃ©e',
     sellRequests: 'Demandes de rachat',
     emptySellRequests: 'Aucune demande de rachat pour le moment.',
-    requestSent: 'Demande envoyée.',
-    integrations: 'Intégrations',
+    requestSent: 'Demande envoyÃ©e.',
+    integrations: 'IntÃ©grations',
     stripeStatus: 'Envoi e-mail',
-    databaseStatus: 'Base de données',
+    databaseStatus: 'Base de donnÃ©es',
     active: 'Actif',
-    inactive: 'À configurer',
+    inactive: 'Ã€ configurer',
     adminTitle: 'Panel admin',
     adminSubtitle:
-      'Contrôle le contenu, les produits, les réservations, la langue, les couleurs et les paramètres de la boutique.',
+      'ContrÃ´le le contenu, les produits, les rÃ©servations, la langue, les couleurs et les paramÃ¨tres de la boutique.',
   },
   en: {
     home: 'Home',
@@ -261,7 +261,7 @@ const labels = {
   },
 }
 
-const reservationStatusOptions = ['Nouvelle', 'Contacté', 'Confirmée', 'Annulée']
+const reservationStatusOptions = ['Nouvelle', 'ContactÃ©', 'ConfirmÃ©e', 'AnnulÃ©e']
 const defaultCheckout = {
   fullName: '',
   email: '',
@@ -347,11 +347,11 @@ function normalizeStatus(status) {
     Expediee: 'Expédiée',
     Archivee: 'Archivée',
     'Paiement à activer': 'Nouvelle réservation',
-    Payée: 'Confirmée',
-    Préparée: 'Contacté',
-    Expédiée: 'Confirmée',
+    'Payée': 'Confirmée',
+    'Préparée': 'Contacté',
+    'Expédiée': 'Confirmée',
     'Nouvelle réservation': 'Nouvelle',
-    Archivée: 'Annulée',
+    'Archivée': 'Annulée',
   }
   return replacements[status] ?? status
 }
@@ -377,9 +377,75 @@ function getCollectionSignals(card) {
   return {
     japanese: Boolean(card.isJapanese || card.language?.toUpperCase() === 'JP'),
     graded: Boolean(card.isGraded || (grade && grade !== 'raw')),
-    vintage: Boolean(card.isVintage || /neo|archive|vault|promo|old|vintage|japan|osaka|kyoto|hanami|ancienne/i.test(haystack)),
+    vintage: Boolean(card.isVintage || /base set|fossil|jungle|neo|premium file|expansion sheet|vending|old back|carddass|topsun|southern islands|gym|rocket|e-series|ex era|delta species|delta|archive|vault|promo|old|vintage|ancienne/i.test(haystack)),
     promo: Boolean(card.isPromo || /promo/i.test(haystack)),
     favorite: Boolean(card.featured || card.badge),
+  }
+}
+
+function getInventorySeo(cards) {
+  const availableCards = cards.filter((card) => getCardStatus(card) !== 'sold')
+  const vintageCards = availableCards.filter((card) => getCollectionSignals(card).vintage)
+  const setNames = [...new Set(availableCards.map((card) => card.set).filter(Boolean))].slice(0, 6)
+  const cardNames = availableCards.map((card) => card.name).filter(Boolean).slice(0, 6)
+  const vintageSets = [...new Set(vintageCards.map((card) => card.set).filter(Boolean))].slice(0, 5)
+  const keywords = [
+    'cartes Pokemon japonaises vintage',
+    'cartes Pokemon anciennes japonaises',
+    'Pokemon Expansion Sheet',
+    'Pokemon Fossil japonais',
+    'Pokemon Neo Premium File',
+    'cartes Pokemon reservation France',
+    ...setNames,
+    ...cardNames,
+  ].filter(Boolean)
+
+  return {
+    vintageSets,
+    cardNames,
+    keywords: [...new Set(keywords)].join(', '),
+  }
+}
+
+function getPageSeo({ view, selected, site, t, cards }) {
+  const copy = site.copy[site.language]
+  const inventory = getInventorySeo(cards)
+  const isFr = site.language === 'fr'
+  const pageTitles = {
+    home: isFr ? 'Cartes Pok\u00e9mon japonaises vintage et rares' : 'Vintage Japanese and rare Pokemon cards',
+    shop: isFr ? 'Boutique de cartes Pok\u00e9mon japonaises vintage' : 'Vintage Japanese Pokemon card shop',
+    arrivals: isFr ? 'Arrivages cartes Pok\u00e9mon japonaises' : 'Japanese Pokemon card arrivals',
+    cards: t.cards,
+    highlights: copy.highlightsTitle,
+    japanese: copy.japaneseTitle,
+    vintageJapanese: copy.vintageJapaneseTitle,
+    graded: copy.gradedTitle,
+    sell: copy.sellTitle,
+    about: copy.aboutTitle,
+    contact: copy.contactTitle,
+    legal: copy.legalTitle,
+    orders: t.orders,
+  }
+
+  if (view === 'cardDetail' && selected) {
+    const signals = getCollectionSignals(selected)
+    return {
+      title: `${selected.name} ${selected.set} | ${site.brandName}`,
+      description: selected.description || `${selected.name} ${selected.set}, carte Pok\u00e9mon ${signals.japanese ? 'japonaise' : selected.language} ${signals.vintage ? 'vintage' : ''}, \u00e9tat ${selected.condition}, grade ${selected.grade}. R\u00e9servation sans paiement direct depuis la France.`,
+      keywords: `${selected.name}, ${selected.set}, ${selected.rarity}, ${selected.condition}, ${selected.language}, ${inventory.keywords}`,
+    }
+  }
+
+  const vintageSets = inventory.vintageSets.length ? inventory.vintageSets.join(', ') : 'Expansion Sheet, Fossil, Neo, Vending'
+  const cardExamples = inventory.cardNames.length ? inventory.cardNames.join(', ') : 'Salam\u00e8che, Mew, Aligatueur, Mentali'
+  const description = isFr
+    ? `HoloKira s\u00e9lectionne des cartes Pok\u00e9mon japonaises vintage et rares : ${vintageSets}. Photos r\u00e9elles, \u00e9tat d\u00e9taill\u00e9, r\u00e9servation sans paiement direct et exp\u00e9dition suivie depuis la France. Exemples du stock : ${cardExamples}.`
+    : `HoloKira curates vintage and rare Japanese Pokemon cards: ${vintageSets}. Real photos, clear condition notes, reservation without direct payment, tracked shipping from France. Current examples: ${cardExamples}.`
+
+  return {
+    title: `${pageTitles[view] || site.brandName} | ${site.brandName}`,
+    description,
+    keywords: inventory.keywords,
   }
 }
 
@@ -482,10 +548,10 @@ function setStructuredData(data) {
 function getCardBadges(card) {
   const status = getCardStatus(card)
   return [
-    status === 'reserved' ? 'Réservée' : '',
+    status === 'reserved' ? 'RÃ©servÃ©e' : '',
     status === 'sold' ? 'Vendue' : '',
     card.badge,
-    card.featured ? 'Coup de cœur' : '',
+    card.featured ? 'Coup de cÅ“ur' : '',
   ].filter(Boolean).filter((badge, index, list) => list.indexOf(badge) === index)
 }
 
@@ -522,7 +588,7 @@ function HoloCardShowcase({ cards, openCardPage }) {
       </div>
       <div className="holo-panel">
         <span>HoloKira selection</span>
-        <strong>{showcaseCards.length} cartes à explorer</strong>
+        <strong>{showcaseCards.length} cartes Ã  explorer</strong>
       </div>
     </section>
   )
@@ -619,6 +685,8 @@ function HomeView({ cards, openCardPage, setView, site, t }) {
   const copy = site.copy[site.language]
   const featuredCards = cards.filter((card) => card.featured).slice(0, 3)
   const previewCards = featuredCards.length ? featuredCards : cards.slice(0, 3)
+  const inventory = getInventorySeo(cards)
+  const vintageCards = cards.filter((card) => getCollectionSignals(card).vintage).slice(0, 4)
 
   return (
     <main className="home-page">
@@ -639,6 +707,29 @@ function HomeView({ cards, openCardPage, setView, site, t }) {
           </div>
         </div>
         <HoloCardShowcase cards={cards} openCardPage={openCardPage} />
+      </section>
+      <section className="home-focus">
+        <div>
+          <span>{site.language === 'fr' ? 'Sp\u00e9cialit\u00e9 HoloKira' : 'HoloKira specialty'}</span>
+          <h2>{site.language === 'fr' ? 'Cartes Pok\u00e9mon japonaises vintage, photos r\u00e9elles' : 'Vintage Japanese Pokemon cards, real photos'}</h2>
+          <p>
+            {site.language === 'fr'
+              ? `Le stock se concentre sur les pi\u00e8ces japonaises anciennes et recherch\u00e9es : ${inventory.vintageSets.join(', ') || 'Expansion Sheet, Fossil, Neo, Vending'}. Chaque carte est pr\u00e9sent\u00e9e avec ses photos, son \u00e9tat et ses d\u00e9fauts visibles.`
+              : `The stock focuses on older and collectible Japanese cards: ${inventory.vintageSets.join(', ') || 'Expansion Sheet, Fossil, Neo, Vending'}. Every card is shown with real photos, condition and visible flaws.`}
+          </p>
+          <button className="secondary-button" type="button" onClick={() => setView('vintageJapanese')}>
+            {t.vintageJapanese}
+          </button>
+        </div>
+        <div className="focus-card-list">
+          {vintageCards.map((card) => (
+            <button type="button" key={card.id} onClick={() => openCardPage(card)}>
+              <CardArt card={card} />
+              <strong>{card.name}</strong>
+              <span>{card.set}</span>
+            </button>
+          ))}
+        </div>
       </section>
       <section className="home-strip">
         {previewCards.map((card) => (
@@ -687,7 +778,7 @@ function ProductCard({ card, selected, onSelect, onAdd, onShare, t }) {
           {status === 'reserved' && card.reservedUntil && (
             <span>{t.reservedUntil} {formatDateTime(card.reservedUntil)}</span>
           )}
-          {card.negotiable && <span>Prix négociable</span>}
+          {card.negotiable && <span>Prix nÃ©gociable</span>}
           {card.tags && <span>{card.tags}</span>}
         </div>
       </button>
@@ -749,10 +840,10 @@ function Filters({
   const collectionOptions = [
     ['all', t.all],
     ['japanese', isFr ? 'Japonais' : 'Japanese'],
-    ['graded', isFr ? 'Gradée' : 'Graded'],
+    ['graded', isFr ? 'GradÃ©e' : 'Graded'],
     ['vintage', 'Vintage'],
     ['promo', 'Promo'],
-    ['favorite', isFr ? 'Coup de cœur' : 'Favorite'],
+    ['favorite', isFr ? 'Coup de cÅ“ur' : 'Favorite'],
   ]
   const statuses = [
     [t.all, t.all],
@@ -899,7 +990,7 @@ function DetailPanel({ card, onAdd, t }) {
       </dl>
       {card.flaws && (
         <p className="card-flaws">
-          <strong>Défauts visibles</strong>
+          <strong>DÃ©fauts visibles</strong>
           {card.flaws}
         </p>
       )}
@@ -1149,7 +1240,7 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
         <div className="empty-state">
           <PackageCheck size={28} />
           <strong>Carte introuvable</strong>
-          <p>Retourne à la boutique pour choisir une carte disponible.</p>
+          <p>Retourne Ã  la boutique pour choisir une carte disponible.</p>
           <button className="checkout" type="button" onClick={() => setView('shop')}>
             Boutique
           </button>
@@ -1168,7 +1259,7 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
         <CardPhotoGallery card={card} images={images} />
         <div className="card-detail-copy">
           <button className="text-button" type="button" onClick={() => setView('shop')}>
-            ← Retour boutique
+            â† Retour boutique
           </button>
           {badges.length > 0 && (
             <span className="badge-row">
@@ -1179,7 +1270,7 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
           <h1>{card.name}</h1>
           <p>{card.set}</p>
           <strong>{formatMoney(card.price)}</strong>
-          <span className="price-mode">{card.negotiable ? 'Prix négociable' : 'Prix ferme'}</span>
+          <span className="price-mode">{card.negotiable ? 'Prix nÃ©gociable' : 'Prix ferme'}</span>
           <div className="card-detail-actions">
             <button className="checkout" type="button" onClick={() => addToCart(card.id)} disabled={!reservable}>
               <ShoppingBag size={18} />
@@ -1213,7 +1304,7 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
               <dd>{card.grade}</dd>
             </div>
             <div>
-              <dt>Date d’ajout</dt>
+              <dt>Date dâ€™ajout</dt>
               <dd>{card.addedAt ? new Date(card.addedAt).toLocaleDateString('fr-FR') : '-'}</dd>
             </div>
             <div>
@@ -1222,32 +1313,32 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
             </div>
             <div>
               <dt>Prix</dt>
-              <dd>{card.negotiable ? 'Négociable' : 'Ferme'}</dd>
+              <dd>{card.negotiable ? 'NÃ©gociable' : 'Ferme'}</dd>
             </div>
           </dl>
         </article>
         <article>
           <h2>Descriptif</h2>
-          <p>{card.description || 'Description détaillée à compléter depuis le panel admin.'}</p>
-          <p>{card.flaws || 'Aucun défaut majeur signalé.'}</p>
+          <p>{card.description || 'Description dÃ©taillÃ©e Ã  complÃ©ter depuis le panel admin.'}</p>
+          <p>{card.flaws || 'Aucun dÃ©faut majeur signalÃ©.'}</p>
           <p>{site.copy[site.language].paymentNote}</p>
         </article>
       </section>
       <section className="trust-grid legacy-detail-trust" aria-hidden="true">
         <article>
           <Check size={18} />
-          <strong>Authenticité vérifiée</strong>
-          <p>Chaque carte est contrôlée avant publication, avec grade, langue et état indiqués clairement.</p>
+          <strong>AuthenticitÃ© vÃ©rifiÃ©e</strong>
+          <p>Chaque carte est contrÃ´lÃ©e avant publication, avec grade, langue et Ã©tat indiquÃ©s clairement.</p>
         </article>
         <article>
           <Eye size={18} />
-          <strong>État transparent</strong>
-          <p>Les défauts visibles sont indiqués sur la fiche pour éviter les mauvaises surprises.</p>
+          <strong>Ã‰tat transparent</strong>
+          <p>Les dÃ©fauts visibles sont indiquÃ©s sur la fiche pour Ã©viter les mauvaises surprises.</p>
         </article>
         <article>
           <PackageCheck size={18} />
-          <strong>Expédition protégée</strong>
-          <p>Envoi suivi depuis la France avec protection rigide adaptée aux cartes de collection.</p>
+          <strong>ExpÃ©dition protÃ©gÃ©e</strong>
+          <p>Envoi suivi depuis la France avec protection rigide adaptÃ©e aux cartes de collection.</p>
         </article>
       </section>
       <TrustSection site={site} />
@@ -1377,7 +1468,7 @@ function CardPhotoGallery({ card, images }) {
         <div className="zoom-modal" role="dialog" aria-modal="true" aria-label="Zoom photo carte">
           <button className="zoom-close" type="button" onClick={() => setZoomOpen(false)}>Fermer</button>
           {images.length > 1 && (
-            <button className="zoom-nav previous" type="button" onClick={() => move(-1)} aria-label="Photo précédente">
+            <button className="zoom-nav previous" type="button" onClick={() => move(-1)} aria-label="Photo prÃ©cÃ©dente">
               <ArrowLeft size={22} />
             </button>
           )}
@@ -1398,10 +1489,10 @@ function TrustSection({ site }) {
   const isFr = site.language === 'fr'
   const items = isFr
     ? [
-        ['Comment fonctionne la réservation', 'Tu ajoutes les cartes souhaitées, tu envoies ta demande, puis elles passent en réservé pendant le délai indiqué.'],
-        ['Paiement après validation vendeur', 'Aucun paiement en ligne. Le vendeur vérifie le stock, l’état et les détails avant de te recontacter.'],
-        ['Expédition protégée', 'Envoi suivi depuis la France, protection rigide et emballage adapté aux cartes de collection.'],
-        ['État des cartes transparent', 'Langue, grade, rareté et défauts visibles sont indiqués sur chaque fiche carte.'],
+        ['Comment fonctionne la rÃ©servation', 'Tu ajoutes les cartes souhaitÃ©es, tu envoies ta demande, puis elles passent en rÃ©servÃ© pendant le dÃ©lai indiquÃ©.'],
+        ['Paiement aprÃ¨s validation vendeur', 'Aucun paiement en ligne. Le vendeur vÃ©rifie le stock, lâ€™Ã©tat et les dÃ©tails avant de te recontacter.'],
+        ['ExpÃ©dition protÃ©gÃ©e', 'Envoi suivi depuis la France, protection rigide et emballage adaptÃ© aux cartes de collection.'],
+        ['Ã‰tat des cartes transparent', 'Langue, grade, raretÃ© et dÃ©fauts visibles sont indiquÃ©s sur chaque fiche carte.'],
       ]
     : [
         ['How reservation works', 'Add the cards you want, submit your request, then the cards are marked as reserved for the displayed period.'],
@@ -1413,7 +1504,7 @@ function TrustSection({ site }) {
   return (
     <section className="trust-panel">
       <div className="panel-title">
-        <h2>{isFr ? 'Réserver en confiance' : 'Reserve with confidence'}</h2>
+        <h2>{isFr ? 'RÃ©server en confiance' : 'Reserve with confidence'}</h2>
         <span>{site.copy[site.language].paymentMode}</span>
       </div>
       <div className="trust-grid">
@@ -1433,11 +1524,11 @@ function ReservationGuide({ site }) {
   const isFr = site.language === 'fr'
   const items = isFr
     ? [
-        ['Délai de réponse', 'Réponse généralement sous 24 à 48 h après ta demande.'],
-        ['Paiement après validation', 'Aucun paiement direct sur le site. Le moyen de paiement est confirmé avec le vendeur.'],
-        ['Expédition', 'Envoi suivi depuis la France avec protection rigide adaptée aux cartes.'],
+        ['DÃ©lai de rÃ©ponse', 'RÃ©ponse gÃ©nÃ©ralement sous 24 Ã  48 h aprÃ¨s ta demande.'],
+        ['Paiement aprÃ¨s validation', 'Aucun paiement direct sur le site. Le moyen de paiement est confirmÃ© avec le vendeur.'],
+        ['ExpÃ©dition', 'Envoi suivi depuis la France avec protection rigide adaptÃ©e aux cartes.'],
         ['Assurance', 'Assurance possible selon la valeur et le transporteur choisi.'],
-        ['Remise en main propre', 'Possible uniquement après accord avec le vendeur.'],
+        ['Remise en main propre', 'Possible uniquement aprÃ¨s accord avec le vendeur.'],
       ]
     : [
         ['Response time', 'Usually within 24 to 48 hours after your request.'],
@@ -1450,7 +1541,7 @@ function ReservationGuide({ site }) {
   return (
     <section className="reservation-guide">
       <div className="panel-title">
-        <h2>{isFr ? 'Réservation claire' : 'Clear reservation'}</h2>
+        <h2>{isFr ? 'RÃ©servation claire' : 'Clear reservation'}</h2>
         <span>{site.copy[site.language].paymentMode}</span>
       </div>
       <div className="guide-grid">
@@ -1493,18 +1584,18 @@ function SellRequestForm({ draft, setDraft, submitRequest, site, t }) {
           <TextInput value={draft.phone} onChange={(value) => setDraft({ ...draft, phone: value })} />
         </Field>
       </div>
-      <Field label="Cartes proposées">
+      <Field label="Cartes proposÃ©es">
         <textarea
           value={draft.cardList}
           onChange={(event) => setDraft({ ...draft, cardList: event.target.value })}
-          placeholder="Dracaufeu, Noctali, cartes gradées, langue, état..."
+          placeholder="Dracaufeu, Noctali, cartes gradÃ©es, langue, Ã©tat..."
         />
       </Field>
       <div className="form-pair">
-        <Field label="État général">
+        <Field label="Ã‰tat gÃ©nÃ©ral">
           <TextInput value={draft.condition} onChange={(value) => setDraft({ ...draft, condition: value })} />
         </Field>
-        <Field label="Prix souhaité">
+        <Field label="Prix souhaitÃ©">
           <TextInput value={draft.expectedPrice} onChange={(value) => setDraft({ ...draft, expectedPrice: value })} />
         </Field>
       </div>
@@ -1633,7 +1724,7 @@ function imageFileToWebpBlob(file) {
     }
 
     const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Image impossible à lire.'))
+    reader.onerror = () => reject(new Error('Image impossible Ã  lire.'))
     reader.onload = () => {
       const image = new Image()
       image.onerror = () => reject(new Error('Format image non reconnu.'))
@@ -1664,7 +1755,7 @@ function imageFileToWebpBlob(file) {
 function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Image impossible à préparer.'))
+    reader.onerror = () => reject(new Error('Image impossible Ã  prÃ©parer.'))
     reader.onload = () => resolve(reader.result)
     reader.readAsDataURL(blob)
   })
@@ -1680,7 +1771,7 @@ async function inlineImageToStoredUrl(image, name) {
   const uploadResult = await uploadCardImage(blob, name)
   if (uploadResult.url) return uploadResult.url
   if (uploadResult.storageEnabled === false) return image
-  throw new Error(uploadResult.error?.message || 'Upload Supabase impossible. Vérifie le bucket card-images.')
+  throw new Error(uploadResult.error?.message || 'Upload Supabase impossible. VÃ©rifie le bucket card-images.')
 }
 
 async function prepareCardsForSave(cards) {
@@ -1730,7 +1821,7 @@ function ImageUploader({ value, onChange, name }) {
         } else if (uploadResult.storageEnabled === false) {
           uploadedImages.push(await blobToDataUrl(blob))
         } else {
-          throw new Error(uploadResult.error?.message || 'Upload Supabase impossible. Vérifie le bucket card-images.')
+          throw new Error(uploadResult.error?.message || 'Upload Supabase impossible. VÃ©rifie le bucket card-images.')
         }
       }
       onChange([...images, ...uploadedImages])
@@ -1763,10 +1854,10 @@ function ImageUploader({ value, onChange, name }) {
               <img src={image} alt={`${name || 'Carte'} ${index + 1}`} />
               <figcaption>{index === 0 ? 'Principale' : `Photo ${index + 1}`}</figcaption>
               <div className="image-order-actions">
-                <button type="button" onClick={() => moveImage(index, -1)} disabled={index === 0} title="Déplacer avant">
+                <button type="button" onClick={() => moveImage(index, -1)} disabled={index === 0} title="DÃ©placer avant">
                   <ArrowLeft size={13} />
                 </button>
-                <button type="button" onClick={() => moveImage(index, 1)} disabled={index === images.length - 1} title="Déplacer après">
+                <button type="button" onClick={() => moveImage(index, 1)} disabled={index === images.length - 1} title="DÃ©placer aprÃ¨s">
                   <ArrowRight size={13} />
                 </button>
                 <button type="button" onClick={() => removeImage(index)} title="Retirer cette photo">
@@ -1792,7 +1883,7 @@ function ImageUploader({ value, onChange, name }) {
           </button>
         )}
       </div>
-      <small>Photos compressées automatiquement. La première photo est utilisée comme image principale.</small>
+      <small>Photos compressÃ©es automatiquement. La premiÃ¨re photo est utilisÃ©e comme image principale.</small>
       {error && <small className="form-error">{error}</small>}
     </div>
   )
@@ -1802,7 +1893,7 @@ function CardClassificationEditor({ card, onChange }) {
   const options = [
     ['isJapanese', 'Carte japonaise'],
     ['isVintage', 'Carte ancienne / vintage'],
-    ['isGraded', 'Carte gradée'],
+    ['isGraded', 'Carte gradÃ©e'],
     ['isPromo', 'Promo'],
   ]
 
@@ -1895,7 +1986,7 @@ function OrderTable({ orders, updateOrderStatus, updateOrderNote, releaseReserva
                       <Copy size={14} />
                       {t.copyEmail}
                     </button>
-                    <a href={`mailto:${order.email}?subject=Votre réservation ${order.id}`}>
+                    <a href={`mailto:${order.email}?subject=Votre rÃ©servation ${order.id}`}>
                       <Mail size={14} />
                       {t.reply}
                     </a>
@@ -1939,7 +2030,7 @@ function SellRequestsTable({ sellRequests, updateSellRequestStatus, t }) {
             <th>Demande</th>
             <th>{t.customer}</th>
             <th>Cartes</th>
-            <th>Prix souhaité</th>
+            <th>Prix souhaitÃ©</th>
             <th>{t.status}</th>
           </tr>
         </thead>
@@ -1959,10 +2050,10 @@ function SellRequestsTable({ sellRequests, updateSellRequestStatus, t }) {
                   onChange={(event) => updateSellRequestStatus(request.id, event.target.value)}
                 >
                   <option>Nouvelle</option>
-                  <option>Estimation envoyée</option>
-                  <option>Acceptée</option>
-                  <option>Refusée</option>
-                  <option>Archivée</option>
+                  <option>Estimation envoyÃ©e</option>
+                  <option>AcceptÃ©e</option>
+                  <option>RefusÃ©e</option>
+                  <option>ArchivÃ©e</option>
                 </select>
               </td>
             </tr>
@@ -2102,7 +2193,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       cardsToSave = await prepareCardsForSave(draftCards)
     } catch (error) {
       setIsSaving(false)
-      setSaveMessage(`Photos non sauvegardées : ${error.message}`)
+      setSaveMessage(`Photos non sauvegardÃ©es : ${error.message}`)
       return
     }
 
@@ -2111,7 +2202,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     const result = await persistCards(cardsToSave)
     if (result?.saved === false) {
       setIsSaving(false)
-      setSaveMessage(`Sauvegarde impossible : ${result.error?.message || 'vérifie Supabase puis réessaie.'}`)
+      setSaveMessage(`Sauvegarde impossible : ${result.error?.message || 'vÃ©rifie Supabase puis rÃ©essaie.'}`)
       return
     }
 
@@ -2130,7 +2221,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     setIsSaving(false)
     setDeletedIds([])
     setHasUnsavedChanges(false)
-    setSaveMessage('Produits sauvegardés.')
+    setSaveMessage('Produits sauvegardÃ©s.')
   }
 
   function cancelProductChanges() {
@@ -2147,7 +2238,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
         <span>Modifie toutes les informations visibles sur les cartes.</span>
       </div>
       <div className="admin-save-bar">
-        <span>{saveMessage || (hasUnsavedChanges ? 'Modifications non sauvegardées' : 'Tous les produits sont sauvegardés')}</span>
+        <span>{saveMessage || (hasUnsavedChanges ? 'Modifications non sauvegardÃ©es' : 'Tous les produits sont sauvegardÃ©s')}</span>
         <div>
           <button type="button" onClick={cancelProductChanges} disabled={!hasUnsavedChanges || isSaving}>
             Annuler
@@ -2165,13 +2256,13 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
         <Field label="Set">
           <TextInput value={draft.set} onChange={(value) => setDraft({ ...draft, set: value })} />
         </Field>
-        <Field label="Rareté">
+        <Field label="RaretÃ©">
           <TextInput value={draft.rarity} onChange={(value) => setDraft({ ...draft, rarity: value })} />
         </Field>
         <Field label="Type">
           <TextInput value={draft.type} onChange={(value) => setDraft({ ...draft, type: value })} />
         </Field>
-        <Field label="État">
+        <Field label="Ã‰tat">
           <TextInput value={draft.condition} onChange={(value) => setDraft({ ...draft, condition: value })} />
         </Field>
         <Field label="Langue">
@@ -2193,19 +2284,19 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
           <select value={draft.badge} onChange={(event) => setDraft({ ...draft, badge: event.target.value })}>
             <option value="">Aucun</option>
             <option>Nouveau</option>
-            <option>Coup de cœur</option>
+            <option>Coup de cÅ“ur</option>
           </select>
         </Field>
         <Field label="Tags">
           <TextInput value={draft.tags} onChange={(value) => setDraft({ ...draft, tags: value })} />
         </Field>
-        <Field label="Date d’ajout">
+        <Field label="Date dâ€™ajout">
           <TextInput type="date" value={draft.addedAt} onChange={(value) => setDraft({ ...draft, addedAt: value })} />
         </Field>
         <Field label="Descriptif public" className="field-wide field-tall">
           <textarea
             value={draft.description}
-            placeholder="Exemple : Carte japonaise en très bel état, idéale pour collection Salamèche..."
+            placeholder="Exemple : Carte japonaise en trÃ¨s bel Ã©tat, idÃ©ale pour collection SalamÃ¨che..."
             onChange={(event) => setDraft({ ...draft, description: event.target.value })}
           />
         </Field>
@@ -2216,14 +2307,14 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
             onChange={(value) => setDraft({ ...draft, imageUrls: value, imageUrl: value[0] || '' })}
           />
         </Field>
-        <Field label="Coup de cœur">
+        <Field label="Coup de cÅ“ur">
           <input
             type="checkbox"
             checked={Boolean(draft.featured)}
             onChange={(event) => setDraft({ ...draft, featured: event.target.checked })}
           />
         </Field>
-        <Field label="Prix négociable">
+        <Field label="Prix nÃ©gociable">
           <input
             type="checkbox"
             checked={Boolean(draft.negotiable)}
@@ -2247,7 +2338,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
           <input
             value={productQuery}
             onChange={(event) => setProductQuery(event.target.value)}
-            placeholder="Rechercher nom, set, rareté, tag..."
+            placeholder="Rechercher nom, set, raretÃ©, tag..."
           />
         </label>
         <label>
@@ -2262,25 +2353,25 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
         <label>
           <Boxes size={17} />
           <select value={productCategory} onChange={(event) => setProductCategory(event.target.value)}>
-            <option value="all">Toutes les catégories</option>
+            <option value="all">Toutes les catÃ©gories</option>
             <option value="japanese">Japonaises</option>
-            <option value="graded">Gradées</option>
+            <option value="graded">GradÃ©es</option>
             <option value="vintage">Anciennes / vintage</option>
             <option value="promo">Promo</option>
-            <option value="favorite">Coup de cœur</option>
+            <option value="favorite">Coup de cÅ“ur</option>
           </select>
         </label>
         <label>
           <SlidersHorizontal size={17} />
           <select value={productSort} onChange={(event) => setProductSort(event.target.value)}>
-            <option value="newest">Plus récentes</option>
+            <option value="newest">Plus rÃ©centes</option>
             <option value="name">Nom A-Z</option>
-            <option value="priceDesc">Prix décroissant</option>
+            <option value="priceDesc">Prix dÃ©croissant</option>
             <option value="priceAsc">Prix croissant</option>
           </select>
         </label>
       </div>
-      <div className="admin-product-strip" aria-label="Aperçu rapide des produits">
+      <div className="admin-product-strip" aria-label="AperÃ§u rapide des produits">
         {visibleDraftCards.slice(0, 12).map((card) => (
           <button type="button" key={card.id} onClick={() => setProductQuery(card.name)}>
             <CardArt card={card} />
@@ -2296,13 +2387,13 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
               {[
                 ['name', 'Nom'],
                 ['set', 'Set'],
-                ['rarity', 'Rareté'],
+                ['rarity', 'RaretÃ©'],
                 ['type', 'Type'],
-                ['condition', 'État'],
+                ['condition', 'Ã‰tat'],
                 ['language', 'Langue'],
                 ['grade', 'Grade'],
                 ['tags', 'Tags'],
-                ['addedAt', 'Date d’ajout'],
+                ['addedAt', 'Date dâ€™ajout'],
               ].map(([field, label]) => (
                 <Field label={label} key={field}>
                   <TextInput
@@ -2319,14 +2410,14 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
                   onChange={(event) => updateCard(card.id, 'description', event.target.value)}
                 />
               </Field>
-              <Field label="Défauts visibles" className="field-wide field-tall">
+              <Field label="DÃ©fauts visibles" className="field-wide field-tall">
                 <textarea
                   value={card.flaws || ''}
-                  placeholder="Rayure, coin blanc, centrage, défaut du boîtier..."
+                  placeholder="Rayure, coin blanc, centrage, dÃ©faut du boÃ®tier..."
                   onChange={(event) => updateCard(card.id, 'flaws', event.target.value)}
                 />
               </Field>
-              <Field label="Note privée" className="field-wide field-tall">
+              <Field label="Note privÃ©e" className="field-wide field-tall">
                 <textarea
                   value={card.privateNote || ''}
                   placeholder="Visible uniquement dans ton admin."
@@ -2344,10 +2435,10 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
                 <select value={card.badge || ''} onChange={(event) => updateCard(card.id, 'badge', event.target.value)}>
                   <option value="">Aucun</option>
                   <option>Nouveau</option>
-                  <option>Coup de cœur</option>
+                  <option>Coup de cÅ“ur</option>
                 </select>
               </Field>
-              <Field label="Coup de cœur">
+              <Field label="Coup de cÅ“ur">
                 <input
                   type="checkbox"
                   checked={Boolean(card.featured)}
@@ -2360,7 +2451,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
                   onChange={(field, value) => updateCard(card.id, field, value)}
                 />
               </Field>
-              <Field label="Prix négociable">
+              <Field label="Prix nÃ©gociable">
                 <input
                   type="checkbox"
                   checked={Boolean(card.negotiable)}
@@ -2392,7 +2483,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
               <Field label="Stock">
                 <TextInput type="number" min="0" value={card.stock} onChange={(value) => updateCard(card.id, 'stock', value)} />
               </Field>
-              <Field label="Réservée">
+              <Field label="RÃ©servÃ©e">
                 <input
                   type="checkbox"
                   checked={Boolean(card.reserved)}
@@ -2434,12 +2525,12 @@ function ContentEditor({ site, setSite }) {
     <section className="admin-panel">
       <div className="panel-title admin-panel-title">
         <h2>Contenu du site</h2>
-        <span>Change les textes français et anglais sans toucher au code.</span>
+        <span>Change les textes franÃ§ais et anglais sans toucher au code.</span>
       </div>
       <div className="translation-grid">
         {['fr', 'en'].map((language) => (
           <div className="translation-card" key={language}>
-            <h3>{language === 'fr' ? 'Français' : 'English'}</h3>
+            <h3>{language === 'fr' ? 'FranÃ§ais' : 'English'}</h3>
             {Object.entries(site.copy[language]).map(([field, value]) => (
               <Field label={field} key={field}>
                 <textarea value={value} onChange={(event) => updateCopy(language, field, event.target.value)} />
@@ -2505,13 +2596,13 @@ function SettingsEditor({ site, setSite }) {
   return (
     <section className="admin-panel">
       <div className="panel-title admin-panel-title">
-        <h2>Paramètres</h2>
-        <span>Configure la langue par défaut, le contact et la livraison.</span>
+        <h2>ParamÃ¨tres</h2>
+        <span>Configure la langue par dÃ©faut, le contact et la livraison.</span>
       </div>
       <div className="settings-grid">
         <Field label="Langue du site">
           <select value={site.language} onChange={(event) => updateSite('language', event.target.value)}>
-            <option value="fr">Français</option>
+            <option value="fr">FranÃ§ais</option>
             <option value="en">English</option>
           </select>
         </Field>
@@ -2521,7 +2612,7 @@ function SettingsEditor({ site, setSite }) {
         <Field label="Alerte stock bas">
           <TextInput type="number" min="0" value={site.lowStockLimit} onChange={(value) => updateSite('lowStockLimit', value)} />
         </Field>
-        <Field label="Durée réservation (heures)">
+        <Field label="DurÃ©e rÃ©servation (heures)">
           <TextInput type="number" min="1" value={site.reservationHours} onChange={(value) => updateSite('reservationHours', value)} />
         </Field>
       </div>
@@ -2615,7 +2706,7 @@ function AdminView({
       const nextCards = cards.map((card) => {
         const line = order.lines.find((item) => item.id === card.id)
         if (!line) return card
-        if (status === 'Annulée') {
+        if (status === 'AnnulÃ©e') {
           return {
             ...card,
             status: 'available',
@@ -2624,7 +2715,7 @@ function AdminView({
             stock: Number(card.stock) + Number(line.qty),
           }
         }
-        if (status === 'Confirmée') {
+        if (status === 'ConfirmÃ©e') {
           return { ...card, status: 'sold', reserved: false, reservedUntil: '' }
         }
         return { ...card, status: 'reserved', reserved: true }
@@ -2659,12 +2750,12 @@ function AdminView({
         : card
     })
     const nextOrders = orders.map((item) =>
-      item.id === id ? { ...item, status: 'Annulée', privateNote: `${item.privateNote || ''}`.trim() } : item,
+      item.id === id ? { ...item, status: 'AnnulÃ©e', privateNote: `${item.privateNote || ''}`.trim() } : item,
     )
     persistCards(nextCards)
     setOrders(nextOrders)
     saveLocal('kc-orders', nextOrders)
-    updateRemoteReservation(id, { status: 'Annulée' })
+    updateRemoteReservation(id, { status: 'AnnulÃ©e' })
   }
 
   function updateSellRequestStatus(id, status) {
@@ -2729,7 +2820,7 @@ function AdminView({
               </section>
               <section className="admin-panel preview-panel">
                 <div>
-                  <h2>Aperçu boutique</h2>
+                  <h2>AperÃ§u boutique</h2>
                   <p>{site.copy[site.language].heroTitle}</p>
                 </div>
                 <Eye size={28} />
@@ -2737,7 +2828,7 @@ function AdminView({
               <section className="admin-panel integration-panel">
                 <div className="panel-title admin-panel-title">
                   <h2>{t.integrations}</h2>
-                  <span>État des connexions nécessaires pour la production.</span>
+                  <span>Ã‰tat des connexions nÃ©cessaires pour la production.</span>
                 </div>
                 <div className="integration-grid">
                   <div>
@@ -2768,8 +2859,8 @@ function AdminView({
           {activeTab === 'orders' && (
             <section className="admin-panel">
               <div className="panel-title admin-panel-title">
-                <h2>Réservations</h2>
-                <span>Lis les messages clients et change le statut des réservations.</span>
+                <h2>RÃ©servations</h2>
+                <span>Lis les messages clients et change le statut des rÃ©servations.</span>
               </div>
               <div className="admin-toolbar">
                 <label className="searchbox">
@@ -2806,7 +2897,7 @@ function AdminView({
             <section className="admin-panel">
               <div className="panel-title admin-panel-title">
                 <h2>{t.sellRequests}</h2>
-                <span>Demandes envoyées depuis la page Vendre.</span>
+                <span>Demandes envoyÃ©es depuis la page Vendre.</span>
               </div>
               <SellRequestsTable
                 sellRequests={sellRequests}
@@ -2864,32 +2955,13 @@ function App() {
   const t = labels[site.language]
 
   useEffect(() => {
-    const copy = site.copy[site.language]
     const origin = window.location.origin
+    const pageSeo = getPageSeo({ view, selected, site, t, cards })
     const canonical = view === 'cardDetail' && selected
       ? `${origin}${getCardPath(selected)}`
       : `${origin}${view === 'home' ? '/' : `/#${view}`}`
-    const pageTitles = {
-      home: copy.homeTitle,
-      shop: copy.heroTitle,
-      arrivals: site.language === 'fr' ? 'Arrivages et nouveautés' : 'New arrivals',
-      cards: t.cards,
-      highlights: copy.highlightsTitle,
-      japanese: copy.japaneseTitle,
-      vintageJapanese: copy.vintageJapaneseTitle,
-      graded: copy.gradedTitle,
-      sell: copy.sellTitle,
-      about: copy.aboutTitle,
-      contact: copy.contactTitle,
-      legal: copy.legalTitle,
-      orders: t.orders,
-    }
-    const title = view === 'cardDetail' && selected
-      ? `${selected.name} | ${site.brandName}`
-      : `${pageTitles[view] || site.brandName} | ${site.brandName}`
-    const description = view === 'cardDetail' && selected
-      ? selected.description || `${selected.name}, ${selected.rarity}, ${selected.condition}, ${selected.language}, ${selected.grade}. Réservation sans paiement en ligne.`
-      : copy.heroSubtitle
+    const title = pageSeo.title
+    const description = pageSeo.description
     const shareImage = view === 'cardDetail' && selected && getCardImages(selected)[0]
       ? getCardImages(selected)[0]
       : `${origin}/og-image.svg`
@@ -2897,6 +2969,7 @@ function App() {
     document.documentElement.lang = site.language
     document.title = title
     setMetaTag('meta[name="description"]', { name: 'description', content: description })
+    setMetaTag('meta[name="keywords"]', { name: 'keywords', content: pageSeo.keywords })
     setMetaTag('meta[property="og:title"]', { property: 'og:title', content: title })
     setMetaTag('meta[property="og:description"]', { property: 'og:description', content: description })
     setMetaTag('meta[property="og:type"]', { property: 'og:type', content: view === 'cardDetail' ? 'product' : 'website' })
@@ -2913,15 +2986,15 @@ function App() {
           name: selected.name,
           description,
           brand: site.brandName,
-          category: 'Pokémon card',
+          category: 'PokÃ©mon card',
           sku: selected.id,
           image: getCardImages(selected).length ? getCardImages(selected) : `${origin}/favicon.svg`,
           additionalProperty: [
-            { '@type': 'PropertyValue', name: 'Rareté', value: selected.rarity },
-            { '@type': 'PropertyValue', name: 'État', value: selected.condition },
+            { '@type': 'PropertyValue', name: 'RaretÃ©', value: selected.rarity },
+            { '@type': 'PropertyValue', name: 'Ã‰tat', value: selected.condition },
             { '@type': 'PropertyValue', name: 'Langue', value: selected.language },
             { '@type': 'PropertyValue', name: 'Grade', value: selected.grade },
-            { '@type': 'PropertyValue', name: 'Prix négociable', value: selected.negotiable ? 'Oui' : 'Non' },
+            { '@type': 'PropertyValue', name: 'Prix nÃ©gociable', value: selected.negotiable ? 'Oui' : 'Non' },
           ],
           offers: {
             '@type': 'Offer',
@@ -2940,10 +3013,27 @@ function App() {
           url: origin,
           email: site.contactEmail,
           description,
+          keywords: pageSeo.keywords,
+          areaServed: ['FR', 'EU'],
+          makesOffer: cards.slice(0, 12).map((card) => ({
+            '@type': 'Offer',
+            url: `${origin}${getCardPath(card)}`,
+            priceCurrency: 'EUR',
+            price: Number(card.price || 0).toFixed(2),
+            availability: isReservable(card)
+              ? 'https://schema.org/InStock'
+              : 'https://schema.org/OutOfStock',
+            itemOffered: {
+              '@type': 'Product',
+              name: card.name,
+              category: 'Pokemon card',
+              image: getCardImages(card)[0] || `${origin}/og-image.svg`,
+            },
+          })),
         }
 
     setStructuredData(structuredData)
-  }, [selected, site, t.cards, t.orders, view])
+  }, [cards, selected, site, t, view])
 
   useEffect(() => {
     async function loadRemoteData() {
@@ -3417,9 +3507,9 @@ function App() {
       )}
       {view === 'arrivals' && (
         <CollectionPage
-          title={site.language === 'fr' ? 'Arrivages et nouveautés' : 'New arrivals'}
+          title={site.language === 'fr' ? 'Arrivages et nouveautÃ©s' : 'New arrivals'}
           intro={site.language === 'fr'
-            ? 'Les dernières cartes ajoutées à la vitrine, classées par date d’arrivée.'
+            ? 'Les derniÃ¨res cartes ajoutÃ©es Ã  la vitrine, classÃ©es par date dâ€™arrivÃ©e.'
             : 'Latest cards added to the showcase, sorted by arrival date.'}
           cards={arrivalCards}
           openCardPage={openCardPage}
