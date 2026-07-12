@@ -45,6 +45,11 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-bulbizarre-expansion-sheet/bulbizarre-expansion-sheet</loc>
+    <lastmod>2026-07-12</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://holokira2.contactholokira.workers.dev/carte/kc-rapasdepic-expansion-sheet/rapasdepic-expansion-sheet</loc>
     <lastmod>2026-07-12</lastmod>
     <priority>0.8</priority>
@@ -90,12 +95,12 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783803491482/hypnomade-fossil</loc>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783803649444/gravalanche-expansion-sheet</loc>
     <lastmod>2026-07-11</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783803649444/gravalanche-expansion-sheet</loc>
+    <loc>https://holokira2.contactholokira.workers.dev/carte/kc-1783803491482/hypnomade-fossil</loc>
     <lastmod>2026-07-11</lastmod>
     <priority>0.8</priority>
   </url>
