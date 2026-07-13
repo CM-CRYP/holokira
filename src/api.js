@@ -167,9 +167,9 @@ export async function signOutAdmin() {
 }
 
 export async function fetchCards() {
-  if (!supabase) return []
+  if (!supabase) return null
   const { data, error } = await supabase.from('cards').select('*').order('created_at')
-  if (error) return []
+  if (error) return null
   return data.map(fromCardRow)
 }
 
@@ -213,22 +213,22 @@ export async function uploadCardImage(blob, fileName = 'card') {
 }
 
 export async function fetchReservations() {
-  if (!supabase) return []
+  if (!supabase) return null
   const { data, error } = await supabase
     .from('reservations')
     .select('*, reservation_items(*, cards(*))')
     .order('created_at', { ascending: false })
-  if (error) return []
+  if (error) return null
   return data.map(fromReservationRow)
 }
 
 export async function fetchSellRequests() {
-  if (!supabase) return []
+  if (!supabase) return null
   const { data, error } = await supabase
     .from('sell_requests')
     .select('*')
     .order('created_at', { ascending: false })
-  if (error) return []
+  if (error) return null
   return data.map(fromSellRequestRow)
 }
 

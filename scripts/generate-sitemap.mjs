@@ -7,20 +7,10 @@ const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY
 
 const staticPages = [
   ['/', '1.0'],
-  ['/#shop', '0.9'],
-  ['/#cards', '0.9'],
-  ['/#arrivals', '0.9'],
-  ['/#vintageJapanese', '0.9'],
-  ['/#japanese', '0.8'],
-  ['/#highlights', '0.8'],
-  ['/#graded', '0.8'],
   ['/cartes-pokemon-japonaises-vintage', '0.9'],
   ['/cartes-pokemon-promo-japonaises', '0.9'],
   ['/cartes-pokemon-vending-series', '0.9'],
   ['/cartes-pokemon-dracaufeu', '0.9'],
-  ['/#sell', '0.7'],
-  ['/#about', '0.6'],
-  ['/#contact', '0.6'],
 ]
 
 function slugify(value) {

@@ -12,12 +12,7 @@
   --ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-family: var(--ui);
   color: var(--ink);
-  background:
-    linear-gradient(90deg, rgba(17, 19, 24, 0.035) 1px, transparent 1px),
-    linear-gradient(rgba(17, 19, 24, 0.03) 1px, transparent 1px),
-    radial-gradient(circle at top right, rgba(219, 42, 42, 0.13), transparent 30%),
-    var(--paper);
-  background-size: 38px 38px, 38px 38px, auto, auto;
+  background: var(--paper);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

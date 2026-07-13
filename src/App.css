@@ -722,9 +722,10 @@ textarea {
   position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   height: 100%;
   content-visibility: auto;
-  contain-intrinsic-size: 430px;
+  contain-intrinsic-block-size: 650px;
   border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
@@ -750,6 +751,7 @@ textarea {
   display: flex;
   flex: 1;
   flex-direction: column;
+  min-width: 0;
   width: 100%;
   padding: 12px;
   color: var(--ink);
@@ -792,6 +794,7 @@ textarea {
 
 .product-actions {
   display: flex;
+  min-width: 0;
   gap: 8px;
   margin-top: auto;
   padding: 0 12px 12px;
@@ -849,9 +852,7 @@ textarea {
   content: '';
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.16), transparent 32%),
-    linear-gradient(0deg, rgba(0, 0, 0, 0.54), transparent 38%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), transparent 28%);
   z-index: 1;
 }
 
@@ -923,11 +924,12 @@ textarea {
 }
 
 .card-art-photo .card-art-name {
-  width: fit-content;
-  max-width: 100%;
-  padding: 7px 9px;
-  background: rgba(0, 0, 0, 0.48);
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.72);
+  display: none;
+}
+
+.product-card .card-art {
+  min-height: 320px;
+  aspect-ratio: 3 / 4;
 }
 
 .card-art-lines {
@@ -2567,6 +2569,44 @@ td:nth-child(2) {
 }
 
 @media (max-width: 1180px) {
+  .topbar {
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+  }
+
+  .nav-tabs {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scroll-snap-type: x proximity;
+  }
+
+  .nav-tabs button {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  .top-actions {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .filters .searchbox {
+    grid-column: 1 / -1;
+  }
+
+  .card-detail-hero,
+  .card-detail-grid,
+  .card-story-panel {
+    grid-template-columns: 1fr;
+  }
+
   .shop-layout {
     grid-template-columns: 1fr;
   }
@@ -2633,6 +2673,11 @@ td:nth-child(2) {
     grid-column: 1 / -1;
     justify-content: flex-start;
     overflow-x: auto;
+  }
+
+  .top-actions {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .hero-copy,
@@ -2746,7 +2791,13 @@ td:nth-child(2) {
 
   .top-actions {
     grid-column: 1 / -1;
+    grid-row: 2;
     justify-content: stretch;
+  }
+
+  .nav-tabs {
+    grid-row: 3;
+    width: 100%;
   }
 
   .language-switch,
