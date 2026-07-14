@@ -15,6 +15,7 @@ create table if not exists public.cards (
   reserved_until timestamptz,
   image_url text,
   image_urls jsonb not null default '[]'::jsonb,
+  thumbnail_urls jsonb not null default '[]'::jsonb,
   description text,
   flaws text,
   negotiable boolean not null default false,
@@ -82,10 +83,63 @@ create table if not exists public.card_private_notes (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.reservation_events (
+  id bigint generated always as identity primary key,
+  reservation_id text not null references public.reservations(id) on delete cascade,
+  event_type text not null,
+  old_status text,
+  new_status text,
+  note text,
+  actor_id uuid,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.customer_notes (
+  customer_email text primary key,
+  note text not null default '',
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.japan_requests (
+  id text primary key,
+  private_token uuid not null unique default gen_random_uuid(),
+  customer_name text not null,
+  customer_email text not null,
+  customer_phone text,
+  card_list text not null,
+  criteria text,
+  budget numeric(10, 2) not null check (budget >= 100),
+  status text not null default 'Nouvelle',
+  internal_note text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.japan_proposals (
+  id uuid primary key default gen_random_uuid(),
+  request_id text not null references public.japan_requests(id) on delete cascade,
+  title text not null,
+  description text not null default '',
+  price numeric(10, 2) not null check (price >= 0),
+  image_urls jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.stock_alerts (
+  id bigint generated always as identity primary key,
+  card_id text not null references public.cards(id) on delete cascade,
+  customer_email text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  notified_at timestamptz,
+  unique (card_id, customer_email)
+);
+
 alter table public.cards add column if not exists status text not null default 'available';
 alter table public.cards add column if not exists reserved_until timestamptz;
 alter table public.cards add column if not exists image_url text;
 alter table public.cards add column if not exists image_urls jsonb not null default '[]'::jsonb;
+alter table public.cards add column if not exists thumbnail_urls jsonb not null default '[]'::jsonb;
 alter table public.cards add column if not exists description text;
 alter table public.cards add column if not exists flaws text;
 alter table public.cards add column if not exists negotiable boolean not null default false;
@@ -179,6 +233,11 @@ alter table public.sell_requests enable row level security;
 alter table public.site_settings enable row level security;
 alter table public.admin_users enable row level security;
 alter table public.card_private_notes enable row level security;
+alter table public.reservation_events enable row level security;
+alter table public.customer_notes enable row level security;
+alter table public.japan_requests enable row level security;
+alter table public.japan_proposals enable row level security;
+alter table public.stock_alerts enable row level security;
 
 -- Remove every previous policy on application-owned tables to avoid stale access.
 do $$
@@ -196,7 +255,12 @@ begin
         'sell_requests',
         'site_settings',
         'admin_users',
-        'card_private_notes'
+        'card_private_notes',
+        'reservation_events',
+        'customer_notes',
+        'japan_requests',
+        'japan_proposals',
+        'stock_alerts'
       )
   loop
     execute format(
@@ -309,6 +373,35 @@ on public.card_private_notes for delete
 to authenticated
 using ((select private.is_admin()));
 
+create policy "Admins can read reservation history"
+on public.reservation_events for select
+to authenticated
+using ((select private.is_admin()));
+
+create policy "Admins can manage customer notes"
+on public.customer_notes for all
+to authenticated
+using ((select private.is_admin()))
+with check ((select private.is_admin()));
+
+create policy "Admins can manage Japan requests"
+on public.japan_requests for all
+to authenticated
+using ((select private.is_admin()))
+with check ((select private.is_admin()));
+
+create policy "Admins can manage Japan proposals"
+on public.japan_proposals for all
+to authenticated
+using ((select private.is_admin()))
+with check ((select private.is_admin()));
+
+create policy "Admins can manage stock alerts"
+on public.stock_alerts for all
+to authenticated
+using ((select private.is_admin()))
+with check ((select private.is_admin()));
+
 revoke all on public.cards from anon, authenticated;
 grant select on public.cards to anon, authenticated;
 grant insert, update, delete on public.cards to authenticated;
@@ -331,6 +424,21 @@ grant select on public.admin_users to service_role;
 
 revoke all on public.card_private_notes from anon, authenticated;
 grant select, insert, update, delete on public.card_private_notes to authenticated;
+
+revoke all on public.reservation_events from anon, authenticated;
+grant select on public.reservation_events to authenticated;
+
+revoke all on public.customer_notes from anon, authenticated;
+grant select, insert, update, delete on public.customer_notes to authenticated;
+
+revoke all on public.japan_requests from anon, authenticated;
+grant select, insert, update, delete on public.japan_requests to authenticated;
+
+revoke all on public.japan_proposals from anon, authenticated;
+grant select, insert, update, delete on public.japan_proposals to authenticated;
+
+revoke all on public.stock_alerts from anon, authenticated;
+grant select, insert, update, delete on public.stock_alerts to authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('card-images', 'card-images', true, 5242880, array['image/webp', 'image/jpeg', 'image/png'])
@@ -359,7 +467,7 @@ on storage.objects for insert
 to authenticated
 with check (
   bucket_id = 'card-images'
-  and (storage.foldername(name))[1] = 'cards'
+  and (storage.foldername(name))[1] in ('cards', 'proposals')
   and (select private.is_admin())
 );
 
@@ -369,7 +477,7 @@ to authenticated
 using (bucket_id = 'card-images' and (select private.is_admin()))
 with check (
   bucket_id = 'card-images'
-  and (storage.foldername(name))[1] = 'cards'
+  and (storage.foldername(name))[1] in ('cards', 'proposals')
   and (select private.is_admin())
 );
 
@@ -528,5 +636,268 @@ $$;
 
 revoke all on function public.create_reservation(jsonb, jsonb) from public;
 grant execute on function public.create_reservation(jsonb, jsonb) to anon, authenticated;
+
+create or replace function private.write_reservation_event()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if tg_op = 'INSERT' then
+    insert into public.reservation_events (
+      reservation_id, event_type, new_status, note, actor_id
+    ) values (
+      new.id, 'creation', new.status, 'Reservation creee', auth.uid()
+    );
+  elsif old.status is distinct from new.status
+    or old.private_note is distinct from new.private_note
+    or old.reserved_until is distinct from new.reserved_until then
+    insert into public.reservation_events (
+      reservation_id, event_type, old_status, new_status, note, actor_id
+    ) values (
+      new.id,
+      case when old.status is distinct from new.status then 'statut' else 'note' end,
+      old.status,
+      new.status,
+      nullif(new.private_note, ''),
+      auth.uid()
+    );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists reservation_history_trigger on public.reservations;
+create trigger reservation_history_trigger
+after insert or update on public.reservations
+for each row execute function private.write_reservation_event();
+
+create or replace function private.release_reservation_stock(target_reservation_id text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  line record;
+begin
+  for line in
+    select card_id, quantity
+    from public.reservation_items
+    where reservation_id = target_reservation_id
+  loop
+    perform 1 from public.cards where id = line.card_id for update;
+    update public.cards
+    set
+      stock = stock + line.quantity,
+      status = case when status = 'sold' then status else 'available' end,
+      reserved_until = null
+    where id = line.card_id;
+  end loop;
+end;
+$$;
+
+create or replace function public.release_expired_reservations()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  expired_reservation record;
+  released_count integer := 0;
+begin
+  for expired_reservation in
+    select id
+    from public.reservations
+    where status in ('Nouvelle', 'Contacte', 'Contactee', 'Confirmee', 'Contacté', 'Contactée', 'Confirmée')
+      and reserved_until is not null
+      and reserved_until <= now()
+    for update skip locked
+  loop
+    perform private.release_reservation_stock(expired_reservation.id);
+    update public.reservations
+    set status = 'Expirée'
+    where id = expired_reservation.id;
+    released_count := released_count + 1;
+  end loop;
+  return released_count;
+end;
+$$;
+
+revoke all on function public.release_expired_reservations() from public;
+grant execute on function public.release_expired_reservations() to anon, authenticated;
+
+create or replace function public.admin_transition_reservation(
+  target_reservation_id text,
+  target_status text,
+  target_note text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  previous_status text;
+  line record;
+  current_stock integer;
+  current_status text;
+  was_released boolean;
+  becomes_released boolean;
+begin
+  if not private.is_admin() then
+    raise exception 'Acces refuse';
+  end if;
+
+  if target_status not in ('Nouvelle', 'Contactée', 'Confirmée', 'Annulée', 'Expirée') then
+    raise exception 'Statut de reservation invalide';
+  end if;
+
+  select status into previous_status
+  from public.reservations
+  where id = target_reservation_id
+  for update;
+
+  if not found then raise exception 'Reservation introuvable'; end if;
+
+  was_released := previous_status in ('Annulée', 'Expirée');
+  becomes_released := target_status in ('Annulée', 'Expirée');
+
+  if not was_released and becomes_released then
+    perform private.release_reservation_stock(target_reservation_id);
+  elsif was_released and not becomes_released then
+    for line in
+      select card_id, quantity
+      from public.reservation_items
+      where reservation_id = target_reservation_id
+    loop
+      select stock, status into current_stock, current_status
+      from public.cards where id = line.card_id for update;
+      if current_status <> 'available' or current_stock < line.quantity then
+        raise exception 'Stock insuffisant pour reactiver la reservation';
+      end if;
+      update public.cards
+      set stock = stock - line.quantity,
+          status = 'reserved',
+          reserved_until = now() + interval '48 hours'
+      where id = line.card_id;
+    end loop;
+  end if;
+
+  update public.reservations
+  set
+    status = target_status,
+    private_note = coalesce(target_note, private_note),
+    reserved_until = case
+      when becomes_released then reserved_until
+      when was_released then now() + interval '48 hours'
+      else reserved_until
+    end
+  where id = target_reservation_id;
+end;
+$$;
+
+revoke all on function public.admin_transition_reservation(text, text, text) from public, anon;
+grant execute on function public.admin_transition_reservation(text, text, text) to authenticated;
+
+create or replace function public.create_japan_request(request_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  request_id text := 'JAPON-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 10));
+  request_token uuid := gen_random_uuid();
+  customer_name text := trim(request_payload->>'customer_name');
+  customer_email text := lower(trim(request_payload->>'customer_email'));
+  customer_phone text := nullif(trim(request_payload->>'customer_phone'), '');
+  card_list text := trim(request_payload->>'card_list');
+  criteria text := nullif(trim(request_payload->>'criteria'), '');
+  budget numeric(10, 2);
+begin
+  begin budget := (request_payload->>'budget')::numeric; exception when others then budget := 0; end;
+  if char_length(customer_name) not between 2 and 120 then raise exception 'Nom client invalide'; end if;
+  if char_length(customer_email) not between 5 and 254 or position('@' in customer_email) <= 1 then raise exception 'Adresse e-mail invalide'; end if;
+  if customer_phone is not null and char_length(customer_phone) > 40 then raise exception 'Telephone invalide'; end if;
+  if char_length(card_list) not between 3 and 5000 then raise exception 'Recherche invalide'; end if;
+  if coalesce(char_length(criteria), 0) > 5000 then raise exception 'Criteres trop longs'; end if;
+  if budget < 100 then raise exception 'Le budget minimum est de 100 euros'; end if;
+
+  insert into public.japan_requests (
+    id, private_token, customer_name, customer_email, customer_phone,
+    card_list, criteria, budget, status
+  ) values (
+    request_id, request_token, customer_name, customer_email, customer_phone,
+    card_list, criteria, budget, 'Nouvelle'
+  );
+  return jsonb_build_object('id', request_id, 'token', request_token);
+end;
+$$;
+
+revoke all on function public.create_japan_request(jsonb) from public;
+grant execute on function public.create_japan_request(jsonb) to anon, authenticated;
+
+create or replace function public.get_japan_request_by_token(request_token uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'id', request.id,
+    'customerName', request.customer_name,
+    'cardList', request.card_list,
+    'criteria', request.criteria,
+    'budget', request.budget,
+    'status', request.status,
+    'createdAt', request.created_at,
+    'proposals', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', proposal.id,
+        'title', proposal.title,
+        'description', proposal.description,
+        'price', proposal.price,
+        'imageUrls', proposal.image_urls,
+        'createdAt', proposal.created_at
+      ) order by proposal.created_at desc)
+      from public.japan_proposals proposal
+      where proposal.request_id = request.id
+    ), '[]'::jsonb)
+  )
+  from public.japan_requests request
+  where request.private_token = request_token;
+$$;
+
+revoke all on function public.get_japan_request_by_token(uuid) from public;
+grant execute on function public.get_japan_request_by_token(uuid) to anon, authenticated;
+
+create or replace function public.create_stock_alert(target_card_id text, target_email text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  clean_email text := lower(trim(target_email));
+begin
+  if char_length(clean_email) not between 5 and 254 or position('@' in clean_email) <= 1 then
+    raise exception 'Adresse e-mail invalide';
+  end if;
+  if not exists (select 1 from public.cards where id = target_card_id) then
+    raise exception 'Carte introuvable';
+  end if;
+  insert into public.stock_alerts (card_id, customer_email, active)
+  values (target_card_id, clean_email, true)
+  on conflict (card_id, customer_email) do update
+  set active = true, notified_at = null, created_at = now();
+end;
+$$;
+
+revoke all on function public.create_stock_alert(text, text) from public;
+grant execute on function public.create_stock_alert(text, text) to anon, authenticated;
 
 commit;

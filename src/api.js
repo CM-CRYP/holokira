@@ -14,6 +14,7 @@ function getCardImages(card) {
 
 function toCardRow(card) {
   const images = getCardImages(card)
+  const thumbnails = Array.isArray(card.thumbnailUrls) ? card.thumbnailUrls : []
 
   return {
     id: card.id,
@@ -30,6 +31,7 @@ function toCardRow(card) {
     reserved_until: card.reservedUntil || null,
     image_url: images[0] || null,
     image_urls: images,
+    thumbnail_urls: thumbnails,
     description: card.description || null,
     flaws: card.flaws || null,
     negotiable: Boolean(card.negotiable),
@@ -66,6 +68,7 @@ function fromCardRow(row) {
     reservedUntil: row.reserved_until || '',
     imageUrl: imageUrls[0] || row.image_url || '',
     imageUrls,
+    thumbnailUrls: Array.isArray(row.thumbnail_urls) ? row.thumbnail_urls : [],
     description: row.description || '',
     flaws: row.flaws || '',
     privateNote: '',
@@ -96,6 +99,14 @@ function fromReservationRow(row) {
     privateNote: row.private_note || '',
     emailSent: Boolean(row.email_sent),
     date: row.created_at?.slice(0, 10) || '',
+    history: (row.reservation_events || []).map((event) => ({
+      id: event.id,
+      type: event.event_type,
+      oldStatus: event.old_status || '',
+      newStatus: event.new_status || '',
+      note: event.note || '',
+      createdAt: event.created_at,
+    })),
     lines: (row.reservation_items || []).map((item) => ({
       id: item.card_id,
       qty: Number(item.quantity),
@@ -200,6 +211,7 @@ export function onAdminAuthStateChange(callback) {
 
 export async function fetchCards({ includePrivateNotes = false } = {}) {
   if (!supabase) return null
+  await supabase.rpc('release_expired_reservations')
   const { data, error } = await supabase.from('cards').select('*').order('created_at')
   if (error) return null
 
@@ -238,7 +250,7 @@ export async function deleteRemoteCard(id) {
   return { deleted: !error, error }
 }
 
-export async function uploadCardImage(blob, fileName = 'card') {
+export async function uploadCardImage(blob, fileName = 'card', folder = 'cards') {
   if (!supabase) return { url: '', storageEnabled: false }
   if (!blob) return { url: '', error: { message: 'Image vide.' } }
 
@@ -250,7 +262,8 @@ export async function uploadCardImage(blob, fileName = 'card') {
     .replace(/^-+|-+$/g, '')
     .slice(0, 80) || 'card'
 
-  const path = `cards/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}.webp`
+  const safeFolder = folder === 'proposals' ? 'proposals' : 'cards'
+  const path = `${safeFolder}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}.webp`
   const { error } = await supabase.storage
     .from('card-images')
     .upload(path, blob, {
@@ -267,9 +280,10 @@ export async function uploadCardImage(blob, fileName = 'card') {
 
 export async function fetchReservations() {
   if (!supabase) return null
+  await supabase.rpc('release_expired_reservations')
   const { data, error } = await supabase
     .from('reservations')
-    .select('*, reservation_items(*, cards(*))')
+    .select('*, reservation_items(*, cards(*)), reservation_events(*)')
     .order('created_at', { ascending: false })
   if (error) return null
   return data.map(fromReservationRow)
@@ -368,4 +382,161 @@ export async function submitReservation({ reservation }) {
       : `Erreur Supabase : ${rpcError.message}`,
     error: rpcError,
   }
+}
+
+export async function transitionRemoteReservation(id, status, privateNote) {
+  if (!supabase) return { saved: false }
+  const { error } = await supabase.rpc('admin_transition_reservation', {
+    target_reservation_id: id,
+    target_status: status,
+    target_note: privateNote ?? null,
+  })
+  return { saved: !error, error }
+}
+
+export async function fetchCustomerNotes() {
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('customer_notes')
+    .select('*')
+    .order('updated_at', { ascending: false })
+  if (error) return []
+  return data.map((row) => ({
+    email: row.customer_email,
+    note: row.note || '',
+    updatedAt: row.updated_at,
+  }))
+}
+
+export async function saveCustomerNote(email, note) {
+  if (!supabase) return { saved: false }
+  const customerEmail = `${email || ''}`.trim().toLowerCase()
+  const { error } = await supabase.from('customer_notes').upsert({
+    customer_email: customerEmail,
+    note: note || '',
+    updated_at: new Date().toISOString(),
+  })
+  return { saved: !error, error }
+}
+
+function fromJapanRequestRow(row) {
+  return {
+    id: row.id,
+    token: row.private_token,
+    customerName: row.customer_name,
+    customerEmail: row.customer_email,
+    customerPhone: row.customer_phone || '',
+    cardList: row.card_list,
+    criteria: row.criteria || '',
+    budget: Number(row.budget),
+    status: row.status,
+    internalNote: row.internal_note || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    proposals: (row.japan_proposals || []).map((proposal) => ({
+      id: proposal.id,
+      title: proposal.title,
+      description: proposal.description || '',
+      price: Number(proposal.price),
+      imageUrls: Array.isArray(proposal.image_urls) ? proposal.image_urls : [],
+      createdAt: proposal.created_at,
+    })),
+  }
+}
+
+export async function createJapanRequest(request) {
+  if (!supabase) return { saved: false, error: { message: 'Supabase non configuré.' } }
+  const { data, error } = await supabase.rpc('create_japan_request', {
+    request_payload: {
+      customer_name: request.fullName,
+      customer_email: request.email,
+      customer_phone: request.phone || '',
+      card_list: request.cardList,
+      criteria: request.condition || '',
+      budget: Number(request.expectedPrice),
+    },
+  })
+  return { saved: !error, id: data?.id, token: data?.token, error }
+}
+
+export async function fetchJapanRequests() {
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('japan_requests')
+    .select('*, japan_proposals(*)')
+    .order('created_at', { ascending: false })
+  if (error) return []
+  return data.map(fromJapanRequestRow)
+}
+
+export async function updateJapanRequest(id, patch) {
+  if (!supabase) return { saved: false }
+  const row = { updated_at: new Date().toISOString() }
+  if (patch.status !== undefined) row.status = patch.status
+  if (patch.internalNote !== undefined) row.internal_note = patch.internalNote
+  const { error } = await supabase.from('japan_requests').update(row).eq('id', id)
+  return { saved: !error, error }
+}
+
+export async function createJapanProposal(requestId, proposal) {
+  if (!supabase) return { saved: false }
+  const { error } = await supabase.from('japan_proposals').insert({
+    request_id: requestId,
+    title: proposal.title,
+    description: proposal.description || '',
+    price: Number(proposal.price),
+    image_urls: proposal.imageUrls || [],
+  })
+  return { saved: !error, error }
+}
+
+export async function deleteJapanProposal(id) {
+  if (!supabase) return { deleted: false }
+  const { error } = await supabase.from('japan_proposals').delete().eq('id', id)
+  return { deleted: !error, error }
+}
+
+export async function fetchPrivateJapanRequest(token) {
+  if (!supabase || !token) return null
+  const { data, error } = await supabase.rpc('get_japan_request_by_token', {
+    request_token: token,
+  })
+  return error ? null : data
+}
+
+export async function createStockAlert(cardId, email) {
+  if (!supabase) return { saved: false, error: { message: 'Supabase non configuré.' } }
+  const { error } = await supabase.rpc('create_stock_alert', {
+    target_card_id: cardId,
+    target_email: email,
+  })
+  return { saved: !error, error }
+}
+
+export async function fetchStockAlerts() {
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('stock_alerts')
+    .select('*, cards(name, card_set)')
+    .order('created_at', { ascending: false })
+  if (error) return []
+  return data.map((row) => ({
+    id: row.id,
+    cardId: row.card_id,
+    cardName: row.cards?.name || row.card_id,
+    cardSet: row.cards?.card_set || '',
+    email: row.customer_email,
+    active: Boolean(row.active),
+    createdAt: row.created_at,
+    notifiedAt: row.notified_at || '',
+  }))
+}
+
+export async function updateStockAlert(id, patch) {
+  if (!supabase) return { saved: false }
+  const row = {}
+  if (patch.active !== undefined) row.active = patch.active
+  if (patch.notifiedAt !== undefined) row.notified_at = patch.notifiedAt || null
+  const { error } = await supabase.from('stock_alerts').update(row).eq('id', id)
+  return { saved: !error, error }
 }

@@ -7,10 +7,12 @@ import {
   Check,
   CircleDollarSign,
   Copy,
+  Download,
   Edit3,
   Eye,
   FileText,
   Globe2,
+  Heart,
   LayoutDashboard,
   Lock,
   LogOut,
@@ -30,23 +32,39 @@ import {
   Sun,
   Trash2,
   Upload,
+  Users,
+  Bell,
+  RotateCcw,
 } from 'lucide-react'
+import Papa from 'papaparse'
 import { starterSite } from './data'
 import {
   deleteRemoteCard,
   fetchCards,
+  fetchCustomerNotes,
+  fetchJapanRequests,
+  fetchPrivateJapanRequest,
   fetchReservations,
   fetchSellRequests,
+  fetchStockAlerts,
   getBackendConfig,
   getAdminSession,
   onAdminAuthStateChange,
   signInAdmin,
   signOutAdmin,
+  createJapanProposal,
+  createJapanRequest,
+  createStockAlert,
+  deleteJapanProposal,
+  saveCustomerNote,
   submitReservation,
   submitSellRequest as submitRemoteSellRequest,
   syncCards,
+  transitionRemoteReservation,
+  updateJapanRequest,
   updateRemoteReservation,
   updateRemoteSellRequest,
+  updateStockAlert,
   uploadCardImage,
 } from './api'
 import './App.css'
@@ -56,6 +74,9 @@ const adminTabs = [
   ['content', 'Contenu', Edit3],
   ['products', 'Produits', Boxes],
   ['orders', 'Réservations', PackageCheck],
+  ['customers', 'Clients', Users],
+  ['japanRequests', 'Recherche Japon', Search],
+  ['stockAlerts', 'Alertes stock', Bell],
   ['sellRequests', 'Demandes', FileText],
   ['appearance', 'Apparence', Palette],
   ['settings', 'Paramètres', Settings],
@@ -72,6 +93,9 @@ const seoRoutes = {
   seoPromo: '/cartes-pokemon-promo-japonaises',
   seoVending: '/cartes-pokemon-vending-series',
   seoDracaufeu: '/cartes-pokemon-dracaufeu',
+  seoPikachu: '/cartes-pokemon-pikachu',
+  seoMew: '/cartes-pokemon-mew',
+  seoStarters: '/cartes-pokemon-starters',
 }
 
 const typeColors = {
@@ -281,7 +305,7 @@ const labels = {
   },
 }
 
-const reservationStatusOptions = ['Nouvelle', 'Contacté', 'Confirmée', 'Annulée']
+const reservationStatusOptions = ['Nouvelle', 'Contactée', 'Confirmée', 'Annulée', 'Expirée']
 const defaultCheckout = {
   fullName: '',
   email: '',
@@ -377,7 +401,7 @@ function normalizeStatus(status) {
     Archivee: 'Archivée',
     'Paiement à activer': 'Nouvelle réservation',
     'Payée': 'Confirmée',
-    'Préparée': 'Contacté',
+    'Préparée': 'Contactée',
     'Expédiée': 'Confirmée',
     'Nouvelle réservation': 'Nouvelle',
     'Archivée': 'Annulée',
@@ -583,6 +607,9 @@ function getPageSeo({ view, selected, site, t, cards }) {
     seoPromo: isFr ? 'Cartes Pokémon promo japonaises' : 'Japanese Pokemon promo cards',
     seoVending: isFr ? 'Cartes Pokémon Vending Series' : 'Pokemon Vending Series cards',
     seoDracaufeu: isFr ? 'Cartes Pokémon Dracaufeu japonaises' : 'Japanese Charizard Pokemon cards',
+    seoPikachu: isFr ? 'Cartes Pokémon Pikachu japonaises' : 'Japanese Pikachu Pokemon cards',
+    seoMew: isFr ? 'Cartes Pokémon Mew japonaises' : 'Japanese Mew Pokemon cards',
+    seoStarters: isFr ? 'Cartes Pokémon starters japonais' : 'Japanese starter Pokemon cards',
   }
 
   const collectionDescriptions = {
@@ -601,6 +628,15 @@ function getPageSeo({ view, selected, site, t, cards }) {
     seoDracaufeu: isFr
       ? 'Cartes Pokémon Dracaufeu et Charizard japonaises : promos, anciennes éditions et cartes de collection à réserver sans paiement direct.'
       : 'Japanese Dracaufeu and Charizard Pokemon cards: promos, vintage releases and collectible cards available for reservation.',
+    seoPikachu: isFr
+      ? 'Cartes Pokémon Pikachu japonaises présentes au catalogue HoloKira, avec photos réelles, état indiqué et réservation sans paiement direct.'
+      : 'Japanese Pikachu Pokemon cards currently listed by HoloKira with real photos and clear condition details.',
+    seoMew: isFr
+      ? 'Cartes Pokémon Mew japonaises présentes au catalogue HoloKira, avec informations factuelles issues de chaque fiche.'
+      : 'Japanese Mew Pokemon cards currently listed by HoloKira with factual product information.',
+    seoStarters: isFr
+      ? 'Cartes japonaises Bulbizarre, Salamèche, Carapuce et leurs évolutions disponibles dans le catalogue HoloKira.'
+      : 'Japanese Bulbasaur, Charmander, Squirtle and evolution cards currently listed by HoloKira.',
   }
 
   if (view === 'cardDetail' && selected) {
@@ -648,6 +684,8 @@ function getViewPath(viewName) {
 function readPathTarget() {
   const seoView = Object.entries(seoRoutes).find(([, path]) => path === window.location.pathname)?.[0]
   if (seoView) return { view: seoView }
+  const japanMatch = window.location.pathname.match(/^\/recherche-japon\/([^/]+)/)
+  if (japanMatch) return { view: 'japanProposal', token: decodeURIComponent(japanMatch[1]) }
   const match = window.location.pathname.match(/^\/carte\/([^/]+)/)
   if (!match) return null
   return { view: 'cardDetail', cardId: decodeURIComponent(match[1]) }
@@ -812,7 +850,7 @@ function HoloCardShowcase({ cards, openCardPage }) {
 }
 
 function CardArt({ card, large = false }) {
-  const primaryImage = getCardImages(card)[0]
+  const primaryImage = (!large && card.thumbnailUrls?.[0]) || getCardImages(card)[0]
   const hasPhoto = Boolean(primaryImage)
 
   return (
@@ -843,6 +881,40 @@ function CardArt({ card, large = false }) {
         </div>
       )}
     </div>
+  )
+}
+
+function FavoriteButton({ cardId, compact = false }) {
+  const readFavorites = () => loadLocal('kc-favorites', [])
+  const [isFavorite, setIsFavorite] = useState(() => readFavorites().includes(cardId))
+
+  useEffect(() => {
+    const sync = () => setIsFavorite(readFavorites().includes(cardId))
+    window.addEventListener('holokira:favorites', sync)
+    return () => window.removeEventListener('holokira:favorites', sync)
+  }, [cardId])
+
+  function toggle(event) {
+    event?.stopPropagation()
+    const current = readFavorites()
+    const next = current.includes(cardId)
+      ? current.filter((id) => id !== cardId)
+      : [...current, cardId]
+    saveLocal('kc-favorites', next)
+    window.dispatchEvent(new CustomEvent('holokira:favorites'))
+  }
+
+  return (
+    <button
+      className={`favorite-button ${compact ? 'compact' : ''} ${isFavorite ? 'active' : ''}`}
+      type="button"
+      onClick={toggle}
+      title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+      aria-pressed={isFavorite}
+    >
+      <Heart size={17} fill={isFavorite ? 'currentColor' : 'none'} />
+      {!compact && <span>{isFavorite ? 'Dans mes favoris' : 'Ajouter aux favoris'}</span>}
+    </button>
   )
 }
 
@@ -1018,6 +1090,7 @@ function ProductCard({ card, selected, onSelect, onAdd, onShare, t }) {
         >
           <Copy size={17} />
         </button>
+        <FavoriteButton cardId={card.id} compact />
       </div>
     </article>
   )
@@ -1527,7 +1600,9 @@ function CardsView({ cards, openCardPage, addToCart, copyCardLink, site, t }) {
   )
 }
 
-function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
+function CardDetailPage({ card, cards, addToCart, setView, site, t, copyCardLink, onStockAlert, onOpenCard }) {
+  const [alertEmail, setAlertEmail] = useState('')
+  const [alertMessage, setAlertMessage] = useState('')
   if (!card) {
     return (
       <main className="simple-page">
@@ -1547,6 +1622,33 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
   const badges = getCardBadges(card)
   const images = getCardImages(card)
   const story = getCardStory(card)
+  const signals = getCollectionSignals(card)
+  const similarCards = (cards || [])
+    .filter((candidate) => candidate.id !== card.id)
+    .map((candidate) => {
+      const candidateSignals = getCollectionSignals(candidate)
+      const score = Number(candidate.set === card.set) * 4
+        + Number(candidate.type === card.type) * 2
+        + Number(candidateSignals.japanese === signals.japanese)
+        + Number(candidateSignals.vintage === signals.vintage)
+        + Number(candidateSignals.promo === signals.promo)
+      return { candidate, score }
+    })
+    .filter((entry) => entry.score > 1)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4)
+    .map((entry) => entry.candidate)
+
+  async function submitAlert(event) {
+    event.preventDefault()
+    const result = await onStockAlert(card.id, alertEmail)
+    if (result?.saved) {
+      setAlertEmail('')
+      setAlertMessage('Demande enregistrée. Le vendeur pourra te contacter au retour en stock.')
+    } else {
+      setAlertMessage(result?.error?.message || 'Impossible d’enregistrer la demande.')
+    }
+  }
 
   return (
     <main className="card-detail-page">
@@ -1575,7 +1677,24 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
               <Copy size={17} />
               {t.shareCard}
             </button>
+            <FavoriteButton cardId={card.id} />
           </div>
+          {!reservable && (
+            <form className="stock-alert-form" onSubmit={submitAlert}>
+              <label>
+                <span>Me prévenir si disponible</span>
+                <input
+                  type="email"
+                  value={alertEmail}
+                  onChange={(event) => setAlertEmail(event.target.value)}
+                  placeholder="ton@email.fr"
+                  required
+                />
+              </label>
+              <button className="secondary-button" type="submit"><Bell size={16} /> M’inscrire</button>
+              {alertMessage && <small>{alertMessage}</small>}
+            </form>
+          )}
         </div>
       </section>
       <section className="card-story-panel">
@@ -1649,6 +1768,24 @@ function CardDetailPage({ card, addToCart, setView, site, t, copyCardLink }) {
         </article>
       </section>
       <TrustSection site={site} />
+      {similarCards.length > 0 && (
+        <section className="similar-cards">
+          <div className="panel-title"><h2>Cartes similaires</h2><span>{similarCards.length} suggestion(s)</span></div>
+          <div className="product-grid collection-grid">
+            {similarCards.map((candidate) => (
+              <ProductCard
+                key={candidate.id}
+                card={candidate}
+                selected={false}
+                onSelect={onOpenCard}
+                onAdd={addToCart}
+                onShare={copyCardLink}
+                t={t}
+              />
+            ))}
+          </div>
+        </section>
+      )}
       <ReservationGuide site={site} />
     </main>
   )
@@ -2067,6 +2204,9 @@ function SiteFooter({ site, setView, t }) {
         <button type="button" onClick={() => setView('seoPromo')}>Promos JP</button>
         <button type="button" onClick={() => setView('seoVending')}>Vending Series</button>
         <button type="button" onClick={() => setView('seoDracaufeu')}>Dracaufeu</button>
+        <button type="button" onClick={() => setView('seoPikachu')}>Pikachu</button>
+        <button type="button" onClick={() => setView('seoMew')}>Mew</button>
+        <button type="button" onClick={() => setView('seoStarters')}>Starters</button>
       </nav>
       <nav aria-label="Navigation secondaire">
         <button type="button" onClick={() => setView('about')}>{t.about}</button>
@@ -2113,7 +2253,7 @@ function TextInput({ value, onChange, type = 'text', step, min, placeholder }) {
   )
 }
 
-function imageFileToWebpBlob(file) {
+function imageFileToWebpBlob(file, maxSide = 1600, quality = 0.82) {
   return new Promise((resolve, reject) => {
     if (!file) {
       resolve(null)
@@ -2126,7 +2266,6 @@ function imageFileToWebpBlob(file) {
       const image = new Image()
       image.onerror = () => reject(new Error('Format image non reconnu.'))
       image.onload = () => {
-        const maxSide = 1200
         const ratio = Math.min(1, maxSide / Math.max(image.width, image.height))
         const width = Math.max(1, Math.round(image.width * ratio))
         const height = Math.max(1, Math.round(image.height * ratio))
@@ -2141,7 +2280,7 @@ function imageFileToWebpBlob(file) {
             return
           }
           resolve(blob)
-        }, 'image/webp', 0.82)
+        }, 'image/webp', quality)
       }
       image.src = reader.result
     }
@@ -2193,10 +2332,11 @@ async function prepareCardsForSave(cards) {
   return preparedCards
 }
 
-function ImageUploader({ value, onChange, name }) {
+function ImageUploader({ value, onChange, thumbnailValue = [], onThumbnailChange, name, folder = 'cards' }) {
   const [error, setError] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const images = Array.isArray(value) ? value : [value].filter(Boolean)
+  const thumbnails = Array.isArray(thumbnailValue) ? thumbnailValue : []
 
   async function uploadImage(event) {
     const files = [...(event.target.files || [])]
@@ -2210,18 +2350,24 @@ function ImageUploader({ value, onChange, name }) {
       setError('')
       setIsUploading(true)
       const uploadedImages = []
+      const uploadedThumbnails = []
       for (const file of files) {
         const blob = await imageFileToWebpBlob(file)
-        const uploadResult = await uploadCardImage(blob, `${name || 'carte'}-${file.name}`)
+        const thumbnailBlob = await imageFileToWebpBlob(file, 480, 0.72)
+        const uploadResult = await uploadCardImage(blob, `${name || 'carte'}-${file.name}`, folder)
+        const thumbnailResult = await uploadCardImage(thumbnailBlob, `thumb-${name || 'carte'}-${file.name}`, folder)
         if (uploadResult.url) {
           uploadedImages.push(uploadResult.url)
+          uploadedThumbnails.push(thumbnailResult.url || uploadResult.url)
         } else if (uploadResult.storageEnabled === false) {
           uploadedImages.push(await blobToDataUrl(blob))
+          uploadedThumbnails.push(await blobToDataUrl(thumbnailBlob))
         } else {
           throw new Error(uploadResult.error?.message || 'Upload Supabase impossible. Vérifie le bucket card-images.')
         }
       }
       onChange([...images, ...uploadedImages])
+      onThumbnailChange?.([...thumbnails, ...uploadedThumbnails])
     } catch (uploadError) {
       setError(uploadError.message)
     } finally {
@@ -2231,6 +2377,7 @@ function ImageUploader({ value, onChange, name }) {
 
   function removeImage(indexToRemove) {
     onChange(images.filter((_, index) => index !== indexToRemove))
+    onThumbnailChange?.(thumbnails.filter((_, index) => index !== indexToRemove))
   }
 
   function moveImage(fromIndex, direction) {
@@ -2240,6 +2387,12 @@ function ImageUploader({ value, onChange, name }) {
     const [movedImage] = nextImages.splice(fromIndex, 1)
     nextImages.splice(toIndex, 0, movedImage)
     onChange(nextImages)
+    if (onThumbnailChange) {
+      const nextThumbnails = [...thumbnails]
+      const [movedThumbnail] = nextThumbnails.splice(fromIndex, 1)
+      nextThumbnails.splice(toIndex, 0, movedThumbnail)
+      onThumbnailChange(nextThumbnails)
+    }
   }
 
   return (
@@ -2248,7 +2401,7 @@ function ImageUploader({ value, onChange, name }) {
         {images.length > 0 ? (
           images.map((image, index) => (
             <figure key={image}>
-              <img src={image} alt={`${name || 'Carte'} ${index + 1}`} />
+              <img src={thumbnails[index] || image} alt={`${name || 'Carte'} ${index + 1}`} loading="lazy" decoding="async" />
               <figcaption>{index === 0 ? 'Principale' : `Photo ${index + 1}`}</figcaption>
               <div className="image-order-actions">
                 <button type="button" onClick={() => moveImage(index, -1)} disabled={index === 0} title="Déplacer avant">
@@ -2274,7 +2427,7 @@ function ImageUploader({ value, onChange, name }) {
           <input type="file" accept="image/*" multiple onChange={uploadImage} disabled={isUploading} />
         </label>
         {images.length > 0 && (
-          <button type="button" onClick={() => onChange([])}>
+          <button type="button" onClick={() => { onChange([]); onThumbnailChange?.([]) }}>
             <Trash2 size={14} />
             Tout retirer
           </button>
@@ -2398,6 +2551,18 @@ function OrderTable({ orders, updateOrderStatus, updateOrderNote, releaseReserva
                       onChange={(event) => updateOrderNote(order.id, event.target.value)}
                     />
                   </Field>
+                  {order.history?.length > 0 && (
+                    <details className="reservation-history">
+                      <summary>Historique ({order.history.length})</summary>
+                      {order.history.map((event) => (
+                        <p key={event.id}>
+                          <time>{formatDateTime(event.createdAt)}</time>
+                          <span>{event.oldStatus ? `${event.oldStatus} → ` : ''}{event.newStatus || event.type}</span>
+                          {event.note && <small>{event.note}</small>}
+                        </p>
+                      ))}
+                    </details>
+                  )}
                 </td>
               )}
             </tr>
@@ -2461,6 +2626,152 @@ function SellRequestsTable({ sellRequests, updateSellRequestStatus, t }) {
   )
 }
 
+function CustomerProfiles({ orders, sellRequests, japanRequests, customerNotes, onSaveNote }) {
+  const [draftNotes, setDraftNotes] = useState({})
+  const profiles = useMemo(() => {
+    const byEmail = new Map()
+    const add = (email, name, kind, item) => {
+      const key = `${email || ''}`.trim().toLowerCase()
+      if (!key) return
+      const current = byEmail.get(key) || { email: key, name: name || key, reservations: [], sellRequests: [], japanRequests: [] }
+      current.name = current.name || name || key
+      current[kind].push(item)
+      byEmail.set(key, current)
+    }
+    orders.forEach((item) => add(item.email, item.customer, 'reservations', item))
+    sellRequests.forEach((item) => add(item.email, item.fullName, 'sellRequests', item))
+    japanRequests.forEach((item) => add(item.customerEmail, item.customerName, 'japanRequests', item))
+    return [...byEmail.values()].sort((a, b) => a.name.localeCompare(b.name))
+  }, [japanRequests, orders, sellRequests])
+  const noteMap = new Map(customerNotes.map((item) => [item.email, item.note]))
+
+  if (!profiles.length) return <div className="empty-state"><Users size={28} /><strong>Aucun client</strong></div>
+  return (
+    <div className="customer-profile-grid">
+      {profiles.map((profile) => {
+        const note = draftNotes[profile.email] ?? noteMap.get(profile.email) ?? ''
+        const reservedTotal = profile.reservations.reduce((sum, item) => sum + Number(item.total || 0), 0)
+        return (
+          <article className="customer-profile" key={profile.email}>
+            <div><strong>{profile.name}</strong><a href={`mailto:${profile.email}`}>{profile.email}</a></div>
+            <div className="customer-metrics">
+              <span>{profile.reservations.length} réservation(s)</span>
+              <span>{formatMoney(reservedTotal)}</span>
+              <span>{profile.japanRequests.length} recherche(s) Japon</span>
+              <span>{profile.sellRequests.length} rachat(s)</span>
+            </div>
+            <details>
+              <summary>Voir toutes les demandes</summary>
+              {[...profile.reservations, ...profile.japanRequests, ...profile.sellRequests].map((item) => (
+                <p key={item.id}><b>{item.id}</b> · {item.status} · {item.cardList || item.lines?.map((line) => line.name).join(', ')}</p>
+              ))}
+            </details>
+            <Field label="Notes vendeur">
+              <textarea value={note} onChange={(event) => setDraftNotes((current) => ({ ...current, [profile.email]: event.target.value }))} />
+            </Field>
+            <button type="button" className="secondary-button" onClick={() => onSaveNote(profile.email, note)}><Save size={15} /> Sauvegarder la note</button>
+          </article>
+        )
+      })}
+    </div>
+  )
+}
+
+function JapanRequestsManager({ requests, onUpdate, onAddProposal, onDeleteProposal }) {
+  const [drafts, setDrafts] = useState({})
+  const statuses = ['Nouvelle', 'En recherche', 'Proposition envoyée', 'Acceptée', 'Refusée']
+  const getDraft = (id) => drafts[id] || { title: '', description: '', price: '', imageUrls: [], thumbnailUrls: [] }
+  const setDraft = (id, patch) => setDrafts((current) => ({ ...current, [id]: { ...getDraft(id), ...patch } }))
+
+  async function submitProposal(event, requestId) {
+    event.preventDefault()
+    const draft = getDraft(requestId)
+    if (!draft.title || Number(draft.price) <= 0) return
+    const saved = await onAddProposal(requestId, draft)
+    if (saved) setDrafts((current) => ({ ...current, [requestId]: { title: '', description: '', price: '', imageUrls: [], thumbnailUrls: [] } }))
+  }
+
+  if (!requests.length) return <div className="empty-state"><Search size={28} /><strong>Aucune recherche Japon</strong></div>
+  return (
+    <div className="japan-admin-list">
+      {requests.map((request) => {
+        const draft = getDraft(request.id)
+        const privateUrl = `${window.location.origin}/recherche-japon/${request.token}`
+        return (
+          <article className="japan-admin-card" key={request.id}>
+            <header>
+              <div><strong>{request.id} · {request.customerName}</strong><a href={`mailto:${request.customerEmail}`}>{request.customerEmail}</a></div>
+              <select value={request.status} onChange={(event) => onUpdate(request.id, { status: event.target.value })}>
+                {statuses.map((status) => <option key={status}>{status}</option>)}
+              </select>
+            </header>
+            <div className="japan-request-summary">
+              <p><b>Recherche :</b> {request.cardList}</p><p><b>Critères :</b> {request.criteria || '-'}</p><strong>{formatMoney(request.budget)}</strong>
+            </div>
+            <button type="button" className="secondary-button" onClick={() => navigator.clipboard?.writeText(privateUrl)}><Copy size={15} /> Copier le lien privé</button>
+            <Field label="Notes internes (invisibles pour le client)">
+              <textarea defaultValue={request.internalNote} onBlur={(event) => onUpdate(request.id, { internalNote: event.target.value })} />
+            </Field>
+            <div className="proposal-list">
+              {request.proposals.map((proposal) => (
+                <article key={proposal.id}>
+                  {proposal.imageUrls[0] && <img src={proposal.imageUrls[0]} alt={proposal.title} loading="lazy" />}
+                  <div><strong>{proposal.title}</strong><span>{formatMoney(proposal.price)}</span><p>{proposal.description}</p></div>
+                  <button type="button" className="danger-button" onClick={() => onDeleteProposal(proposal.id)}><Trash2 size={14} /></button>
+                </article>
+              ))}
+            </div>
+            <form className="proposal-form" onSubmit={(event) => submitProposal(event, request.id)}>
+              <Field label="Titre de la proposition"><TextInput value={draft.title} onChange={(value) => setDraft(request.id, { title: value })} /></Field>
+              <Field label="Prix proposé"><TextInput type="number" min="0" step="0.01" value={draft.price} onChange={(value) => setDraft(request.id, { price: value })} /></Field>
+              <Field label="Description"><textarea value={draft.description} onChange={(event) => setDraft(request.id, { description: event.target.value })} /></Field>
+              <Field label="Photos de la proposition">
+                <ImageUploader value={draft.imageUrls} thumbnailValue={draft.thumbnailUrls} folder="proposals" name={draft.title || request.id} onChange={(value) => setDraft(request.id, { imageUrls: value })} onThumbnailChange={(value) => setDraft(request.id, { thumbnailUrls: value })} />
+              </Field>
+              <button type="submit" className="checkout"><Plus size={16} /> Ajouter la proposition</button>
+            </form>
+          </article>
+        )
+      })}
+    </div>
+  )
+}
+
+function StockAlertsTable({ alerts, onMarkNotified }) {
+  if (!alerts.length) return <div className="empty-state"><Bell size={28} /><strong>Aucune alerte de stock</strong></div>
+  return (
+    <div className="table-wrap"><table><thead><tr><th>Carte</th><th>Client</th><th>Date</th><th>Statut</th><th>Action</th></tr></thead><tbody>
+      {alerts.map((alert) => <tr key={alert.id}><td><strong>{alert.cardName}</strong><span>{alert.cardSet}</span></td><td><a href={`mailto:${alert.email}`}>{alert.email}</a></td><td>{formatDateTime(alert.createdAt)}</td><td>{alert.active ? 'À prévenir' : 'Prévenu'}</td><td><button type="button" onClick={() => onMarkNotified(alert)} disabled={!alert.active}><Bell size={14} /> Marquer prévenu</button></td></tr>)}
+    </tbody></table></div>
+  )
+}
+
+function JapanProposalPage({ token, setView, site }) {
+  const [request, setRequest] = useState(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let active = true
+    fetchPrivateJapanRequest(token).then((result) => { if (active) { setRequest(result); setLoading(false) } })
+    return () => { active = false }
+  }, [token])
+  if (loading) return <main className="simple-page"><div className="empty-state"><Search size={28} /><strong>Chargement de la proposition…</strong></div></main>
+  if (!request) return <main className="simple-page"><div className="empty-state"><strong>Lien privé introuvable ou expiré</strong><button type="button" onClick={() => setView('japanSourcing')}>Recherche Japon</button></div></main>
+  return (
+    <main className="simple-page private-proposal-page">
+      <div className="page-heading"><span>Lien privé · {request.id}</span><h1>Ta recherche au Japon</h1><p>{request.cardList}</p></div>
+      <section className="private-request-status"><span>Statut</span><strong>{request.status}</strong><p>Budget indiqué : {formatMoney(request.budget)}</p>{request.criteria && <p>{request.criteria}</p>}</section>
+      <section className="private-proposal-grid">
+        {(request.proposals || []).map((proposal) => <article key={proposal.id}>
+          {proposal.imageUrls?.[0] && <img src={proposal.imageUrls[0]} alt={proposal.title} loading="lazy" decoding="async" />}
+          <div><h2>{proposal.title}</h2><strong>{formatMoney(proposal.price)}</strong><p>{proposal.description}</p></div>
+        </article>)}
+      </section>
+      {!(request.proposals || []).length && <div className="empty-state"><Search size={26} /><strong>La recherche est en cours</strong><p>Les propositions apparaîtront ici avec leurs photos et leur prix.</p></div>}
+      <p className="sourcing-note">Ce lien est personnel. Une proposition ne déclenche aucun paiement automatique. Contact : {site.contactEmail}</p>
+    </main>
+  )
+}
+
 function ProductEditor({ cards, persistCards, removeCardById, t }) {
   const [draftCards, setDraftCards] = useState(cards)
   const [deletedIds, setDeletedIds] = useState([])
@@ -2471,6 +2782,10 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
   const [productStatus, setProductStatus] = useState('all')
   const [productCategory, setProductCategory] = useState('all')
   const [productSort, setProductSort] = useState('newest')
+  const [selectedProductIds, setSelectedProductIds] = useState([])
+  const [bulkStatus, setBulkStatus] = useState('')
+  const [bulkCategory, setBulkCategory] = useState('')
+  const [bulkPrice, setBulkPrice] = useState('')
   const [draft, setDraft] = useState({
     name: '',
     set: '',
@@ -2485,6 +2800,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     status: 'available',
     imageUrl: '',
     imageUrls: [],
+    thumbnailUrls: [],
     description: '',
     flaws: '',
     privateNote: '',
@@ -2556,6 +2872,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       stock: Number(preparedDraft.stock),
       imageUrl: getCardImages(preparedDraft)[0] || '',
       imageUrls: getCardImages(preparedDraft),
+      thumbnailUrls: preparedDraft.thumbnailUrls || [],
       status: 'available',
       reserved: false,
       featured: Boolean(preparedDraft.featured),
@@ -2573,6 +2890,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       stock: '1',
       imageUrl: '',
       imageUrls: [],
+      thumbnailUrls: [],
       description: '',
       flaws: '',
       privateNote: '',
@@ -2632,8 +2950,143 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
   function cancelProductChanges() {
     setDraftCards(cards)
     setDeletedIds([])
+    setSelectedProductIds([])
     setHasUnsavedChanges(false)
     setSaveMessage('')
+  }
+
+  function duplicateCard(card) {
+    const copy = {
+      ...card,
+      id: `kc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: `${card.name} (copie)`,
+      status: 'available',
+      reserved: false,
+      reservedUntil: '',
+      addedAt: new Date().toISOString().slice(0, 10),
+    }
+    markEdited([copy, ...draftCards])
+    setProductQuery(copy.name)
+  }
+
+  function toggleSelectedProduct(id) {
+    setSelectedProductIds((current) => current.includes(id)
+      ? current.filter((item) => item !== id)
+      : [...current, id])
+  }
+
+  function applyBulkChanges() {
+    if (selectedProductIds.length === 0) return
+    const selected = new Set(selectedProductIds)
+    markEdited(draftCards.map((card) => {
+      if (!selected.has(card.id)) return card
+      const next = { ...card }
+      if (bulkStatus) {
+        next.status = bulkStatus
+        next.reserved = bulkStatus === 'reserved'
+        if (bulkStatus === 'available') next.reservedUntil = ''
+      }
+      if (bulkCategory) next[bulkCategory] = true
+      if (bulkPrice !== '') next.price = Math.max(0, Number(bulkPrice) || 0)
+      return next
+    }))
+  }
+
+  function deleteSelectedProducts() {
+    if (selectedProductIds.length === 0) return
+    if (!window.confirm(`Supprimer ${selectedProductIds.length} fiche(s) sélectionnée(s) ?`)) return
+    const selected = new Set(selectedProductIds)
+    const persistedIds = cards.filter((card) => selected.has(card.id)).map((card) => card.id)
+    markEdited(draftCards.filter((card) => !selected.has(card.id)))
+    setDeletedIds((current) => [...new Set([...current, ...persistedIds])])
+    setSelectedProductIds([])
+  }
+
+  function downloadCatalogBackup() {
+    const blob = new Blob([JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), cards: draftCards }, null, 2)], {
+      type: 'application/json',
+    })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `holokira-catalogue-${new Date().toISOString().slice(0, 10)}.json`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
+
+  async function restoreCatalogBackup(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    try {
+      const parsed = JSON.parse(await file.text())
+      const restored = Array.isArray(parsed) ? parsed : parsed.cards
+      if (!Array.isArray(restored) || restored.some((card) => !card.id || !card.name)) {
+        throw new Error('Fichier de sauvegarde invalide.')
+      }
+      const restoredIds = new Set(restored.map((card) => card.id))
+      setDeletedIds(cards.filter((card) => !restoredIds.has(card.id)).map((card) => card.id))
+      markEdited(restored)
+      setSaveMessage(`${restored.length} fiche(s) restaurée(s). Clique sur Sauvegarder les produits.`)
+    } catch (error) {
+      setSaveMessage(error.message)
+    }
+  }
+
+  function importCsv(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: ({ data, errors }) => {
+        if (errors.length) {
+          setSaveMessage(`CSV invalide : ${errors[0].message}`)
+          return
+        }
+        const normalizeKey = (value) => slugify(value).replace(/-/g, '')
+        const imported = data.map((row, index) => {
+          const normalized = Object.fromEntries(Object.entries(row).map(([key, value]) => [normalizeKey(key), `${value ?? ''}`.trim()]))
+          const name = normalized.nom || normalized.name
+          if (!name) return null
+          return autocompleteCardDraft({
+            id: normalized.id || `csv-${Date.now()}-${index}`,
+            name,
+            set: normalized.set || normalized.serie || '',
+            rarity: normalized.rarete || normalized.rarity || '',
+            type: normalized.type || '',
+            condition: normalized.etat || normalized.condition || '',
+            language: normalized.langue || normalized.language || 'Japonais',
+            grade: normalized.grade || 'Raw',
+            price: Number((normalized.prix || normalized.price || '0').replace(',', '.')) || 0,
+            stock: Number(normalized.stock || 1) || 1,
+            status: normalized.statut || normalized.status || 'available',
+            description: normalized.description || '',
+            flaws: normalized.defauts || normalized.flaws || '',
+            tags: normalized.tags || '',
+            badge: normalized.badge || '',
+            imageUrl: '',
+            imageUrls: [],
+            thumbnailUrls: [],
+            addedAt: normalized.dateajout || new Date().toISOString().slice(0, 10),
+            isJapanese: /^(oui|true|1)$/i.test(normalized.japonais || ''),
+            isVintage: /^(oui|true|1)$/i.test(normalized.vintage || ''),
+            isGraded: /^(oui|true|1)$/i.test(normalized.gradee || ''),
+            isPromo: /^(oui|true|1)$/i.test(normalized.promo || ''),
+            featured: false,
+            negotiable: /^(oui|true|1)$/i.test(normalized.negociable || ''),
+            reserved: false,
+            color: '#db2a2a',
+          })
+        }).filter(Boolean)
+        if (!imported.length) {
+          setSaveMessage('Aucune ligne exploitable dans le CSV. La colonne nom est obligatoire.')
+          return
+        }
+        markEdited([...imported, ...draftCards])
+        setSaveMessage(`${imported.length} fiche(s) importée(s). Ajoute les photos puis sauvegarde.`)
+      },
+    })
   }
 
   return (
@@ -2653,6 +3106,23 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
             {isSaving ? 'Sauvegarde...' : 'Sauvegarder les produits'}
           </button>
         </div>
+      </div>
+      <div className="catalog-admin-tools">
+        <label className="file-button">
+          <Upload size={16} />
+          Importer un CSV
+          <input type="file" accept=".csv,text/csv" onChange={importCsv} />
+        </label>
+        <button type="button" onClick={downloadCatalogBackup}>
+          <Download size={16} />
+          Sauvegarder le catalogue
+        </button>
+        <label className="file-button">
+          <RotateCcw size={16} />
+          Restaurer une sauvegarde
+          <input type="file" accept=".json,application/json" onChange={restoreCatalogBackup} />
+        </label>
+        <small>CSV : colonnes recommandées nom, set, prix, état, stock, langue, rareté, promo, vintage.</small>
       </div>
       <form className="admin-form wide-form" onSubmit={addCard}>
         <Field label="Nom">
@@ -2708,8 +3178,10 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
         <Field label="Image">
           <ImageUploader
             value={getCardImages(draft)}
+            thumbnailValue={draft.thumbnailUrls}
             name={draft.name}
             onChange={(value) => setDraft({ ...draft, imageUrls: value, imageUrl: value[0] || '' })}
+            onThumbnailChange={(value) => setDraft((current) => ({ ...current, thumbnailUrls: value }))}
           />
         </Field>
         <Field label="Coup de cœur">
@@ -2791,10 +3263,45 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
           </button>
         ))}
       </div>
+      <div className="bulk-product-actions">
+        <label className="check-field">
+          <input
+            type="checkbox"
+            checked={visibleDraftCards.length > 0 && visibleDraftCards.every((card) => selectedProductIds.includes(card.id))}
+            onChange={(event) => setSelectedProductIds(event.target.checked ? visibleDraftCards.map((card) => card.id) : [])}
+          />
+          {selectedProductIds.length} sélectionnée(s)
+        </label>
+        <select value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value)}>
+          <option value="">Statut inchangé</option>
+          {Object.entries(cardStatuses).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+        </select>
+        <select value={bulkCategory} onChange={(event) => setBulkCategory(event.target.value)}>
+          <option value="">Catégorie inchangée</option>
+          <option value="isJapanese">Japonaise</option>
+          <option value="isVintage">Vintage</option>
+          <option value="isGraded">Gradée</option>
+          <option value="isPromo">Promo</option>
+        </select>
+        <input type="number" min="0" step="0.01" value={bulkPrice} onChange={(event) => setBulkPrice(event.target.value)} placeholder="Nouveau prix" />
+        <button type="button" onClick={applyBulkChanges} disabled={!selectedProductIds.length}>Appliquer</button>
+        <button className="danger-button" type="button" onClick={deleteSelectedProducts} disabled={!selectedProductIds.length}>
+          <Trash2 size={15} /> Supprimer
+        </button>
+      </div>
       <div className="product-editor-list">
         {visibleDraftCards.map((card) => (
-          <article className="editable-product" key={card.id}>
-            <CardArt card={card} />
+          <article className={`editable-product${selectedProductIds.includes(card.id) ? ' selected' : ''}`} key={card.id}>
+            <div className="editable-product-preview">
+              <label className="check-field">
+                <input type="checkbox" checked={selectedProductIds.includes(card.id)} onChange={() => toggleSelectedProduct(card.id)} />
+                Sélectionner
+              </label>
+              <CardArt card={card} />
+              <button type="button" className="secondary-button" onClick={() => duplicateCard(card)}>
+                <Copy size={15} /> Dupliquer
+              </button>
+            </div>
             <div className="editable-grid">
               {[
                 ['name', 'Nom'],
@@ -2839,8 +3346,10 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
               <Field label="Image">
                 <ImageUploader
                   value={getCardImages(card)}
+                  thumbnailValue={card.thumbnailUrls}
                   name={card.name}
                   onChange={(value) => updateCard(card.id, 'imageUrls', value)}
+                  onThumbnailChange={(value) => updateCard(card.id, 'thumbnailUrls', value)}
                 />
               </Field>
               <Field label="Badge">
@@ -2917,7 +3426,7 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
                 <span>Complète automatiquement les tags, le descriptif et le classement sans toucher aux photos.</span>
               </div>
             </div>
-            <button className="danger-button" type="button" onClick={() => removeCard(card.id)}>
+            <button className="danger-button product-delete-button" type="button" onClick={() => removeCard(card.id)}>
               <Trash2 size={16} />
               Supprimer
             </button>
@@ -3088,6 +3597,9 @@ function AdminView({
   cards,
   orders,
   sellRequests,
+  japanRequests,
+  customerNotes,
+  stockAlerts,
   setOrders,
   setSellRequests,
   persistCards,
@@ -3097,12 +3609,16 @@ function AdminView({
   t,
   logoutAdmin,
   backendConfig,
+  refreshAdminData,
 }) {
   const [activeTab, setActiveTab] = useState('overview')
   const [orderQuery, setOrderQuery] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState('Tous')
-  const revenue = orders.reduce((sum, order) => sum + Number(order.total), 0)
   const stock = cards.reduce((sum, card) => sum + Number(card.stock), 0)
+  const stockValue = cards.reduce(
+    (sum, card) => sum + Number(card.price || 0) * Number(card.stock || 0),
+    0,
+  )
   const lowStock = cards.filter((card) => Number(card.stock) <= Number(site.lowStockLimit)).length
   const filteredOrders = useMemo(() => {
     const normalized = orderQuery.toLowerCase().trim()
@@ -3122,44 +3638,10 @@ function AdminView({
     })
   }, [orderQuery, orderStatusFilter, orders])
 
-  function updateOrderStatus(id, status) {
-    const next = orders.map((order) => (order.id === id ? { ...order, status } : order))
+  async function updateOrderStatus(id, status) {
     const order = orders.find((item) => item.id === id)
-    if (order?.lines?.length) {
-      const wasCancelled = normalizeStatus(order.status) === 'Annulée'
-      const willBeCancelled = status === 'Annulée'
-      const nextCards = cards.map((card) => {
-        const line = order.lines.find((item) => item.id === card.id)
-        if (!line) return card
-        if (!wasCancelled && willBeCancelled) {
-          return {
-            ...card,
-            status: 'available',
-            reserved: false,
-            reservedUntil: '',
-            stock: Number(card.stock) + Number(line.qty),
-          }
-        }
-        if (wasCancelled && !willBeCancelled) {
-          const stock = Math.max(0, Number(card.stock) - Number(line.qty))
-          return {
-            ...card,
-            stock,
-            status: status === 'Confirmée' ? 'sold' : 'reserved',
-            reserved: status !== 'Confirmée',
-          }
-        }
-        if (status === 'Confirmée') {
-          return { ...card, status: 'sold', reserved: false, reservedUntil: '' }
-        }
-        if (willBeCancelled) return card
-        return { ...card, status: 'reserved', reserved: true }
-      })
-      persistCards(nextCards)
-    }
-    setOrders(next)
-    saveLocal('kc-orders', next)
-    updateRemoteReservation(id, { status })
+    const result = await transitionRemoteReservation(id, status, order?.privateNote || '')
+    if (result.saved) await refreshAdminData()
   }
 
   function updateOrderNote(id, privateNote) {
@@ -3169,28 +3651,37 @@ function AdminView({
     updateRemoteReservation(id, { privateNote })
   }
 
-  function releaseReservation(id) {
-    const order = orders.find((item) => item.id === id)
-    if (!order?.lines?.length || normalizeStatus(order.status) === 'Annulée') return
-    const nextCards = cards.map((card) => {
-      const line = order.lines.find((item) => item.id === card.id)
-      return line
-        ? {
-            ...card,
-            status: 'available',
-            reserved: false,
-            reservedUntil: '',
-            stock: Number(card.stock) + Number(line.qty),
-          }
-        : card
-    })
-    const nextOrders = orders.map((item) =>
-      item.id === id ? { ...item, status: 'Annulée', privateNote: `${item.privateNote || ''}`.trim() } : item,
-    )
-    persistCards(nextCards)
-    setOrders(nextOrders)
-    saveLocal('kc-orders', nextOrders)
-    updateRemoteReservation(id, { status: 'Annulée' })
+  async function releaseReservation(id) {
+    await updateOrderStatus(id, 'Annulée')
+  }
+
+  async function handleCustomerNote(email, note) {
+    const result = await saveCustomerNote(email, note)
+    if (result.saved) await refreshAdminData()
+  }
+
+  async function handleJapanUpdate(id, patch) {
+    const result = await updateJapanRequest(id, patch)
+    if (result.saved) await refreshAdminData()
+  }
+
+  async function handleAddProposal(requestId, proposal) {
+    const result = await createJapanProposal(requestId, proposal)
+    if (result.saved) {
+      await updateJapanRequest(requestId, { status: 'Proposition envoyée' })
+      await refreshAdminData()
+    }
+    return result.saved
+  }
+
+  async function handleDeleteProposal(id) {
+    const result = await deleteJapanProposal(id)
+    if (result.deleted) await refreshAdminData()
+  }
+
+  async function handleStockAlert(alert) {
+    const result = await updateStockAlert(alert.id, { active: false, notifiedAt: new Date().toISOString() })
+    if (result.saved) await refreshAdminData()
   }
 
   function updateSellRequestStatus(id, status) {
@@ -3232,11 +3723,20 @@ function AdminView({
           {activeTab === 'overview' && (
             <>
               <section className="stats">
-                <StatCard icon={CircleDollarSign} label={t.sales} value={formatMoney(revenue)} tone="red" />
+                <StatCard
+                  icon={CircleDollarSign}
+                  label={site.language === 'fr' ? 'Valeur du stock' : 'Stock value'}
+                  value={formatMoney(stockValue)}
+                  tone="red"
+                />
                 <StatCard icon={Boxes} label={t.stock} value={stock} tone="ink" />
                 <StatCard icon={PackageCheck} label={t.orders} value={orders.length} tone="blue" />
                 <StatCard icon={FileText} label={t.sellRequests} value={sellRequests.length} tone="gold" />
                 <StatCard icon={BarChart3} label={t.lowStock} value={lowStock} tone="ink" />
+              </section>
+              <section className="admin-panel recent-reservations">
+                <div className="panel-title admin-panel-title"><h2>Réservations récentes</h2><span>Les cinq dernières demandes reçues.</span></div>
+                {orders.slice(0, 5).map((order) => <div key={order.id}><strong>{order.id} · {order.customer}</strong><span>{formatMoney(order.total)} · {normalizeStatus(order.status)}</span></div>)}
               </section>
               <section className="admin-panel preview-panel">
                 <div>
@@ -3313,6 +3813,15 @@ function AdminView({
               />
             </section>
           )}
+          {activeTab === 'customers' && (
+            <section className="admin-panel"><div className="panel-title admin-panel-title"><h2>Fiches clients</h2><span>Toutes les demandes et tes notes vendeur au même endroit.</span></div><CustomerProfiles orders={orders} sellRequests={sellRequests} japanRequests={japanRequests} customerNotes={customerNotes} onSaveNote={handleCustomerNote} /></section>
+          )}
+          {activeTab === 'japanRequests' && (
+            <section className="admin-panel"><div className="panel-title admin-panel-title"><h2>Recherche Japon</h2><span>Suivi, propositions illustrées et liens privés clients.</span></div><JapanRequestsManager requests={japanRequests} onUpdate={handleJapanUpdate} onAddProposal={handleAddProposal} onDeleteProposal={handleDeleteProposal} /></section>
+          )}
+          {activeTab === 'stockAlerts' && (
+            <section className="admin-panel"><div className="panel-title admin-panel-title"><h2>Alertes de disponibilité</h2><span>Clients à prévenir lorsqu’une carte revient en stock.</span></div><StockAlertsTable alerts={stockAlerts} onMarkNotified={handleStockAlert} /></section>
+          )}
           {activeTab === 'sellRequests' && (
             <section className="admin-panel">
               <div className="panel-title admin-panel-title">
@@ -3348,6 +3857,10 @@ function App() {
   const [cards, setCards] = useState(() => withoutPrivateCardNotes(loadLocal('kc-cards', [])))
   const [orders, setOrders] = useState(loadOrders)
   const [sellRequests, setSellRequests] = useState(loadSellRequests)
+  const [japanRequests, setJapanRequests] = useState([])
+  const [customerNotes, setCustomerNotes] = useState([])
+  const [stockAlerts, setStockAlerts] = useState([])
+  const [japanPrivateToken, setJapanPrivateToken] = useState('')
   const [site, setSite] = useState(() => mergeSite(loadLocal('kc-site', starterSite)))
   const [cart, setCart] = useState(() => loadLocal('kc-cart', []))
   const [checkoutDraft, setCheckoutDraft] = useState(defaultCheckout)
@@ -3380,7 +3893,9 @@ function App() {
     const pageSeo = getPageSeo({ view, selected, site, t, cards })
     const canonical = view === 'cardDetail' && selected
       ? `${origin}${getCardPath(selected)}`
-      : `${origin}${getViewPath(view)}`
+      : view === 'japanProposal'
+        ? `${origin}/recherche-japon/${japanPrivateToken}`
+        : `${origin}${getViewPath(view)}`
     const title = pageSeo.title
     const description = pageSeo.description
     const shareImage = view === 'cardDetail' && selected && getCardImages(selected)[0]
@@ -3398,6 +3913,7 @@ function App() {
     setMetaTag('meta[property="og:image"]', { property: 'og:image', content: shareImage })
     setMetaTag('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' })
     setMetaTag('meta[name="twitter:image"]', { name: 'twitter:image', content: shareImage })
+    setMetaTag('meta[name="robots"]', { name: 'robots', content: view === 'japanProposal' ? 'noindex,nofollow' : 'index,follow' })
     setLinkTag('canonical', canonical)
 
     const structuredData = view === 'cardDetail' && selected
@@ -3454,7 +3970,7 @@ function App() {
         }
 
     setStructuredData(structuredData)
-  }, [cards, selected, site, t, view])
+  }, [cards, japanPrivateToken, selected, site, t, view])
 
   useEffect(() => {
     async function loadRemoteData() {
@@ -3484,6 +4000,9 @@ function App() {
           setSellRequests(remoteSellRequests)
           saveLocal('kc-sell-requests', remoteSellRequests)
         }
+        setJapanRequests(await fetchJapanRequests())
+        setCustomerNotes(await fetchCustomerNotes())
+        setStockAlerts(await fetchStockAlerts())
       }
     }
 
@@ -3510,6 +4029,11 @@ function App() {
         }
         return
       }
+      if (target.view === 'japanProposal') {
+        setJapanPrivateToken(target.token)
+        setView('japanProposal')
+        return
+      }
       const allowedViews = new Set([
         'home',
         'shop',
@@ -3531,6 +4055,9 @@ function App() {
         'seoPromo',
         'seoVending',
         'seoDracaufeu',
+        'seoPikachu',
+        'seoMew',
+        'seoStarters',
       ])
       if (allowedViews.has(target.view)) {
         setView(target.view)
@@ -3665,6 +4192,18 @@ function App() {
     () => cards.filter((card) => getCardBadgeSignals(card).dracaufeu),
     [cards],
   )
+  const seoPikachuCards = useMemo(
+    () => cards.filter((card) => normalizeSearchText(card.name).includes('pikachu')),
+    [cards],
+  )
+  const seoMewCards = useMemo(
+    () => cards.filter((card) => normalizeSearchText(card.name).split(/\s+/).includes('mew')),
+    [cards],
+  )
+  const seoStartersCards = useMemo(() => {
+    const names = ['bulbizarre', 'herbizarre', 'florizarre', 'salameche', 'reptincel', 'dracaufeu', 'carapuce', 'carabaffe', 'tortank', 'bulbasaur', 'ivysaur', 'venusaur', 'charmander', 'charmeleon', 'charizard', 'squirtle', 'wartortle', 'blastoise']
+    return cards.filter((card) => names.some((name) => normalizeSearchText(card.name).includes(name)))
+  }, [cards])
 
   function flash(message) {
     setToast(message)
@@ -3726,24 +4265,30 @@ function App() {
     flash(t.linkCopied)
   }
 
-  async function unlockAdmin() {
-    setIsAdminUnlocked(true)
-    const remoteCards = await fetchCards({ includePrivateNotes: true })
+  async function refreshAdminData() {
+    const [remoteCards, remoteReservations, remoteSellRequests, remoteJapanRequests, remoteCustomerNotes, remoteStockAlerts] = await Promise.all([
+      fetchCards({ includePrivateNotes: true }),
+      fetchReservations(),
+      fetchSellRequests(),
+      fetchJapanRequests(),
+      fetchCustomerNotes(),
+      fetchStockAlerts(),
+    ])
     if (Array.isArray(remoteCards)) {
       setCards(remoteCards)
       setSelected((current) => remoteCards.find((card) => card.id === current?.id) || remoteCards[0] || null)
       savePublicCards(remoteCards)
     }
-    const remoteReservations = await fetchReservations()
-    if (Array.isArray(remoteReservations)) {
-      setOrders(remoteReservations)
-      saveLocal('kc-orders', remoteReservations)
-    }
-    const remoteSellRequests = await fetchSellRequests()
-    if (Array.isArray(remoteSellRequests)) {
-      setSellRequests(remoteSellRequests)
-      saveLocal('kc-sell-requests', remoteSellRequests)
-    }
+    if (Array.isArray(remoteReservations)) { setOrders(remoteReservations); saveLocal('kc-orders', remoteReservations) }
+    if (Array.isArray(remoteSellRequests)) { setSellRequests(remoteSellRequests); saveLocal('kc-sell-requests', remoteSellRequests) }
+    setJapanRequests(remoteJapanRequests || [])
+    setCustomerNotes(remoteCustomerNotes || [])
+    setStockAlerts(remoteStockAlerts || [])
+  }
+
+  async function unlockAdmin() {
+    setIsAdminUnlocked(true)
+    await refreshAdminData()
   }
 
   async function logoutAdmin() {
@@ -3799,24 +4344,23 @@ function App() {
       flash(site.language === 'fr' ? 'Le budget minimum est de 100 €.' : 'The minimum budget is €100.')
       return
     }
-    const request = {
-      ...japanDraft,
-      cardList: `[RECHERCHE JAPON] ${japanDraft.cardList.trim()}`,
-      expectedPrice: `${Number(japanDraft.expectedPrice)} €`,
-      id: `JAPON-${Math.floor(1000 + Math.random() * 9000)}`,
-      status: 'Nouvelle',
-      date: new Date().toISOString().slice(0, 10),
-    }
-    const result = await submitRemoteSellRequest(request)
-    if (backendConfig.databaseEnabled && !result.databaseSaved) {
-      flash(result.message)
+    const result = await createJapanRequest(japanDraft)
+    if (!result.saved || !result.token) {
+      flash(result.error?.message || 'Impossible d’enregistrer la recherche.')
       return
     }
-    const next = [request, ...sellRequests]
-    setSellRequests(next)
-    saveLocal('kc-sell-requests', next)
     setJapanDraft(defaultJapanRequest)
-    flash(site.language === 'fr' ? 'Recherche envoyée.' : 'Sourcing request sent.')
+    setJapanPrivateToken(result.token)
+    setView('japanProposal')
+    window.history.pushState(null, '', `/recherche-japon/${result.token}`)
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    flash(site.language === 'fr' ? 'Recherche envoyée. Conserve ce lien privé.' : 'Request sent. Keep this private link.')
+  }
+
+  async function registerStockAlert(cardId, email) {
+    const result = await createStockAlert(cardId, email)
+    if (result.saved) flash('Alerte de disponibilité enregistrée.')
+    return result
   }
 
   async function checkout(event) {
@@ -4001,11 +4545,14 @@ function App() {
       {view === 'cardDetail' && (
         <CardDetailPage
           card={selected}
+          cards={cards}
           addToCart={addToCart}
           setView={navigate}
           site={site}
           t={t}
           copyCardLink={copyCardLink}
+          onStockAlert={registerStockAlert}
+          onOpenCard={openCardPage}
         />
       )}
       {view === 'reservationSuccess' && (
@@ -4112,6 +4659,15 @@ function App() {
           t={t}
         />
       )}
+      {view === 'seoPikachu' && (
+        <CollectionPage title="Cartes Pokémon Pikachu japonaises" intro="Les cartes Pikachu actuellement présentes au catalogue, avec photos réelles et état indiqué." cards={seoPikachuCards} openCardPage={openCardPage} addToCart={addToCart} copyCardLink={copyCardLink} site={site} t={t} />
+      )}
+      {view === 'seoMew' && (
+        <CollectionPage title="Cartes Pokémon Mew japonaises" intro="Les cartes Mew actuellement présentes au catalogue HoloKira." cards={seoMewCards} openCardPage={openCardPage} addToCart={addToCart} copyCardLink={copyCardLink} site={site} t={t} />
+      )}
+      {view === 'seoStarters' && (
+        <CollectionPage title="Cartes Pokémon starters japonais" intro="Bulbizarre, Salamèche, Carapuce et leurs évolutions présents dans le catalogue." cards={seoStartersCards} openCardPage={openCardPage} addToCart={addToCart} copyCardLink={copyCardLink} site={site} t={t} />
+      )}
       {view === 'sell' && (
         <InfoPage
           type="sell"
@@ -4131,6 +4687,7 @@ function App() {
           t={t}
         />
       )}
+      {view === 'japanProposal' && <JapanProposalPage token={japanPrivateToken} setView={navigate} site={site} />}
       {view === 'about' && <InfoPage type="about" site={site} t={t} />}
       {view === 'contact' && <InfoPage type="contact" site={site} t={t} />}
       {view === 'legal' && <InfoPage type="legal" site={site} t={t} />}
@@ -4147,6 +4704,9 @@ function App() {
           cards={cards}
           orders={orders}
           sellRequests={sellRequests}
+          japanRequests={japanRequests}
+          customerNotes={customerNotes}
+          stockAlerts={stockAlerts}
           setOrders={setOrders}
           setSellRequests={setSellRequests}
           persistCards={persistCards}
@@ -4156,6 +4716,7 @@ function App() {
           t={t}
           logoutAdmin={logoutAdmin}
           backendConfig={backendConfig}
+          refreshAdminData={refreshAdminData}
         />
       )}
       {view !== 'admin' && <SiteFooter site={site} setView={navigate} t={t} />}

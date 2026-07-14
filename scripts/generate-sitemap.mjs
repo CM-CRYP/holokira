@@ -1,7 +1,6 @@
 import { writeFile } from 'node:fs/promises'
-import 'dotenv/config'
 
-const siteUrl = 'https://holokira2.contactholokira.workers.dev'
+const siteUrl = (process.env.VITE_SITE_URL || 'https://holokira2.contactholokira.workers.dev').replace(/\/$/, '')
 const supabaseUrl = process.env.VITE_SUPABASE_URL
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY
 
@@ -11,6 +10,9 @@ const staticPages = [
   ['/cartes-pokemon-promo-japonaises', '0.9'],
   ['/cartes-pokemon-vending-series', '0.9'],
   ['/cartes-pokemon-dracaufeu', '0.9'],
+  ['/cartes-pokemon-pikachu', '0.9'],
+  ['/cartes-pokemon-mew', '0.9'],
+  ['/cartes-pokemon-starters', '0.9'],
 ]
 
 function slugify(value) {
