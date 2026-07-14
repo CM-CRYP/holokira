@@ -770,7 +770,7 @@ function getCardBadges(card) {
   const status = getCardStatus(card)
   const signals = getCardBadgeSignals(card)
   const condition = getConditionBadge(card.condition)
-  return [
+  const badges = [
     status === 'reserved' ? 'Réservée' : '',
     status === 'sold' ? 'Vendue' : '',
     signals.promo ? 'Promo' : '',
@@ -781,7 +781,13 @@ function getCardBadges(card) {
     condition,
     card.badge,
     card.featured ? 'Coup de cœur' : '',
-  ].filter(Boolean).filter((badge, index, list) => list.indexOf(badge) === index)
+  ]
+    .map((badge) => `${badge || ''}`.trim())
+    .filter(Boolean)
+
+  return badges.filter((badge, index, list) => (
+    list.findIndex((item) => item.toLocaleLowerCase('fr') === badge.toLocaleLowerCase('fr')) === index
+  ))
 }
 
 function getCardStory(card) {

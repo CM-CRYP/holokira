@@ -7,6 +7,8 @@
   --topbar-bg: rgba(255, 255, 255, 0.9);
   --footer-bg: rgba(255, 255, 255, 0.72);
   --button-ink: var(--ink);
+  --badge-contrast-bg: #161a22;
+  --badge-contrast-ink: #ffffff;
   background:
     radial-gradient(circle at top right, rgba(219, 42, 42, 0.13), transparent 30%),
     radial-gradient(circle at 12% 16%, rgba(54, 127, 215, 0.08), transparent 24%),
@@ -25,6 +27,8 @@
   --topbar-bg: rgba(9, 11, 16, 0.9);
   --footer-bg: rgba(5, 7, 11, 0.96);
   --button-ink: #ded7cd;
+  --badge-contrast-bg: #ded7cd;
+  --badge-contrast-ink: #11151d;
   --shadow-soft: 0 18px 48px rgba(0, 0, 0, 0.3);
   --shadow-strong: 0 20px 56px rgba(0, 0, 0, 0.45);
   background:
@@ -787,8 +791,8 @@ textarea {
 }
 
 .card-badge:nth-child(3n) {
-  color: var(--ink);
-  background: var(--button-ink);
+  color: var(--badge-contrast-ink);
+  background: var(--badge-contrast-bg);
   box-shadow: none;
 }
 
