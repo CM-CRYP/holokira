@@ -55,7 +55,7 @@ const adminTabs = [
   ['content', 'Contenu', Edit3],
   ['products', 'Produits', Boxes],
   ['orders', 'Réservations', PackageCheck],
-  ['sellRequests', 'Rachats', FileText],
+  ['sellRequests', 'Demandes', FileText],
   ['appearance', 'Apparence', Palette],
   ['settings', 'Paramètres', Settings],
 ]
@@ -90,6 +90,7 @@ const labels = {
     highlights: 'Pépites',
     sell: 'Vendre',
     cards: 'Toutes les cartes',
+    japanSourcing: 'Recherche Japon',
     arrivals: 'Arrivages',
     about: 'À propos',
     contact: 'Contact',
@@ -168,8 +169,8 @@ const labels = {
     lightMode: 'Mode clair',
     reservationPending: 'Nouvelle réservation',
     paymentPending: 'Réservée',
-    sellRequests: 'Demandes de rachat',
-    emptySellRequests: 'Aucune demande de rachat pour le moment.',
+    sellRequests: 'Demandes clients',
+    emptySellRequests: 'Aucune demande client pour le moment.',
     requestSent: 'Demande envoyée.',
     integrations: 'Intégrations',
     stripeStatus: 'Envoi e-mail',
@@ -186,6 +187,7 @@ const labels = {
     highlights: 'Highlights',
     sell: 'Sell',
     cards: 'All cards',
+    japanSourcing: 'Japan sourcing',
     arrivals: 'New arrivals',
     about: 'About',
     contact: 'Contact',
@@ -264,8 +266,8 @@ const labels = {
     lightMode: 'Light mode',
     reservationPending: 'New reservation',
     paymentPending: 'Reserved',
-    sellRequests: 'Buylist requests',
-    emptySellRequests: 'No buylist requests yet.',
+    sellRequests: 'Customer requests',
+    emptySellRequests: 'No customer requests yet.',
     requestSent: 'Request sent.',
     integrations: 'Integrations',
     stripeStatus: 'Email delivery',
@@ -297,6 +299,15 @@ const defaultSellRequest = {
   cardList: '',
   condition: '',
   expectedPrice: '',
+}
+
+const defaultJapanRequest = {
+  fullName: '',
+  email: '',
+  phone: '',
+  cardList: '',
+  condition: '',
+  expectedPrice: '100',
 }
 
 function loadLocal(key, fallback) {
@@ -373,8 +384,17 @@ function normalizeStatus(status) {
   return replacements[status] ?? status
 }
 
+function normalizeSearchText(value) {
+  return `${value || ''}`
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function getCardSearchText(card) {
-  return [
+  return normalizeSearchText([
     card.name,
     card.set,
     card.description,
@@ -385,12 +405,12 @@ function getCardSearchText(card) {
     card.grade,
     card.tags,
     card.badge,
-  ].join(' ').toLowerCase()
+  ].join(' '))
 }
 
 function includesAny(value, needles) {
-  const text = `${value || ''}`.toLowerCase()
-  return needles.some((needle) => text.includes(needle))
+  const text = normalizeSearchText(value)
+  return needles.some((needle) => text.includes(normalizeSearchText(needle)))
 }
 
 function getCollectionSignals(card) {
@@ -540,6 +560,7 @@ function getPageSeo({ view, selected, site, t, cards }) {
     shop: isFr ? 'Boutique de cartes Pok\u00e9mon japonaises vintage' : 'Vintage Japanese Pokemon card shop',
     arrivals: isFr ? 'Arrivages cartes Pok\u00e9mon japonaises' : 'Japanese Pokemon card arrivals',
     cards: t.cards,
+    japanSourcing: isFr ? 'Recherche de cartes Pokémon sur mesure au Japon' : 'Custom Pokemon card sourcing in Japan',
     highlights: copy.highlightsTitle,
     japanese: copy.japaneseTitle,
     vintageJapanese: copy.vintageJapaneseTitle,
@@ -556,6 +577,9 @@ function getPageSeo({ view, selected, site, t, cards }) {
   }
 
   const collectionDescriptions = {
+    japanSourcing: isFr
+      ? 'Confiez à HoloKira la recherche d’une carte Pokémon précise directement au Japon, pour les demandes à partir de 100 €. Proposition détaillée avant toute validation.'
+      : 'Ask HoloKira to source a specific Pokemon card directly from Japan for requests starting at €100. You receive a detailed proposal before approval.',
     seoVintage: isFr
       ? 'Sélection de cartes Pokémon japonaises vintage : Expansion Sheet, Vending Series, anciennes promos et pièces japonaises recherchées, avec photos réelles et réservation sans paiement direct.'
       : 'Selection of vintage Japanese Pokemon cards, including Expansion Sheet, Vending Series, old promos and collectible Japanese pieces with real photos and no direct checkout.',
@@ -822,8 +846,9 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
     ['highlights', t.highlights],
     ['graded', t.graded],
     ['vintageJapanese', t.vintageJapanese],
-    ['sell', t.sell],
     ['cards', t.cards],
+    ['japanSourcing', t.japanSourcing],
+    ['sell', t.sell],
   ]
 
   return (
@@ -1354,65 +1379,141 @@ function ShopView(props) {
   )
 }
 
-function CardsView({ cards, allCards, filters, openCardPage, addToCart, copyCardLink, site, t }) {
+function CardsView({ cards, openCardPage, addToCart, copyCardLink, site, t }) {
+  const [inventoryQuery, setInventoryQuery] = useState('')
+  const [inventoryStatus, setInventoryStatus] = useState('all')
+  const [inventoryCollection, setInventoryCollection] = useState('all')
+  const [inventorySort, setInventorySort] = useState('newest')
+  const isFr = site.language === 'fr'
+
+  const visibleCards = useMemo(() => {
+    const terms = normalizeSearchText(inventoryQuery).split(' ').filter(Boolean)
+    const filtered = cards.filter((card) => {
+      const haystack = getCardSearchText(card)
+      const signals = getCardBadgeSignals(card)
+      const matchesQuery = terms.every((term) => haystack.includes(term))
+      const matchesStatus = inventoryStatus === 'all' || getCardStatus(card) === inventoryStatus
+      const matchesCollection = inventoryCollection === 'all' || Boolean(signals[inventoryCollection])
+      return matchesQuery && matchesStatus && matchesCollection
+    })
+
+    return [...filtered].sort((a, b) => {
+      if (inventorySort === 'priceAsc') return Number(a.price) - Number(b.price)
+      if (inventorySort === 'priceDesc') return Number(b.price) - Number(a.price)
+      if (inventorySort === 'name') return `${a.name}`.localeCompare(`${b.name}`, site.language)
+      return new Date(b.addedAt || 0) - new Date(a.addedAt || 0)
+    })
+  }, [cards, inventoryCollection, inventoryQuery, inventorySort, inventoryStatus, site.language])
+
+  const resetInventoryFilters = () => {
+    setInventoryQuery('')
+    setInventoryStatus('all')
+    setInventoryCollection('all')
+    setInventorySort('newest')
+  }
+
   return (
-    <main className="simple-page">
+    <main className="simple-page cards-page">
       <div className="page-heading">
         <h1>{t.cards}</h1>
         <p>{site.copy[site.language].cardsIntro}</p>
       </div>
-      <TrustSection site={site} />
-      {filters && <Filters {...filters} cards={allCards} site={site} t={t} />}
+      <section className="inventory-toolbar" aria-label={isFr ? 'Recherche et filtres des cartes' : 'Card search and filters'}>
+        <label className="inventory-search">
+          <Search size={18} />
+          <input
+            value={inventoryQuery}
+            onChange={(event) => setInventoryQuery(event.target.value)}
+            placeholder={isFr ? 'Nom, Pokémon, série ou numéro...' : 'Name, Pokemon, set or number...'}
+          />
+        </label>
+        <label>
+          <PackageCheck size={17} />
+          <select value={inventoryStatus} onChange={(event) => setInventoryStatus(event.target.value)}>
+            <option value="all">{isFr ? 'Toutes les disponibilités' : 'All availability'}</option>
+            <option value="available">{t.available}</option>
+            <option value="reserved">{t.reserved}</option>
+            <option value="sold">{t.sold}</option>
+          </select>
+        </label>
+        <label>
+          <Sparkles size={17} />
+          <select value={inventoryCollection} onChange={(event) => setInventoryCollection(event.target.value)}>
+            <option value="all">{isFr ? 'Toutes les collections' : 'All collections'}</option>
+            <option value="japanese">{isFr ? 'Japonaises' : 'Japanese'}</option>
+            <option value="vintage">Vintage</option>
+            <option value="promo">Promo</option>
+            <option value="vending">Vending</option>
+            <option value="graded">{isFr ? 'Gradées' : 'Graded'}</option>
+          </select>
+        </label>
+        <label>
+          <BarChart3 size={17} />
+          <select value={inventorySort} onChange={(event) => setInventorySort(event.target.value)}>
+            <option value="newest">{isFr ? 'Plus récentes' : 'Newest'}</option>
+            <option value="name">A-Z</option>
+            <option value="priceAsc">{t.sortPriceAsc}</option>
+            <option value="priceDesc">{t.sortPriceDesc}</option>
+          </select>
+        </label>
+      </section>
+      <div className="inventory-summary">
+        <span>{visibleCards.length} {isFr ? 'carte(s)' : 'card(s)'}</span>
+        {(inventoryQuery || inventoryStatus !== 'all' || inventoryCollection !== 'all' || inventorySort !== 'newest') && (
+          <button type="button" onClick={resetInventoryFilters}>{isFr ? 'Réinitialiser' : 'Reset'}</button>
+        )}
+      </div>
       <div className="inventory-list">
-        {cards.map((card) => {
+        {visibleCards.map((card) => {
           const badges = getCardBadges(card)
 
           return (
-            <button
-              className={!isReservable(card) ? 'inventory-row reserved' : 'inventory-row'}
+            <article
+              className={!isReservable(card) ? 'inventory-card reserved' : 'inventory-card'}
               key={card.id}
-              type="button"
-              onClick={() => openCardPage(card)}
             >
-              <CardArt card={card} />
-              <span className="inventory-copy">
+              <button className="inventory-open" type="button" onClick={() => openCardPage(card)}>
+                <CardArt card={card} />
+              </button>
+              <div className="inventory-copy">
                 {badges.length > 0 && (
                   <span className="inventory-badges">
-                    {badges.map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
+                    {badges.slice(0, 3).map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
                   </span>
                 )}
-                <strong>{card.name}</strong>
-                <small>{card.set} - {card.rarity}</small>
-              </span>
-              <span className="inventory-price">{formatMoney(card.price)}</span>
-              <span className="inventory-stock">
-                {isReservable(card) ? `${card.stock} en stock` : getCardStatusLabel(card, t)}
-              </span>
-              <span
-                className="inventory-add"
-                aria-disabled={!isReservable(card)}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  if (!isReservable(card)) return
-                  addToCart(card.id)
-                }}
-              >
-                <Plus size={16} />
-              </span>
-              <span
-                className="inventory-share"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  copyCardLink(card)
-                }}
-                title={t.shareCard}
-              >
-                <Copy size={16} />
-              </span>
-            </button>
+                <button className="inventory-title" type="button" onClick={() => openCardPage(card)}>{card.name}</button>
+                <small>{card.set || (isFr ? 'Série à compléter' : 'Set to complete')}</small>
+              </div>
+              <div className="inventory-card-footer">
+                <span>
+                  <strong>{formatMoney(card.price)}</strong>
+                  <small>{isReservable(card) ? `${card.stock} ${isFr ? 'en stock' : 'in stock'}` : getCardStatusLabel(card, t)}</small>
+                </span>
+                <button
+                  className="inventory-add"
+                  type="button"
+                  disabled={!isReservable(card)}
+                  onClick={() => addToCart(card.id)}
+                  title={t.addToCart}
+                >
+                  <Plus size={17} />
+                </button>
+                <button className="inventory-share" type="button" onClick={() => copyCardLink(card)} title={t.shareCard}>
+                  <Copy size={16} />
+                </button>
+              </div>
+            </article>
           )
         })}
       </div>
+      {!visibleCards.length && (
+        <div className="empty-state inventory-empty">
+          <Search size={26} />
+          <strong>{isFr ? 'Aucune carte trouvée' : 'No cards found'}</strong>
+          <p>{isFr ? 'Essaie un nom plus court ou réinitialise les filtres.' : 'Try a shorter name or reset the filters.'}</p>
+          <button className="secondary-button" type="button" onClick={resetInventoryFilters}>{isFr ? 'Afficher toutes les cartes' : 'Show all cards'}</button>
+        </div>
+      )}
     </main>
   )
 }
@@ -1861,6 +1962,89 @@ function InfoPage({ type, site, t, sellDraft, setSellDraft, submitSellRequest })
   )
 }
 
+function JapanSourcingPage({ draft, setDraft, submitRequest, site, t }) {
+  const isFr = site.language === 'fr'
+  const steps = isFr
+    ? [
+        ['Décris ta recherche', 'Indique la carte, la série, la langue, l’état minimum et les détails importants.'],
+        ['Recherche au Japon', 'HoloKira vérifie les pistes disponibles et prépare une proposition adaptée à ton budget.'],
+        ['Tu décides', 'Prix, état et photos sont confirmés avant ton accord. La demande ne vaut pas achat.'],
+      ]
+    : [
+        ['Describe your search', 'Tell us the card, set, language, minimum condition and important details.'],
+        ['Sourcing in Japan', 'HoloKira checks available options and prepares a proposal for your budget.'],
+        ['You decide', 'Price, condition and photos are confirmed before approval. The request is not a purchase.'],
+      ]
+
+  return (
+    <main className="simple-page japan-sourcing-page">
+      <section className="japan-sourcing-hero">
+        <div>
+          <span>{isFr ? 'Service personnalisé' : 'Personal sourcing service'}</span>
+          <h1>{isFr ? 'Recherche sur mesure au Japon' : 'Custom card sourcing in Japan'}</h1>
+          <p>{isFr
+            ? 'Tu cherches une carte Pokémon japonaise précise qui n’est pas en stock ? Confie-moi la recherche directement au Japon.'
+            : 'Looking for a specific Japanese Pokemon card that is not in stock? Let me source it directly in Japan.'}</p>
+        </div>
+        <aside>
+          <small>{isFr ? 'Budget minimum par demande' : 'Minimum budget per request'}</small>
+          <strong>100 €</strong>
+          <span>{isFr ? 'Proposition avant toute validation' : 'Proposal before any approval'}</span>
+        </aside>
+      </section>
+      <section className="sourcing-steps">
+        {steps.map(([title, text], index) => (
+          <article key={title}>
+            <span>0{index + 1}</span>
+            <strong>{title}</strong>
+            <p>{text}</p>
+          </article>
+        ))}
+      </section>
+      <form className="sell-form sourcing-form" onSubmit={submitRequest}>
+        <div className="panel-title">
+          <h2>{isFr ? 'Déposer une recherche' : 'Submit a search'}</h2>
+          <span>{isFr ? 'Les demandes sont visibles dans ton panel admin.' : 'Requests are visible in the admin panel.'}</span>
+        </div>
+        <div className="settings-grid">
+          <Field label={t.fullName}>
+            <TextInput value={draft.fullName} onChange={(value) => setDraft({ ...draft, fullName: value })} />
+          </Field>
+          <Field label={t.email}>
+            <TextInput type="email" value={draft.email} onChange={(value) => setDraft({ ...draft, email: value })} />
+          </Field>
+          <Field label={t.phone}>
+            <TextInput value={draft.phone} onChange={(value) => setDraft({ ...draft, phone: value })} />
+          </Field>
+        </div>
+        <Field label={isFr ? 'Carte(s) recherchée(s)' : 'Card(s) wanted'}>
+          <textarea
+            required
+            value={draft.cardList}
+            onChange={(event) => setDraft({ ...draft, cardList: event.target.value })}
+            placeholder={isFr ? 'Exemple : Dracaufeu japonais 143/S-P, Excellent minimum...' : 'Example: Japanese Charizard 143/S-P, Excellent or better...'}
+          />
+        </Field>
+        <div className="form-pair">
+          <Field label={isFr ? 'État et critères souhaités' : 'Condition and criteria'}>
+            <TextInput value={draft.condition} onChange={(value) => setDraft({ ...draft, condition: value })} placeholder={isFr ? 'État, édition, gradée ou raw...' : 'Condition, edition, graded or raw...'} />
+          </Field>
+          <Field label={isFr ? 'Budget maximum (€)' : 'Maximum budget (€)'}>
+            <TextInput type="number" min="100" step="1" value={draft.expectedPrice} onChange={(value) => setDraft({ ...draft, expectedPrice: value })} />
+          </Field>
+        </div>
+        <p className="sourcing-note">{isFr
+          ? 'Budget minimum : 100 €. L’envoi de ce formulaire est gratuit et ne t’engage pas à acheter.'
+          : 'Minimum budget: €100. Submitting this form is free and does not commit you to a purchase.'}</p>
+        <button className="checkout" type="submit" disabled={!draft.fullName || !draft.email || !draft.cardList || Number(draft.expectedPrice) < 100}>
+          <Send size={18} />
+          {isFr ? 'Envoyer ma recherche' : 'Send my request'}
+        </button>
+      </form>
+    </main>
+  )
+}
+
 function SiteFooter({ site, setView, t }) {
   return (
     <footer className="site-footer">
@@ -1869,6 +2053,7 @@ function SiteFooter({ site, setView, t }) {
         <span>{site.copy[site.language].footerNote}</span>
       </div>
       <nav className="footer-collections" aria-label="Collections Pokémon">
+        <button type="button" onClick={() => setView('japanSourcing')}>{t.japanSourcing}</button>
         <button type="button" onClick={() => setView('seoVintage')}>Vintage JP</button>
         <button type="button" onClick={() => setView('seoPromo')}>Promos JP</button>
         <button type="button" onClick={() => setView('seoVending')}>Vending Series</button>
@@ -3123,7 +3308,7 @@ function AdminView({
             <section className="admin-panel">
               <div className="panel-title admin-panel-title">
                 <h2>{t.sellRequests}</h2>
-                <span>Demandes envoyées depuis la page Vendre.</span>
+                <span>Demandes de rachat et recherches personnalisées au Japon.</span>
               </div>
               <SellRequestsTable
                 sellRequests={sellRequests}
@@ -3158,6 +3343,7 @@ function App() {
   const [cart, setCart] = useState(() => loadLocal('kc-cart', []))
   const [checkoutDraft, setCheckoutDraft] = useState(defaultCheckout)
   const [sellDraft, setSellDraft] = useState(defaultSellRequest)
+  const [japanDraft, setJapanDraft] = useState(defaultJapanRequest)
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false)
   const [backendConfig, setBackendConfig] = useState({
     emailEnabled: false,
@@ -3314,6 +3500,7 @@ function App() {
         'japanese',
         'graded',
         'vintageJapanese',
+        'japanSourcing',
         'sell',
         'cards',
         'about',
@@ -3361,7 +3548,7 @@ function App() {
   }
 
   const filteredCards = useMemo(() => {
-    const normalized = query.toLowerCase().trim()
+    const normalized = normalizeSearchText(query)
     const min = minPrice === '' ? null : Number(minPrice)
     const max = maxPrice === '' ? null : Number(maxPrice)
     const filtered = cards.filter((card) => {
@@ -3505,12 +3692,14 @@ function App() {
   function navigate(viewName) {
     setView(viewName)
     window.history.pushState(null, '', getViewPath(viewName))
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }
 
   function openCardPage(card) {
     setSelected(card)
     setView('cardDetail')
     window.history.pushState(null, '', getCardPath(card))
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }
 
   async function copyCardLink(card) {
@@ -3573,6 +3762,32 @@ function App() {
     saveLocal('kc-sell-requests', next)
     setSellDraft(defaultSellRequest)
     flash(t.requestSent)
+  }
+
+  async function submitJapanRequest(event) {
+    event.preventDefault()
+    if (Number(japanDraft.expectedPrice) < 100) {
+      flash(site.language === 'fr' ? 'Le budget minimum est de 100 €.' : 'The minimum budget is €100.')
+      return
+    }
+    const request = {
+      ...japanDraft,
+      cardList: `[RECHERCHE JAPON] ${japanDraft.cardList.trim()}`,
+      expectedPrice: `${Number(japanDraft.expectedPrice)} €`,
+      id: `JAPON-${Math.floor(1000 + Math.random() * 9000)}`,
+      status: 'Nouvelle',
+      date: new Date().toISOString().slice(0, 10),
+    }
+    const result = await submitRemoteSellRequest(request)
+    if (backendConfig.databaseEnabled && !result.databaseSaved) {
+      flash(result.message)
+      return
+    }
+    const next = [request, ...sellRequests]
+    setSellRequests(next)
+    saveLocal('kc-sell-requests', next)
+    setJapanDraft(defaultJapanRequest)
+    flash(site.language === 'fr' ? 'Recherche envoyée.' : 'Sourcing request sent.')
   }
 
   async function checkout(event) {
@@ -3732,32 +3947,7 @@ function App() {
       )}
       {view === 'cards' && (
         <CardsView
-          cards={filteredCards}
-          allCards={cards}
-          filters={{
-            query,
-            setQuery,
-            type,
-            setType,
-            rarity,
-            setRarity,
-            status: statusFilter,
-            setStatus: setStatusFilter,
-            sort: sortOrder,
-            setSort: setSortOrder,
-            language: languageFilter,
-            setLanguageFilter,
-            grade: gradeFilter,
-            setGradeFilter,
-            collectionTag,
-            setCollectionTag,
-            minPrice,
-            setMinPrice,
-            maxPrice,
-            setMaxPrice,
-            stockOnly,
-            setStockOnly,
-          }}
+          cards={cards}
           openCardPage={openCardPage}
           addToCart={addToCart}
           copyCardLink={copyCardLink}
@@ -3901,6 +4091,15 @@ function App() {
           sellDraft={sellDraft}
           setSellDraft={setSellDraft}
           submitSellRequest={submitSellRequest}
+        />
+      )}
+      {view === 'japanSourcing' && (
+        <JapanSourcingPage
+          draft={japanDraft}
+          setDraft={setJapanDraft}
+          submitRequest={submitJapanRequest}
+          site={site}
+          t={t}
         />
       )}
       {view === 'about' && <InfoPage type="about" site={site} t={t} />}
