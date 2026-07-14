@@ -39,6 +39,7 @@ import {
   fetchSellRequests,
   getBackendConfig,
   getAdminSession,
+  onAdminAuthStateChange,
   signInAdmin,
   signOutAdmin,
   submitReservation,
@@ -391,6 +392,14 @@ function normalizeSearchText(value) {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+function withoutPrivateCardNotes(cards) {
+  return cards.map(({ privateNote: _privateNote, ...card }) => card)
+}
+
+function savePublicCards(cards) {
+  return saveLocal('kc-cards', withoutPrivateCardNotes(cards))
 }
 
 function getCardSearchText(card) {
@@ -3336,7 +3345,7 @@ function Toast({ toast }) {
 }
 
 function App() {
-  const [cards, setCards] = useState(() => loadLocal('kc-cards', []))
+  const [cards, setCards] = useState(() => withoutPrivateCardNotes(loadLocal('kc-cards', [])))
   const [orders, setOrders] = useState(loadOrders)
   const [sellRequests, setSellRequests] = useState(loadSellRequests)
   const [site, setSite] = useState(() => mergeSite(loadLocal('kc-site', starterSite)))
@@ -3457,11 +3466,11 @@ function App() {
       }
       if (!config.databaseEnabled) return
 
-      const remoteCards = await fetchCards()
+      const remoteCards = await fetchCards({ includePrivateNotes: Boolean(session) })
       if (Array.isArray(remoteCards)) {
         setCards(remoteCards)
         setSelected(remoteCards[0] || null)
-        saveLocal('kc-cards', remoteCards)
+        savePublicCards(remoteCards)
       }
 
       if (session) {
@@ -3480,6 +3489,15 @@ function App() {
 
     loadRemoteData()
   }, [])
+
+  useEffect(() => onAdminAuthStateChange(() => {
+    setIsAdminUnlocked(false)
+    setCards((currentCards) => {
+      const publicCards = withoutPrivateCardNotes(currentCards)
+      savePublicCards(publicCards)
+      return publicCards
+    })
+  }), [])
 
   useEffect(() => {
     function applyHashTarget() {
@@ -3530,7 +3548,7 @@ function App() {
 
   async function persistCards(next) {
     setCards(next)
-    saveLocal('kc-cards', next)
+    savePublicCards(next)
     if (backendConfig.databaseEnabled) {
       return syncCards(next)
     }
@@ -3540,7 +3558,7 @@ function App() {
   async function removeCardById(id) {
     const next = cards.filter((card) => card.id !== id)
     setCards(next)
-    saveLocal('kc-cards', next)
+    savePublicCards(next)
     if (backendConfig.databaseEnabled) {
       return deleteRemoteCard(id)
     }
@@ -3710,6 +3728,12 @@ function App() {
 
   async function unlockAdmin() {
     setIsAdminUnlocked(true)
+    const remoteCards = await fetchCards({ includePrivateNotes: true })
+    if (Array.isArray(remoteCards)) {
+      setCards(remoteCards)
+      setSelected((current) => remoteCards.find((card) => card.id === current?.id) || remoteCards[0] || null)
+      savePublicCards(remoteCards)
+    }
     const remoteReservations = await fetchReservations()
     if (Array.isArray(remoteReservations)) {
       setOrders(remoteReservations)
@@ -3725,6 +3749,11 @@ function App() {
   async function logoutAdmin() {
     await signOutAdmin()
     setIsAdminUnlocked(false)
+    setCards((currentCards) => {
+      const publicCards = withoutPrivateCardNotes(currentCards)
+      savePublicCards(publicCards)
+      return publicCards
+    })
   }
 
   function updateQty(id, qty) {
@@ -3861,7 +3890,7 @@ function App() {
     }
     const nextOrders = [nextOrder, ...orders]
     setCards(nextCards)
-    saveLocal('kc-cards', nextCards)
+    savePublicCards(nextCards)
     setOrders(nextOrders)
     setLastReservation(nextOrder)
     setCart([])

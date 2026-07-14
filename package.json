@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:api": "node server/server.js",
     "prebuild": "node scripts/generate-sitemap.mjs",
     "build": "vite build",
     "lint": "oxlint",
@@ -13,11 +12,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.1",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
     "lucide-react": "^1.23.0",
-    "nodemailer": "^9.0.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

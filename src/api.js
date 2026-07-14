@@ -32,7 +32,6 @@ function toCardRow(card) {
     image_urls: images,
     description: card.description || null,
     flaws: card.flaws || null,
-    private_note: card.privateNote || null,
     negotiable: Boolean(card.negotiable),
     featured: Boolean(card.featured),
     is_japanese: Boolean(card.isJapanese),
@@ -69,7 +68,7 @@ function fromCardRow(row) {
     imageUrls,
     description: row.description || '',
     flaws: row.flaws || '',
-    privateNote: row.private_note || '',
+    privateNote: '',
     negotiable: Boolean(row.negotiable),
     featured: Boolean(row.featured),
     isJapanese: Boolean(row.is_japanese),
@@ -122,7 +121,7 @@ function toSellRequestRow(request) {
     card_list: request.cardList,
     condition: request.condition || null,
     expected_price: request.expectedPrice || null,
-    status: request.status || 'Nouvelle',
+    status: 'Nouvelle',
   }
 }
 
@@ -150,6 +149,14 @@ export async function getBackendConfig() {
 export async function getAdminSession() {
   if (!supabase) return null
   const { data } = await supabase.auth.getSession()
+  if (!data.session) return null
+
+  const { data: isAdmin, error } = await supabase.rpc('is_current_user_admin')
+  if (error || isAdmin !== true) {
+    await supabase.auth.signOut()
+    return null
+  }
+
   return data.session
 }
 
@@ -158,7 +165,22 @@ export async function signInAdmin({ email, password }) {
     return { session: null, error: { message: 'Supabase is not configured.' } }
   }
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  return { session: data.session, error }
+  if (error || !data.session) return { session: null, error }
+
+  const { data: isAdmin, error: accessError } = await supabase.rpc('is_current_user_admin')
+  if (accessError || isAdmin !== true) {
+    await supabase.auth.signOut()
+    return {
+      session: null,
+      error: {
+        message: accessError
+          ? 'Sécurité Supabase non installée. Relance le fichier supabase-schema.sql.'
+          : "Ce compte n'est pas autorisé à ouvrir l'administration.",
+      },
+    }
+  }
+
+  return { session: data.session, error: null }
 }
 
 export async function signOutAdmin() {
@@ -166,17 +188,48 @@ export async function signOutAdmin() {
   await supabase.auth.signOut()
 }
 
-export async function fetchCards() {
+export function onAdminAuthStateChange(callback) {
+  if (!supabase) return () => {}
+
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (!session) callback(null)
+  })
+
+  return () => data.subscription.unsubscribe()
+}
+
+export async function fetchCards({ includePrivateNotes = false } = {}) {
   if (!supabase) return null
   const { data, error } = await supabase.from('cards').select('*').order('created_at')
   if (error) return null
-  return data.map(fromCardRow)
+
+  const cards = data.map(fromCardRow)
+  if (!includePrivateNotes || cards.length === 0) return cards
+
+  const { data: notes, error: notesError } = await supabase
+    .from('card_private_notes')
+    .select('card_id, note')
+
+  if (notesError) return cards
+
+  const noteByCard = new Map(notes.map((row) => [row.card_id, row.note]))
+  return cards.map((card) => ({ ...card, privateNote: noteByCard.get(card.id) || '' }))
 }
 
 export async function syncCards(cards) {
   if (!supabase) return { saved: false }
+  if (cards.length === 0) return { saved: true }
+
   const { error } = await supabase.from('cards').upsert(cards.map(toCardRow))
-  return { saved: !error, error }
+  if (error) return { saved: false, error }
+
+  const noteRows = cards.map((card) => ({
+    card_id: card.id,
+    note: card.privateNote || '',
+    updated_at: new Date().toISOString(),
+  }))
+  const { error: notesError } = await supabase.from('card_private_notes').upsert(noteRows)
+  return { saved: !notesError, error: notesError }
 }
 
 export async function deleteRemoteCard(id) {
@@ -307,36 +360,12 @@ export async function submitReservation({ reservation }) {
     }
   }
 
-  if (rpcError.code !== 'PGRST202') {
-    return {
-      databaseSaved: false,
-      emailSent: false,
-      message: `Erreur Supabase : ${rpcError.message}`,
-    }
-  }
-
-  const { error: reservationError } = await supabase.from('reservations').insert(reservationRow)
-
-  if (reservationError) {
-    return {
-      databaseSaved: false,
-      emailSent: false,
-      message: `Erreur Supabase : ${reservationError.message}`,
-    }
-  }
-
-  const { error: itemsError } = await supabase.from('reservation_items').insert(itemRows)
-  if (itemsError) {
-    return {
-      databaseSaved: false,
-      emailSent: false,
-      message: `Erreur lignes Supabase : ${itemsError.message}`,
-    }
-  }
-
   return {
-    databaseSaved: true,
+    databaseSaved: false,
     emailSent: false,
-    message: 'Réservation enregistrée dans Supabase.',
+    message: rpcError.code === 'PGRST202'
+      ? 'Sécurité Supabase non installée. Relance le fichier supabase-schema.sql.'
+      : `Erreur Supabase : ${rpcError.message}`,
+    error: rpcError,
   }
 }

@@ -19,18 +19,26 @@ de gérer une durée de réservation temporaire.
 
 ## Admin sécurisé
 
-Le panel admin utilise Supabase Auth. Il n'y a plus de code admin public dans le
-site.
+Le panel admin utilise Supabase Auth et une liste d'autorisation RLS. Une simple
+session Supabase ne suffit pas : seul l'utilisateur Auth lié à
+`holokira@gmail.com` est autorisé à ouvrir le panel et à modifier les données.
 
 Dans Supabase :
 
-1. Ouvre `Authentication`.
-2. Va dans `Users`.
-3. Clique sur `Add user`.
-4. Crée ton compte administrateur avec ton e-mail et un mot de passe fort.
+1. Ouvre `Authentication`, puis `Users`.
+2. Clique sur `Add user`.
+3. Crée le compte `holokira@gmail.com` avec un mot de passe fort.
+4. Dans les réglages Auth, désactive les nouvelles inscriptions publiques.
+5. Ouvre `SQL Editor`.
+6. Colle la totalité de `supabase-schema.sql`, puis clique sur `Run`.
 
-Ensuite, sur le site, ouvre `Admin` et connecte-toi avec ce compte. Les
-réservations et les actions admin ne sont visibles qu'après connexion.
+Le compte Auth doit exister avant d'exécuter le SQL. Si tu l'as créé après,
+relance simplement le même fichier : aucune carte ni réservation ne sera
+supprimée.
+
+Le script protège également les notes privées dans une table séparée, refuse
+les écritures de cartes par les visiteurs et limite l'upload d'images au seul
+administrateur autorisé.
 
 ## Supabase
 
@@ -43,9 +51,9 @@ Dans Supabase, ouvre `SQL Editor`, colle le fichier complet, puis clique sur
 `Run`.
 
 Important : relance ce fichier après chaque changement de sécurité. Les clients
-peuvent lire les cartes et créer une réservation, mais seul un compte connecté
-avec Supabase Auth peut ajouter, modifier ou supprimer les cartes et consulter
-les réservations.
+peuvent lire les cartes et appeler la fonction contrôlée de réservation, mais
+seul le compte administrateur autorisé peut ajouter, modifier ou supprimer les
+cartes et consulter les réservations.
 
 Le schéma ajoute aussi la fonction `create_reservation`. Elle enregistre la
 réservation et ses cartes dans une seule opération : si une carte n'est plus
