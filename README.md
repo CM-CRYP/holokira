@@ -10,8 +10,10 @@ Le site ne prend aucun paiement en ligne et n'envoie pas d'e-mail. Le client
 ajoute une ou plusieurs cartes à ses réservations, clique sur `Je réserve`,
 renseigne ses coordonnées et ajoute un message pour le vendeur.
 
-La réservation est enregistrée dans Supabase, la carte passe en `Réservée`, et
-la demande apparaît dans le panel admin du site.
+La réservation est enregistrée dans Supabase et la quantité demandée est retirée
+du stock disponible. Les exemplaires restants restent réservables. Quand il ne
+reste plus aucun exemplaire libre, la carte passe en `Réservée`. La demande
+apparaît dans le panel admin du site.
 
 Le panel admin permet aussi de passer une carte en `Disponible`, `Réservée` ou
 `Vendue`, de remettre une réservation en vente, d'ajouter une note privée, et
@@ -104,5 +106,74 @@ Ouvre ensuite `http://127.0.0.1:5175`.
 
 ```bash
 npm run lint
+npm test
 npm run build
 ```
+
+## Reprise et corrections — septembre 2026
+
+La version précédente avait plusieurs parcours seulement partiellement reliés à
+la base. Cette reprise corrige les points suivants :
+
+- **Paramètres partagés** : les textes FR/EN, le thème et les coordonnées se
+  sauvegardent explicitement depuis l’admin. Les visiteurs lisent une projection
+  limitée aux réglages publics, sans accès direct à `site_settings`.
+- **Demandes réelles** : aucun succès ni blocage local du stock n’est simulé si
+  Supabase est absent ou refuse une réservation ou une demande de rachat.
+  Les formulaires valident les coordonnées, bloquent les doubles clics et
+  conservent leur contenu en cas d’échec.
+- **Confidentialité** : les dossiers admin restent en mémoire pendant la session.
+  Les anciens caches locaux de réservations et de rachats sont supprimés. Les
+  visiteurs ne conservent que leurs reçus sur cet appareil, sans coordonnées,
+  message client, note privée ou historique admin. Ces reçus ne sont pas un suivi
+  en temps réel : le vendeur confirme le statut par e-mail.
+- **Stock** : annuler ou expirer une réservation restitue sa quantité une seule
+  fois. Le nouveau statut `Terminée` clôture une vente sans doubler la déduction
+  et l’exclut de l’expiration. Une vente terminée ne se réactive pas.
+- **Produits** : `admin_save_cards` enregistre les fiches modifiées et leurs notes
+  privées dans une transaction. Une version périmée est refusée plutôt que
+  d’écraser une réservation récente. Les suppressions échouées restent visibles ;
+  les cartes liées à l’historique des réservations doivent être conservées.
+- **Navigation** : liens mal encodés et fiches absentes gérés, état de catalogue
+  indisponible, filtres sans résultat, labels de champs et focus clavier.
+- **Livraison** : le total de réservation est clairement présenté hors frais
+  d’envoi, à confirmer avec le vendeur.
+
+### Mise à jour du site existant
+
+1. Exécuter la nouvelle version complète de `supabase-schema.sql` dans le projet
+   Supabase existant **avant** de publier le nouveau frontend. Le fichier est
+   transactionnel et réexécutable ; il conserve les cartes, réservations et notes.
+   Il ajoute `updated_at`, `admin_save_cards`, `get_public_site_settings` et
+   met à jour les fonctions de réservation. `create_reservation` renvoie désormais
+   le montant et la durée réellement enregistrés ; l’ancien frontend peut ignorer
+   ce résultat pendant la transition.
+2. Conserver les deux variables Supabase publiques et renseigner `VITE_SITE_URL`
+   avec l’origine réelle. Le générateur de sitemap lit aussi `.env.production` et
+   génère `robots.txt` avec la même origine.
+3. Exécuter `npm ci`, `npm run lint`, `npm test` et `npm run build`.
+4. Publier `dist` sur l’hébergement existant. La configuration `wrangler.jsonc`
+   reprend le nom `holokira` de la dernière proposition Cloudflare du dépôt et
+   définit le dossier `dist` ainsi que le fallback SPA. Si le site actuel est le
+   Worker `holokira2`, conserver ce nom avec `npx wrangler deploy --name holokira2`.
+   Pour Cloudflare Pages, `public/_redirects` assure l’ouverture directe des fiches.
+   Référence : [routage SPA Cloudflare](https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/).
+5. Depuis l’admin, enregistrer les réglages voulus puis vérifier le résultat dans
+   une session visiteur distincte. En cas de conflit produit, le bouton d’annulation
+   abandonne le brouillon après confirmation et recharge le catalogue.
+
+### Vérifications et limites
+
+`npm test` exécute la validation des formulaires et des données locales ainsi que
+le schéma complet dans un PostgreSQL isolé via PGlite. Les tests couvrent les
+règles d’accès, l’installation répétée, la réservation de plusieurs exemplaires,
+le prix/délai côté serveur, l’annulation, l’expiration, la clôture des ventes,
+le rollback d’une demande incomplète, les conflits de sauvegarde et les liens
+privés de recherche Japon. Seuls les schémas de plateforme Auth/Storage de
+Supabase sont simulés ; les fonctions SQL applicatives sont utilisées telles quelles.
+
+Ces tests ne remplacent pas une vérification sur le projet Supabase réel, des
+uploads de photos, de l’authentification et du rendu mobile/desktop dans un
+navigateur. Aucun paiement ou envoi automatique d’e-mail n’est intégré, conformément
+au fonctionnement de réservation déjà prévu. Les informations légales de
+l’éditeur et les conditions spécifiques restent à compléter par le propriétaire.

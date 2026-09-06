@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { publicSettings } from './domain.js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -54,6 +55,7 @@ function fromCardRow(row) {
 
   return {
     id: row.id,
+    updatedAt: row.updated_at,
     name: row.name,
     set: row.card_set,
     rarity: row.rarity,
@@ -222,32 +224,48 @@ export async function fetchCards({ includePrivateNotes = false } = {}) {
     .from('card_private_notes')
     .select('card_id, note')
 
-  if (notesError) return cards
+  if (notesError) throw notesError
 
   const noteByCard = new Map(notes.map((row) => [row.card_id, row.note]))
   return cards.map((card) => ({ ...card, privateNote: noteByCard.get(card.id) || '' }))
 }
 
-export async function syncCards(cards) {
+export async function syncCards(cards, originalCards = []) {
   if (!supabase) return { saved: false }
-  if (cards.length === 0) return { saved: true }
+  const original = new Map(originalCards.map((card) => [card.id, card]))
+  const changed = cards.filter((card) => {
+    const previous = original.get(card.id)
+    return !previous || JSON.stringify(toCardRow(previous)) !== JSON.stringify(toCardRow(card)) || previous.privateNote !== card.privateNote
+  })
+  const { data, error } = await supabase.rpc('admin_save_cards', {
+    cards_payload: changed.map((card) => ({
+      ...toCardRow(card),
+      expected_updated_at: original.get(card.id)?.updatedAt || null,
+      private_note: card.privateNote || '',
+    })),
+  })
+  return { saved: !error, error, cards: error ? undefined : (data || []).map((row) => ({ ...fromCardRow(row), privateNote: row.private_note || '' })) }
+}
 
-  const { error } = await supabase.from('cards').upsert(cards.map(toCardRow))
-  if (error) return { saved: false, error }
+export async function fetchSiteSettings() {
+  if (!supabase) return null
+  const { data, error } = await supabase.rpc('get_public_site_settings')
+  if (error) throw error
+  return data
+}
 
-  const noteRows = cards.map((card) => ({
-    card_id: card.id,
-    note: card.privateNote || '',
-    updated_at: new Date().toISOString(),
-  }))
-  const { error: notesError } = await supabase.from('card_private_notes').upsert(noteRows)
-  return { saved: !notesError, error: notesError }
+export async function saveSiteSettings(site) {
+  if (!supabase) return { saved: false, error: { message: 'Connexion au serveur indisponible.' } }
+  const { error } = await supabase.from('site_settings').upsert({
+    id: 'default', payload: publicSettings(site), updated_at: new Date().toISOString(),
+  })
+  return { saved: !error, error }
 }
 
 export async function deleteRemoteCard(id) {
   if (!supabase) return { deleted: false }
-  const { error } = await supabase.from('cards').delete().eq('id', id)
-  return { deleted: !error, error }
+  const { data, error } = await supabase.from('cards').delete().eq('id', id).select('id')
+  return { deleted: !error && data?.length === 1, error: error || (!data?.length ? { message: 'Carte introuvable ou accès refusé.' } : null) }
 }
 
 export async function uploadCardImage(blob, fileName = 'card', folder = 'cards') {
@@ -285,7 +303,7 @@ export async function fetchReservations() {
     .from('reservations')
     .select('*, reservation_items(*, cards(*)), reservation_events(*)')
     .order('created_at', { ascending: false })
-  if (error) return null
+  if (error) throw error
   return data.map(fromReservationRow)
 }
 
@@ -295,32 +313,31 @@ export async function fetchSellRequests() {
     .from('sell_requests')
     .select('*')
     .order('created_at', { ascending: false })
-  if (error) return null
+  if (error) throw error
   return data.map(fromSellRequestRow)
 }
 
 export async function updateRemoteReservation(id, patch) {
   if (!supabase) return { saved: false }
   const row = {}
-  if (patch.status !== undefined) row.status = patch.status
   if (patch.privateNote !== undefined) row.private_note = patch.privateNote
-  const { error } = await supabase.from('reservations').update(row).eq('id', id)
-  return { saved: !error, error }
+  const { data, error } = await supabase.from('reservations').update(row).eq('id', id).select('id')
+  return { saved: !error && data?.length === 1, error: error || (!data?.length ? { message: 'Élément introuvable ou accès refusé.' } : null) }
 }
 
 export async function updateRemoteSellRequest(id, patch) {
   if (!supabase) return { saved: false }
   const row = {}
   if (patch.status !== undefined) row.status = patch.status
-  const { error } = await supabase.from('sell_requests').update(row).eq('id', id)
-  return { saved: !error, error }
+  const { data, error } = await supabase.from('sell_requests').update(row).eq('id', id).select('id')
+  return { saved: !error && data?.length === 1, error: error || (!data?.length ? { message: 'Élément introuvable ou accès refusé.' } : null) }
 }
 
 export async function submitSellRequest(request) {
   if (!supabase) {
     return {
       databaseSaved: false,
-      message: 'Demande enregistrée localement. Configure Supabase pour la synchroniser.',
+      message: 'Demande non envoyée. Le service est temporairement indisponible ; contacte le vendeur par e-mail.',
     }
   }
   const { error } = await supabase.from('sell_requests').insert(toSellRequestRow(request))
@@ -336,7 +353,7 @@ export async function submitReservation({ reservation }) {
     return {
       databaseSaved: false,
       emailSent: false,
-      message: 'Réservation enregistrée localement. Configure Supabase pour la synchroniser.',
+      message: 'Réservation non envoyée. Le service est temporairement indisponible ; contacte le vendeur par e-mail.',
     }
   }
 
@@ -361,7 +378,7 @@ export async function submitReservation({ reservation }) {
     unit_price: Number(line.price) || 0,
   }))
 
-  const { error: rpcError } = await supabase.rpc('create_reservation', {
+  const { data: receipt, error: rpcError } = await supabase.rpc('create_reservation', {
     reservation_payload: reservationRow,
     reservation_items_payload: itemRows,
   })
@@ -370,7 +387,8 @@ export async function submitReservation({ reservation }) {
     return {
       databaseSaved: true,
       emailSent: false,
-      message: 'Réservation enregistrée dans Supabase.',
+      message: 'Réservation enregistrée.',
+      receipt,
     }
   }
 
@@ -400,7 +418,7 @@ export async function fetchCustomerNotes() {
     .from('customer_notes')
     .select('*')
     .order('updated_at', { ascending: false })
-  if (error) return []
+  if (error) throw error
   return data.map((row) => ({
     email: row.customer_email,
     note: row.note || '',
@@ -465,7 +483,7 @@ export async function fetchJapanRequests() {
     .from('japan_requests')
     .select('*, japan_proposals(*)')
     .order('created_at', { ascending: false })
-  if (error) return []
+  if (error) throw error
   return data.map(fromJapanRequestRow)
 }
 
@@ -474,8 +492,8 @@ export async function updateJapanRequest(id, patch) {
   const row = { updated_at: new Date().toISOString() }
   if (patch.status !== undefined) row.status = patch.status
   if (patch.internalNote !== undefined) row.internal_note = patch.internalNote
-  const { error } = await supabase.from('japan_requests').update(row).eq('id', id)
-  return { saved: !error, error }
+  const { data, error } = await supabase.from('japan_requests').update(row).eq('id', id).select('id')
+  return { saved: !error && data?.length === 1, error: error || (!data?.length ? { message: 'Élément introuvable ou accès refusé.' } : null) }
 }
 
 export async function createJapanProposal(requestId, proposal) {
@@ -492,8 +510,8 @@ export async function createJapanProposal(requestId, proposal) {
 
 export async function deleteJapanProposal(id) {
   if (!supabase) return { deleted: false }
-  const { error } = await supabase.from('japan_proposals').delete().eq('id', id)
-  return { deleted: !error, error }
+  const { data, error } = await supabase.from('japan_proposals').delete().eq('id', id).select('id')
+  return { deleted: !error && data?.length === 1, error }
 }
 
 export async function fetchPrivateJapanRequest(token) {
@@ -519,7 +537,7 @@ export async function fetchStockAlerts() {
     .from('stock_alerts')
     .select('*, cards(name, card_set)')
     .order('created_at', { ascending: false })
-  if (error) return []
+  if (error) throw error
   return data.map((row) => ({
     id: row.id,
     cardId: row.card_id,
@@ -537,6 +555,6 @@ export async function updateStockAlert(id, patch) {
   const row = {}
   if (patch.active !== undefined) row.active = patch.active
   if (patch.notifiedAt !== undefined) row.notified_at = patch.notifiedAt || null
-  const { error } = await supabase.from('stock_alerts').update(row).eq('id', id)
-  return { saved: !error, error }
+  const { data, error } = await supabase.from('stock_alerts').update(row).eq('id', id).select('id')
+  return { saved: !error && data?.length === 1, error: error || (!data?.length ? { message: 'Élément introuvable ou accès refusé.' } : null) }
 }

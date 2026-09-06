@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -41,6 +41,8 @@ import { starterSite } from './data'
 import {
   deleteRemoteCard,
   fetchCards,
+  fetchSiteSettings,
+  saveSiteSettings,
   fetchCustomerNotes,
   fetchJapanRequests,
   fetchPrivateJapanRequest,
@@ -67,6 +69,7 @@ import {
   updateStockAlert,
   uploadCardImage,
 } from './api'
+import { publicSettings, validateSettings, validCustomer, validCart, safeDecode, reservationReceipt } from './domain.js'
 import './App.css'
 
 const adminTabs = [
@@ -305,7 +308,7 @@ const labels = {
   },
 }
 
-const reservationStatusOptions = ['Nouvelle', 'Contactée', 'Confirmée', 'Annulée', 'Expirée']
+const reservationStatusOptions = ['Nouvelle', 'Contactée', 'Confirmée', 'Terminée', 'Annulée', 'Expirée']
 const defaultCheckout = {
   fullName: '',
   email: '',
@@ -359,31 +362,14 @@ function mergeSite(saved) {
   return {
     ...starterSite,
     ...saved,
+    language: ['fr', 'en'].includes(saved.language) ? saved.language : starterSite.language,
+    colorMode: ['light', 'dark'].includes(saved.colorMode) ? saved.colorMode : starterSite.colorMode,
     theme: { ...starterSite.theme, ...saved.theme },
     copy: {
       fr: { ...starterSite.copy.fr, ...saved.copy?.fr },
       en: { ...starterSite.copy.en, ...saved.copy?.en },
     },
   }
-}
-
-function loadOrders() {
-  const savedSite = loadLocal('kc-site', null)
-  if (!savedSite || savedSite.dataVersion !== starterSite.dataVersion) {
-    return []
-  }
-  return loadLocal('kc-orders', []).map((order) => ({
-    ...order,
-    status: normalizeStatus(order.status),
-  }))
-}
-
-function loadSellRequests() {
-  const savedSite = loadLocal('kc-site', null)
-  if (!savedSite || savedSite.dataVersion !== starterSite.dataVersion) {
-    return []
-  }
-  return loadLocal('kc-sell-requests', [])
 }
 
 function formatMoney(value) {
@@ -419,7 +405,7 @@ function normalizeSearchText(value) {
 }
 
 function withoutPrivateCardNotes(cards) {
-  return cards.map(({ privateNote: _privateNote, ...card }) => card)
+  return (Array.isArray(cards) ? cards.filter((card) => card && typeof card === 'object') : []).map(({ privateNote: _privateNote, ...card }) => card)
 }
 
 function savePublicCards(cards) {
@@ -685,22 +671,23 @@ function readPathTarget() {
   const seoView = Object.entries(seoRoutes).find(([, path]) => path === window.location.pathname)?.[0]
   if (seoView) return { view: seoView }
   const japanMatch = window.location.pathname.match(/^\/recherche-japon\/([^/]+)/)
-  if (japanMatch) return { view: 'japanProposal', token: decodeURIComponent(japanMatch[1]) }
+  if (japanMatch) return { view: 'japanProposal', token: safeDecode(japanMatch[1]) }
   const match = window.location.pathname.match(/^\/carte\/([^/]+)/)
-  if (!match) return null
-  return { view: 'cardDetail', cardId: decodeURIComponent(match[1]) }
+  if (!match) return window.location.pathname === '/' ? null : { view: 'notFound' }
+  return { view: 'cardDetail', cardId: safeDecode(match[1]) }
 }
 
 function readHashTarget() {
   const hash = window.location.hash.replace(/^#/, '')
   if (!hash) return { view: 'home' }
   if (hash.startsWith('card/')) {
-    return { view: 'cardDetail', cardId: decodeURIComponent(hash.slice(5)) }
+    return { view: 'cardDetail', cardId: safeDecode(hash.slice(5)) }
   }
   return { view: hash }
 }
 
 function getCardStatus(card) {
+  if (card.status === 'available' && Number(card.stock) <= 0) return 'reserved'
   if (card.status) return card.status
   if (card.sold) return 'sold'
   if (card.reserved || Number(card.stock) === 0) return 'reserved'
@@ -891,11 +878,12 @@ function CardArt({ card, large = false }) {
 }
 
 function FavoriteButton({ cardId, compact = false }) {
-  const readFavorites = () => loadLocal('kc-favorites', [])
+  const readFavorites = () => { const saved = loadLocal('kc-favorites', []); return Array.isArray(saved) ? saved : [] }
   const [isFavorite, setIsFavorite] = useState(() => readFavorites().includes(cardId))
 
   useEffect(() => {
     const sync = () => setIsFavorite(readFavorites().includes(cardId))
+    sync()
     window.addEventListener('holokira:favorites', sync)
     return () => window.removeEventListener('holokira:favorites', sync)
   }, [cardId])
@@ -959,7 +947,7 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
       <div className="top-actions">
         <label className="language-switch">
           <Globe2 size={16} />
-          <select value={site.language} onChange={(event) => setLanguage(event.target.value)}>
+          <select aria-label={t.language} value={site.language} onChange={(event) => setLanguage(event.target.value)}>
             <option value="fr">FR</option>
             <option value="en">EN</option>
           </select>
@@ -968,7 +956,7 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
           {site.colorMode === 'light' ? <Sun size={17} /> : <Moon size={17} />}
           <span>{site.colorMode === 'light' ? t.lightMode : t.darkMode}</span>
         </button>
-        <button className="cart-pill" type="button" onClick={() => setView('shop')}>
+        <button className="cart-pill" aria-label={`${t.cart} (${cartCount})`} type="button" onClick={() => setView('shop')}>
           <ShoppingBag size={18} />
           <span>{cartCount}</span>
         </button>
@@ -1313,6 +1301,7 @@ function CartPanel({
   checkout,
   checkoutDraft,
   setCheckoutDraft,
+  sending,
   site,
   t,
 }) {
@@ -1338,11 +1327,11 @@ function CartPanel({
                 <span>{formatMoney(item.card.price)}</span>
               </div>
               <div className="qty">
-                <button type="button" onClick={() => updateQty(item.id, item.qty - 1)}>
+                <button type="button" aria-label={`${t.remove} ${item.card.name}`} onClick={() => updateQty(item.id, item.qty - 1)}>
                   <Minus size={14} />
                 </button>
                 <span>{item.qty}</span>
-                <button type="button" onClick={() => updateQty(item.id, item.qty + 1)}>
+                <button type="button" aria-label={`${t.add} ${item.card.name}`} disabled={!isReservable(item.card) || item.qty >= item.card.stock} onClick={() => updateQty(item.id, item.qty + 1)}>
                   <Plus size={14} />
                 </button>
                 <button type="button" onClick={() => removeItem(item.id)} title={t.remove}>
@@ -1365,6 +1354,7 @@ function CartPanel({
           </div>
           <Field label={t.fullName}>
             <TextInput
+              required minLength={2} maxLength={120} autoComplete="name"
               value={checkoutDraft.fullName}
               onChange={(value) => setCheckoutDraft({ ...checkoutDraft, fullName: value })}
             />
@@ -1372,18 +1362,21 @@ function CartPanel({
           <Field label={t.email}>
             <TextInput
               type="email"
+              required maxLength={254} autoComplete="email"
               value={checkoutDraft.email}
               onChange={(value) => setCheckoutDraft({ ...checkoutDraft, email: value })}
             />
           </Field>
           <Field label={t.phone}>
             <TextInput
+              type="tel" maxLength={40} autoComplete="tel"
               value={checkoutDraft.phone}
               onChange={(value) => setCheckoutDraft({ ...checkoutDraft, phone: value })}
             />
           </Field>
           <Field label={t.sellerMessage}>
             <textarea
+              required maxLength={2000}
               value={checkoutDraft.message}
               placeholder={site.copy[site.language].reservationMessagePlaceholder}
               onChange={(event) => setCheckoutDraft({ ...checkoutDraft, message: event.target.value })}
@@ -1397,6 +1390,7 @@ function CartPanel({
             className="checkout"
             type="submit"
             disabled={
+              sending || !validCart(cart, cards) ||
               !checkoutDraft.fullName ||
               !checkoutDraft.email ||
               !checkoutDraft.message
@@ -1407,7 +1401,7 @@ function CartPanel({
           </button>
         </form>
       )}
-      <p className="panel-note">{site.copy[site.language].footerNote}</p>
+      <p className="panel-note">{site.language === 'fr' ? 'Montant des cartes hors livraison. Les frais d’envoi sont confirmés par le vendeur.' : 'Card subtotal excludes shipping. Delivery costs are confirmed by the seller.'} {site.copy[site.language].footerNote}</p>
     </aside>
   )
 }
@@ -1434,6 +1428,7 @@ function ShopView(props) {
         </div>
         <Filters {...props.filters} cards={props.cards} site={props.site} t={props.t} />
         <div className="product-grid">
+          {props.filteredCards.length === 0 && <p className="empty-state">{props.site.language === 'fr' ? 'Aucune carte ne correspond à ces filtres.' : 'No cards match these filters.'}</p>}
           {props.filteredCards.map((card) => (
             <ProductCard
               key={card.id}
@@ -1457,6 +1452,7 @@ function ShopView(props) {
           updateQty={props.updateQty}
           removeItem={props.removeItem}
           checkout={props.checkout}
+          sending={props.sending}
           checkoutDraft={props.checkoutDraft}
           setCheckoutDraft={props.setCheckoutDraft}
           site={props.site}
@@ -1647,7 +1643,8 @@ function CardDetailPage({ card, cards, addToCart, setView, site, t, copyCardLink
 
   async function submitAlert(event) {
     event.preventDefault()
-    const result = await onStockAlert(card.id, alertEmail)
+    let result
+    try { result = await onStockAlert(card.id, alertEmail) } catch { result = { saved: false } }
     if (result?.saved) {
       setAlertEmail('')
       setAlertMessage('Demande enregistrée. Le vendeur pourra te contacter au retour en stock.')
@@ -1821,10 +1818,6 @@ function ReservationSuccessPage({ reservation, setView, site, t }) {
         <h1>{t.reservationSuccessTitle}</h1>
         <p>{t.reservationSuccessIntro}</p>
         <dl className="spec-grid">
-          <div>
-            <dt>{t.customer}</dt>
-            <dd>{reservation.customer}</dd>
-          </div>
           <div>
             <dt>{t.total}</dt>
             <dd>{formatMoney(reservation.total)}</dd>
@@ -2008,60 +2001,67 @@ function ReservationGuide({ site }) {
 }
 
 function OrdersView({ orders, site, t }) {
+  const isFr = site.language === 'fr'
   return (
     <main className="simple-page">
       <div className="page-heading">
         <h1>{t.orders}</h1>
-        <p>{site.copy[site.language].ordersIntro}</p>
+        <p>{isFr ? 'Reçus des demandes envoyées depuis cet appareil. Le vendeur confirme leur statut actuel par e-mail.' : 'Receipts for requests sent from this device. The seller confirms their current status by email.'}</p>
       </div>
-      <OrderTable orders={orders} t={t} />
+      {!orders.length && <div className="empty-state"><PackageCheck size={28} /><p>{t.emptyOrders}</p></div>}
+      <div className="receipt-list">{orders.map((order) => <article className="info-card" key={order.id}>
+        <h2>{order.id}</h2><p>{order.date} · {formatMoney(order.total)}</p>
+        <ul>{order.lines.map((line) => <li key={line.id}>{line.qty} × {line.name}</li>)}</ul>
+        <a href={`mailto:${site.contactEmail}?subject=${encodeURIComponent(order.id)}`}>{isFr ? 'Contacter le vendeur' : 'Contact the seller'}</a>
+      </article>)}</div>
     </main>
   )
 }
 
-function SellRequestForm({ draft, setDraft, submitRequest, site, t }) {
+function SellRequestForm({ draft, setDraft, submitRequest, site, t, sending }) {
   return (
     <form className="sell-form" onSubmit={submitRequest}>
       <h2>{site.copy[site.language].sellTitle}</h2>
       <div className="settings-grid">
         <Field label={t.fullName}>
-          <TextInput value={draft.fullName} onChange={(value) => setDraft({ ...draft, fullName: value })} />
+          <TextInput required minLength={2} maxLength={120} autoComplete="name" value={draft.fullName} onChange={(value) => setDraft({ ...draft, fullName: value })} />
         </Field>
         <Field label={t.email}>
-          <TextInput type="email" value={draft.email} onChange={(value) => setDraft({ ...draft, email: value })} />
+          <TextInput required maxLength={254} autoComplete="email" type="email" value={draft.email} onChange={(value) => setDraft({ ...draft, email: value })} />
         </Field>
         <Field label={t.phone}>
-          <TextInput value={draft.phone} onChange={(value) => setDraft({ ...draft, phone: value })} />
+          <TextInput type="tel" maxLength={40} autoComplete="tel" value={draft.phone} onChange={(value) => setDraft({ ...draft, phone: value })} />
         </Field>
       </div>
-      <Field label="Cartes proposées">
+      <Field label={site.language === 'fr' ? 'Cartes proposées' : 'Cards offered'}>
         <textarea
+          minLength={3} maxLength={5000}
           value={draft.cardList}
           onChange={(event) => setDraft({ ...draft, cardList: event.target.value })}
           placeholder="Dracaufeu, Noctali, cartes gradées, langue, état..."
         />
       </Field>
       <div className="form-pair">
-        <Field label="État général">
+        <Field label={site.language === 'fr' ? 'État général' : 'Overall condition'}>
           <TextInput value={draft.condition} onChange={(value) => setDraft({ ...draft, condition: value })} />
         </Field>
-        <Field label="Prix souhaité">
+        <Field label={site.language === 'fr' ? 'Prix souhaité' : 'Asking price'}>
           <TextInput value={draft.expectedPrice} onChange={(value) => setDraft({ ...draft, expectedPrice: value })} />
         </Field>
       </div>
       <button
         className="checkout"
         type="submit"
-        disabled={!draft.fullName || !draft.email || !draft.cardList}
+        disabled={sending || !draft.fullName || !draft.email || !draft.cardList}
       >
         <FileText size={18} />
-        Envoyer la demande
+        {site.language === 'fr' ? 'Envoyer la demande' : 'Send request'}
       </button>
     </form>
   )
 }
 
-function InfoPage({ type, site, t, sellDraft, setSellDraft, submitSellRequest }) {
+function InfoPage({ type, site, t, sellDraft, setSellDraft, submitSellRequest, sending }) {
   const copy = site.copy[site.language]
   const pageMap = {
     sell: {
@@ -2106,6 +2106,7 @@ function InfoPage({ type, site, t, sellDraft, setSellDraft, submitSellRequest })
           draft={sellDraft}
           setDraft={setSellDraft}
           submitRequest={submitSellRequest}
+          sending={sending}
           site={site}
           t={t}
         />
@@ -2114,7 +2115,7 @@ function InfoPage({ type, site, t, sellDraft, setSellDraft, submitSellRequest })
   )
 }
 
-function JapanSourcingPage({ draft, setDraft, submitRequest, site, t }) {
+function JapanSourcingPage({ draft, setDraft, submitRequest, site, t, sending }) {
   const isFr = site.language === 'fr'
   const steps = isFr
     ? [
@@ -2156,23 +2157,24 @@ function JapanSourcingPage({ draft, setDraft, submitRequest, site, t }) {
       <form className="sell-form sourcing-form" onSubmit={submitRequest}>
         <div className="panel-title">
           <h2>{isFr ? 'Déposer une recherche' : 'Submit a search'}</h2>
-          <span>{isFr ? 'Les demandes sont visibles dans ton panel admin.' : 'Requests are visible in the admin panel.'}</span>
+          <span>{isFr ? 'Suis les propositions grâce à ton lien privé.' : 'Follow proposals using your private link.'}</span>
         </div>
         <div className="settings-grid">
           <Field label={t.fullName}>
-            <TextInput value={draft.fullName} onChange={(value) => setDraft({ ...draft, fullName: value })} />
+            <TextInput required minLength={2} maxLength={120} autoComplete="name" value={draft.fullName} onChange={(value) => setDraft({ ...draft, fullName: value })} />
           </Field>
           <Field label={t.email}>
-            <TextInput type="email" value={draft.email} onChange={(value) => setDraft({ ...draft, email: value })} />
+            <TextInput required maxLength={254} autoComplete="email" type="email" value={draft.email} onChange={(value) => setDraft({ ...draft, email: value })} />
           </Field>
           <Field label={t.phone}>
-            <TextInput value={draft.phone} onChange={(value) => setDraft({ ...draft, phone: value })} />
+            <TextInput type="tel" maxLength={40} autoComplete="tel" value={draft.phone} onChange={(value) => setDraft({ ...draft, phone: value })} />
           </Field>
         </div>
         <Field label={isFr ? 'Carte(s) recherchée(s)' : 'Card(s) wanted'}>
           <textarea
             required
-            value={draft.cardList}
+            minLength={3} maxLength={5000}
+          value={draft.cardList}
             onChange={(event) => setDraft({ ...draft, cardList: event.target.value })}
             placeholder={isFr ? 'Exemple : Dracaufeu japonais 143/S-P, Excellent minimum...' : 'Example: Japanese Charizard 143/S-P, Excellent or better...'}
           />
@@ -2188,7 +2190,7 @@ function JapanSourcingPage({ draft, setDraft, submitRequest, site, t }) {
         <p className="sourcing-note">{isFr
           ? 'Budget minimum : 100 €. L’envoi de ce formulaire est gratuit et ne t’engage pas à acheter.'
           : 'Minimum budget: €100. Submitting this form is free and does not commit you to a purchase.'}</p>
-        <button className="checkout" type="submit" disabled={!draft.fullName || !draft.email || !draft.cardList || Number(draft.expectedPrice) < 100}>
+        <button className="checkout" type="submit" disabled={sending || !draft.fullName || !draft.email || !draft.cardList || Number(draft.expectedPrice) < 100}>
           <Send size={18} />
           {isFr ? 'Envoyer ma recherche' : 'Send my request'}
         </button>
@@ -2240,15 +2242,15 @@ function StatCard({ icon: Icon, label, value, tone }) {
 function Field({ label, children, className = '' }) {
   return (
     <div className={`field ${className}`.trim()}>
-      <span>{label}</span>
-      {children}
+      <label>{label}{children}</label>
     </div>
   )
 }
 
-function TextInput({ value, onChange, type = 'text', step, min, placeholder }) {
+function TextInput({ value, onChange, type = 'text', step, min, placeholder, ...props }) {
   return (
     <input
+      {...props}
       type={type}
       step={step}
       min={min}
@@ -2524,6 +2526,7 @@ function OrderTable({ orders, updateOrderStatus, updateOrderNote, releaseReserva
               <td>
                 {updateOrderStatus ? (
                   <select
+                    disabled={order.status === 'Terminée'}
                     value={normalizeStatus(order.status)}
                     onChange={(event) => updateOrderStatus(order.id, event.target.value)}
                   >
@@ -2546,15 +2549,16 @@ function OrderTable({ orders, updateOrderStatus, updateOrderNote, releaseReserva
                       <Mail size={14} />
                       {t.reply}
                     </a>
-                    <button type="button" onClick={() => releaseReservation(order.id)}>
+                    <button type="button" disabled={['Terminée', 'Annulée', 'Expirée'].includes(order.status)} onClick={() => releaseReservation(order.id)}>
                       <PackageCheck size={14} />
                       {t.release}
                     </button>
                   </div>
                   <Field label={t.privateNote}>
                     <textarea
-                      value={order.privateNote || ''}
-                      onChange={(event) => updateOrderNote(order.id, event.target.value)}
+                      key={`${order.id}-${order.privateNote || ''}`}
+                      defaultValue={order.privateNote || ''}
+                      onBlur={(event) => { if (event.target.value !== (order.privateNote || '')) updateOrderNote(order.id, event.target.value) }}
                     />
                   </Field>
                   {order.history?.length > 0 && (
@@ -2757,7 +2761,9 @@ function JapanProposalPage({ token, setView, site }) {
   const [loading, setLoading] = useState(true)
   useEffect(() => {
     let active = true
-    fetchPrivateJapanRequest(token).then((result) => { if (active) { setRequest(result); setLoading(false) } })
+    setLoading(true)
+    setRequest(null)
+    fetchPrivateJapanRequest(token).then((result) => { if (active) setRequest(result) }).catch(() => { if (active) setRequest(null) }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [token])
   if (loading) return <main className="simple-page"><div className="empty-state"><Search size={28} /><strong>Chargement de la proposition…</strong></div></main>
@@ -2778,7 +2784,7 @@ function JapanProposalPage({ token, setView, site }) {
   )
 }
 
-function ProductEditor({ cards, persistCards, removeCardById, t }) {
+function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) {
   const [draftCards, setDraftCards] = useState(cards)
   const [deletedIds, setDeletedIds] = useState([])
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -2873,14 +2879,14 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     })
     const nextCard = {
       ...preparedDraft,
-      id: `kc-${Date.now()}`,
+      id: `kc-${crypto.randomUUID()}`,
       price: Number(preparedDraft.price),
       stock: Number(preparedDraft.stock),
       imageUrl: getCardImages(preparedDraft)[0] || '',
       imageUrls: getCardImages(preparedDraft),
       thumbnailUrls: preparedDraft.thumbnailUrls || [],
-      status: 'available',
-      reserved: false,
+      status: preparedDraft.status || 'available',
+      reserved: preparedDraft.status === 'reserved',
       featured: Boolean(preparedDraft.featured),
     }
     markEdited([nextCard, ...draftCards])
@@ -2935,17 +2941,18 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
       return
     }
 
-    const deleteResults = await Promise.all(deletedIds.map((id) => removeCardById(id)))
-    const failedDelete = deleteResults.find((result) => result && result.deleted === false && result.error)
-    if (failedDelete) {
+    const failedIds = []
+    for (const id of deletedIds) {
+      const deletion = await removeCardById(id)
+      if (!deletion?.deleted) failedIds.push(id)
+    }
+    if (failedIds.length) {
+      setDeletedIds(failedIds)
       setIsSaving(false)
-      setSaveMessage(`Suppression impossible : ${failedDelete.error.message}`)
+      setSaveMessage('Produits enregistrés, mais certaines suppressions ont été refusées. Les cartes liées à une réservation doivent être conservées.')
       return
     }
-
-    if (deletedIds.length > 0) {
-      await persistCards(cardsToSave)
-    }
+    setDraftCards((result.cards || cardsToSave).filter((card) => !deletedIds.includes(card.id)))
 
     setIsSaving(false)
     setDeletedIds([])
@@ -2953,7 +2960,9 @@ function ProductEditor({ cards, persistCards, removeCardById, t }) {
     setSaveMessage('Produits sauvegardés.')
   }
 
-  function cancelProductChanges() {
+  async function cancelProductChanges() {
+    if (hasUnsavedChanges && !window.confirm('Abandonner les modifications et recharger le catalogue ?')) return
+    try { await reloadCards() } catch (error) { setSaveMessage(`Actualisation impossible : ${error.message}`); return }
     setDraftCards(cards)
     setDeletedIds([])
     setSelectedProductIds([])
@@ -3456,7 +3465,6 @@ function ContentEditor({ site, setSite }) {
       },
     }
     setSite(next)
-    saveLocal('kc-site', next)
   }
 
   return (
@@ -3485,7 +3493,6 @@ function AppearanceEditor({ site, setSite }) {
   function updateTheme(field, value) {
     const next = { ...site, theme: { ...site.theme, [field]: value } }
     setSite(next)
-    saveLocal('kc-site', next)
   }
 
   return (
@@ -3499,14 +3506,12 @@ function AppearanceEditor({ site, setSite }) {
           <TextInput value={site.brandName} onChange={(value) => {
             const next = { ...site, brandName: value }
             setSite(next)
-            saveLocal('kc-site', next)
           }} />
         </Field>
         <Field label="Symbole">
           <TextInput value={site.brandMark} onChange={(value) => {
             const next = { ...site, brandMark: value }
             setSite(next)
-            saveLocal('kc-site', next)
           }} />
         </Field>
         <Field label="Rouge principal">
@@ -3528,7 +3533,6 @@ function SettingsEditor({ site, setSite }) {
     const numeric = ['lowStockLimit', 'reservationHours'].includes(field)
     const next = { ...site, [field]: numeric ? Number(value) : value }
     setSite(next)
-    saveLocal('kc-site', next)
   }
 
   return (
@@ -3606,8 +3610,6 @@ function AdminView({
   japanRequests,
   customerNotes,
   stockAlerts,
-  setOrders,
-  setSellRequests,
   persistCards,
   removeCardById,
   site,
@@ -3618,6 +3620,33 @@ function AdminView({
   refreshAdminData,
 }) {
   const [activeTab, setActiveTab] = useState('overview')
+  const [settingsDraft, setSettingsDraft] = useState(site)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [adminMessage, setAdminMessage] = useState('')
+  const settingsChanged = JSON.stringify(publicSettings(settingsDraft)) !== JSON.stringify(publicSettings(site))
+  async function publishSettings() {
+    const validation = validateSettings(settingsDraft)
+    if (validation) { setAdminMessage(validation); return }
+    setSettingsSaving(true)
+    try {
+      const result = await saveSiteSettings(settingsDraft)
+      if (!result.saved) throw result.error || new Error('Enregistrement impossible.')
+      setSite(settingsDraft)
+      saveLocal('kc-site', settingsDraft)
+      setAdminMessage('Paramètres enregistrés pour tous les visiteurs.')
+    } catch (error) { setAdminMessage(`Enregistrement impossible : ${error.message}`) }
+    finally { setSettingsSaving(false) }
+  }
+  async function performAdminAction(action) {
+    try {
+      const result = await action()
+      if (!result?.saved && !result?.deleted) throw result?.error || new Error('Action refusée.')
+      await refreshAdminData()
+      setAdminMessage('Modification enregistrée.')
+      return true
+    } catch (error) { setAdminMessage(`Modification non enregistrée : ${error.message}`); return false }
+  }
+
   const [orderQuery, setOrderQuery] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState('Tous')
   const stock = cards.reduce((sum, card) => sum + Number(card.stock), 0)
@@ -3646,58 +3675,26 @@ function AdminView({
 
   async function updateOrderStatus(id, status) {
     const order = orders.find((item) => item.id === id)
-    const result = await transitionRemoteReservation(id, status, order?.privateNote || '')
-    if (result.saved) await refreshAdminData()
+    return performAdminAction(() => transitionRemoteReservation(id, status, order?.privateNote || ''))
   }
 
-  function updateOrderNote(id, privateNote) {
-    const next = orders.map((order) => (order.id === id ? { ...order, privateNote } : order))
-    setOrders(next)
-    saveLocal('kc-orders', next)
-    updateRemoteReservation(id, { privateNote })
+  async function updateOrderNote(id, privateNote) {
+    return performAdminAction(() => updateRemoteReservation(id, { privateNote }))
   }
 
-  async function releaseReservation(id) {
-    await updateOrderStatus(id, 'Annulée')
-  }
-
-  async function handleCustomerNote(email, note) {
-    const result = await saveCustomerNote(email, note)
-    if (result.saved) await refreshAdminData()
-  }
-
-  async function handleJapanUpdate(id, patch) {
-    const result = await updateJapanRequest(id, patch)
-    if (result.saved) await refreshAdminData()
-  }
-
+  async function releaseReservation(id) { return updateOrderStatus(id, 'Annulée') }
+  async function handleCustomerNote(email, note) { return performAdminAction(() => saveCustomerNote(email, note)) }
+  async function handleJapanUpdate(id, patch) { return performAdminAction(() => updateJapanRequest(id, patch)) }
   async function handleAddProposal(requestId, proposal) {
-    const result = await createJapanProposal(requestId, proposal)
-    if (result.saved) {
-      await updateJapanRequest(requestId, { status: 'Proposition envoyée' })
-      await refreshAdminData()
-    }
-    return result.saved
+    return performAdminAction(async () => {
+      const result = await createJapanProposal(requestId, proposal)
+      if (result.saved) await updateJapanRequest(requestId, { status: 'Proposition envoyée' })
+      return result
+    })
   }
-
-  async function handleDeleteProposal(id) {
-    const result = await deleteJapanProposal(id)
-    if (result.deleted) await refreshAdminData()
-  }
-
-  async function handleStockAlert(alert) {
-    const result = await updateStockAlert(alert.id, { active: false, notifiedAt: new Date().toISOString() })
-    if (result.saved) await refreshAdminData()
-  }
-
-  function updateSellRequestStatus(id, status) {
-    const next = sellRequests.map((request) =>
-      request.id === id ? { ...request, status } : request,
-    )
-    setSellRequests(next)
-    saveLocal('kc-sell-requests', next)
-    updateRemoteSellRequest(id, { status })
-  }
+  async function handleDeleteProposal(id) { return performAdminAction(() => deleteJapanProposal(id)) }
+  async function handleStockAlert(alert) { return performAdminAction(() => updateStockAlert(alert.id, { active: false, notifiedAt: new Date().toISOString() })) }
+  async function updateSellRequestStatus(id, status) { return performAdminAction(() => updateRemoteSellRequest(id, { status })) }
 
   return (
     <main className="admin-page">
@@ -3726,6 +3723,12 @@ function AdminView({
           ))}
         </nav>
         <div className="admin-workspace">
+          {adminMessage && <p className="service-notice" role="status">{adminMessage}</p>}
+          {['content', 'appearance', 'settings'].includes(activeTab) && <div className="settings-save-bar">
+            <span>{settingsChanged ? 'Modifications non enregistrées' : 'Paramètres enregistrés'}</span>
+            <button type="button" className="checkout" disabled={settingsSaving || !settingsChanged} onClick={publishSettings}><Save size={16} />{settingsSaving ? 'Enregistrement…' : 'Enregistrer les paramètres'}</button>
+            <button type="button" disabled={settingsSaving || !settingsChanged} onClick={() => setSettingsDraft(site)}>Annuler</button>
+          </div>}
           {activeTab === 'overview' && (
             <>
               <section className="stats">
@@ -3773,12 +3776,13 @@ function AdminView({
               </section>
             </>
           )}
-          {activeTab === 'content' && <ContentEditor site={site} setSite={setSite} />}
+          {activeTab === 'content' && <ContentEditor site={settingsDraft} setSite={setSettingsDraft} />}
           {activeTab === 'products' && (
             <ProductEditor
               cards={cards}
               persistCards={persistCards}
               removeCardById={removeCardById}
+              reloadCards={refreshAdminData}
               t={t}
             />
           )}
@@ -3841,8 +3845,8 @@ function AdminView({
               />
             </section>
           )}
-          {activeTab === 'appearance' && <AppearanceEditor site={site} setSite={setSite} />}
-          {activeTab === 'settings' && <SettingsEditor site={site} setSite={setSite} />}
+          {activeTab === 'appearance' && <AppearanceEditor site={settingsDraft} setSite={setSettingsDraft} />}
+          {activeTab === 'settings' && <SettingsEditor site={settingsDraft} setSite={setSettingsDraft} />}
         </div>
       </section>
     </main>
@@ -3852,7 +3856,7 @@ function AdminView({
 function Toast({ toast }) {
   if (!toast) return null
   return (
-    <div className="toast">
+    <div className="toast" role="status">
       <Check size={18} />
       {toast}
     </div>
@@ -3861,14 +3865,22 @@ function Toast({ toast }) {
 
 function App() {
   const [cards, setCards] = useState(() => withoutPrivateCardNotes(loadLocal('kc-cards', [])))
-  const [orders, setOrders] = useState(loadOrders)
-  const [sellRequests, setSellRequests] = useState(loadSellRequests)
+  const [orders, setOrders] = useState([])
+  const [receipts, setReceipts] = useState(() => {
+    const saved = loadLocal('hk-receipts', [])
+    return Array.isArray(saved) ? saved.filter((receipt) => receipt && typeof receipt.id === 'string').map(reservationReceipt) : []
+  })
+  const [catalogState, setCatalogState] = useState('loading')
+  const [sending, setSending] = useState(false)
+  const submitLock = useRef(false)
+  const adminSessionVersion = useRef(0)
+  const [sellRequests, setSellRequests] = useState([])
   const [japanRequests, setJapanRequests] = useState([])
   const [customerNotes, setCustomerNotes] = useState([])
   const [stockAlerts, setStockAlerts] = useState([])
   const [japanPrivateToken, setJapanPrivateToken] = useState('')
   const [site, setSite] = useState(() => mergeSite(loadLocal('kc-site', starterSite)))
-  const [cart, setCart] = useState(() => loadLocal('kc-cart', []))
+  const [cart, setCart] = useState(() => { const saved = loadLocal('kc-cart', []); return Array.isArray(saved) ? saved.filter((line) => line && typeof line.id === 'string' && Number.isInteger(line.qty) && line.qty > 0) : [] })
   const [checkoutDraft, setCheckoutDraft] = useState(defaultCheckout)
   const [sellDraft, setSellDraft] = useState(defaultSellRequest)
   const [japanDraft, setJapanDraft] = useState(defaultJapanRequest)
@@ -3877,7 +3889,7 @@ function App() {
     emailEnabled: false,
     databaseEnabled: false,
   })
-  const [lastReservation, setLastReservation] = useState(null)
+  const [lastReservation, setLastReservation] = useState(() => receipts[0] || null)
   const [selected, setSelected] = useState(() => cards[0])
   const [view, setView] = useState('home')
   const [query, setQuery] = useState('')
@@ -3919,7 +3931,7 @@ function App() {
     setMetaTag('meta[property="og:image"]', { property: 'og:image', content: shareImage })
     setMetaTag('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' })
     setMetaTag('meta[name="twitter:image"]', { name: 'twitter:image', content: shareImage })
-    setMetaTag('meta[name="robots"]', { name: 'robots', content: view === 'japanProposal' ? 'noindex,nofollow' : 'index,follow' })
+    setMetaTag('meta[name="robots"]', { name: 'robots', content: ['japanProposal', 'admin', 'orders', 'reservationSuccess', 'notFound'].includes(view) ? 'noindex,nofollow' : 'index,follow' })
     setLinkTag('canonical', canonical)
 
     const structuredData = view === 'cardDetail' && selected
@@ -3979,60 +3991,66 @@ function App() {
   }, [cards, japanPrivateToken, selected, site, t, view])
 
   useEffect(() => {
+    let active = true
+    // Older versions persisted all customer records on the administrator's device.
+    try { localStorage.removeItem('kc-orders'); localStorage.removeItem('kc-sell-requests') } catch { /* storage may be unavailable */ }
     async function loadRemoteData() {
-      const config = await getBackendConfig()
-      setBackendConfig(config)
-      const session = await getAdminSession()
-      if (session) {
-        setIsAdminUnlocked(true)
-      }
-      if (!config.databaseEnabled) return
-
-      const remoteCards = await fetchCards({ includePrivateNotes: Boolean(session) })
-      if (Array.isArray(remoteCards)) {
+      try {
+        const config = await getBackendConfig()
+        if (!active) return
+        setBackendConfig(config)
+        if (!config.databaseEnabled) { setCatalogState('unavailable'); return }
+        const [remoteCards, remoteSite] = await Promise.all([fetchCards(), fetchSiteSettings()])
+        if (!active) return
+        if (!Array.isArray(remoteCards)) throw new Error('catalog')
         setCards(remoteCards)
-        setSelected(remoteCards[0] || null)
         savePublicCards(remoteCards)
-      }
-
-      if (session) {
-        const remoteReservations = await fetchReservations()
-        if (Array.isArray(remoteReservations)) {
-          setOrders(remoteReservations)
-          saveLocal('kc-orders', remoteReservations)
+        setCatalogState('ready')
+        if (remoteSite) {
+          const preferences = loadLocal('hk-preferences', {}) || {}
+          setSite(mergeSite({ ...remoteSite, dataVersion: starterSite.dataVersion,
+            language: ['fr', 'en'].includes(preferences.language) ? preferences.language : (remoteSite.language || starterSite.language),
+            colorMode: ['light', 'dark'].includes(preferences.colorMode) ? preferences.colorMode : (remoteSite.colorMode || starterSite.colorMode) }))
         }
-        const remoteSellRequests = await fetchSellRequests()
-        if (Array.isArray(remoteSellRequests)) {
-          setSellRequests(remoteSellRequests)
-          saveLocal('kc-sell-requests', remoteSellRequests)
+        const version = adminSessionVersion.current
+        const session = await getAdminSession()
+        if (active && session && version === adminSessionVersion.current) {
+          setIsAdminUnlocked(true)
+          try { await refreshAdminData() } catch { setToast('Certaines données admin ne sont pas accessibles. Vérifie la mise à jour de la base.') }
         }
-        setJapanRequests(await fetchJapanRequests())
-        setCustomerNotes(await fetchCustomerNotes())
-        setStockAlerts(await fetchStockAlerts())
+      } catch {
+        if (active) setCatalogState('error')
       }
     }
-
     loadRemoteData()
+    return () => { active = false }
   }, [])
 
-  useEffect(() => onAdminAuthStateChange(() => {
+  function clearAdminData() {
+    adminSessionVersion.current += 1
     setIsAdminUnlocked(false)
+    setOrders([])
+    setSellRequests([])
+    setJapanRequests([])
+    setCustomerNotes([])
+    setStockAlerts([])
+    setSelected((card) => card ? withoutPrivateCardNotes([card])[0] : null)
     setCards((currentCards) => {
       const publicCards = withoutPrivateCardNotes(currentCards)
       savePublicCards(publicCards)
       return publicCards
     })
-  }), [])
+  }
+
+  useEffect(() => onAdminAuthStateChange(clearAdminData), [])
 
   useEffect(() => {
     function applyHashTarget() {
       const target = readPathTarget() || readHashTarget()
       if (target.view === 'cardDetail') {
         const card = cards.find((item) => item.id === target.cardId)
-        if (card) {
-          setSelected(card)
-          setView('cardDetail')
-        }
+        setSelected(card || null)
+        setView('cardDetail')
         return
       }
       if (target.view === 'japanProposal') {
@@ -4041,6 +4059,7 @@ function App() {
         return
       }
       const allowedViews = new Set([
+        'notFound',
         'home',
         'shop',
         'arrivals',
@@ -4065,9 +4084,7 @@ function App() {
         'seoMew',
         'seoStarters',
       ])
-      if (allowedViews.has(target.view)) {
-        setView(target.view)
-      }
+      setView(allowedViews.has(target.view) ? target.view : 'notFound')
     }
 
     applyHashTarget()
@@ -4080,22 +4097,30 @@ function App() {
   }, [cards])
 
   async function persistCards(next) {
-    setCards(next)
-    savePublicCards(next)
-    if (backendConfig.databaseEnabled) {
-      return syncCards(next)
-    }
-    return { saved: true }
+    if (!isAdminUnlocked || !backendConfig.databaseEnabled) return { saved: false, error: { message: 'Connexion administrateur requise.' } }
+    const version = adminSessionVersion.current
+    try {
+      const result = await syncCards(next, cards)
+      if (version !== adminSessionVersion.current) return { saved: false, error: { message: 'Session terminée. Reconnecte-toi pour vérifier le résultat.' } }
+      if (!result.saved) return result
+      const savedCards = result.cards || next
+      setCards(savedCards)
+      savePublicCards(savedCards)
+      return { saved: true, cards: savedCards }
+    } catch (error) { return { saved: false, error } }
   }
 
   async function removeCardById(id) {
-    const next = cards.filter((card) => card.id !== id)
-    setCards(next)
-    savePublicCards(next)
-    if (backendConfig.databaseEnabled) {
-      return deleteRemoteCard(id)
-    }
-    return { deleted: true }
+    if (!isAdminUnlocked || !backendConfig.databaseEnabled) return { deleted: false }
+    try {
+      const result = await deleteRemoteCard(id)
+      if (result.deleted) setCards((current) => {
+        const next = current.filter((card) => card.id !== id)
+        savePublicCards(next)
+        return next
+      })
+      return result
+    } catch (error) { return { deleted: false, error } }
   }
 
   const filteredCards = useMemo(() => {
@@ -4225,7 +4250,7 @@ function App() {
     setStatusFilter(labels[language].all)
     setLanguageFilter(labels[language].all)
     setGradeFilter(labels[language].all)
-    saveLocal('kc-site', next)
+    saveLocal('hk-preferences', { language, colorMode: next.colorMode })
   }
 
   function toggleColorMode() {
@@ -4234,7 +4259,7 @@ function App() {
       colorMode: site.colorMode === 'light' ? 'dark' : 'light',
     }
     setSite(next)
-    saveLocal('kc-site', next)
+    saveLocal('hk-preferences', { language: next.language, colorMode: next.colorMode })
   }
 
   function addToCart(id) {
@@ -4267,11 +4292,15 @@ function App() {
 
   async function copyCardLink(card) {
     const url = `${window.location.origin}${getCardPath(card)}`
-    await navigator.clipboard?.writeText(url)
-    flash(t.linkCopied)
+    try {
+      if (!navigator.clipboard) throw new Error('clipboard')
+      await navigator.clipboard.writeText(url)
+      flash(t.linkCopied)
+    } catch { flash(site.language === 'fr' ? 'Copie le lien dans la barre d’adresse.' : 'Copy the link from the address bar.') }
   }
 
   async function refreshAdminData() {
+    const version = adminSessionVersion.current
     const [remoteCards, remoteReservations, remoteSellRequests, remoteJapanRequests, remoteCustomerNotes, remoteStockAlerts] = await Promise.all([
       fetchCards({ includePrivateNotes: true }),
       fetchReservations(),
@@ -4280,13 +4309,14 @@ function App() {
       fetchCustomerNotes(),
       fetchStockAlerts(),
     ])
+    if (version !== adminSessionVersion.current) return
     if (Array.isArray(remoteCards)) {
       setCards(remoteCards)
       setSelected((current) => remoteCards.find((card) => card.id === current?.id) || remoteCards[0] || null)
       savePublicCards(remoteCards)
     }
-    if (Array.isArray(remoteReservations)) { setOrders(remoteReservations); saveLocal('kc-orders', remoteReservations) }
-    if (Array.isArray(remoteSellRequests)) { setSellRequests(remoteSellRequests); saveLocal('kc-sell-requests', remoteSellRequests) }
+    if (Array.isArray(remoteReservations)) setOrders(remoteReservations)
+    if (Array.isArray(remoteSellRequests)) setSellRequests(remoteSellRequests)
     setJapanRequests(remoteJapanRequests || [])
     setCustomerNotes(remoteCustomerNotes || [])
     setStockAlerts(remoteStockAlerts || [])
@@ -4298,13 +4328,8 @@ function App() {
   }
 
   async function logoutAdmin() {
-    await signOutAdmin()
-    setIsAdminUnlocked(false)
-    setCards((currentCards) => {
-      const publicCards = withoutPrivateCardNotes(currentCards)
-      savePublicCards(publicCards)
-      return publicCards
-    })
+    clearAdminData()
+    try { await signOutAdmin() } catch { flash('Déconnexion distante impossible. Réessaie.') }
   }
 
   function updateQty(id, qty) {
@@ -4326,129 +4351,149 @@ function App() {
 
   async function submitSellRequest(event) {
     event.preventDefault()
-    const request = {
-      ...sellDraft,
-      id: `RACHAT-${Math.floor(1000 + Math.random() * 9000)}`,
-      status: 'Nouvelle',
-      date: new Date().toISOString().slice(0, 10),
-    }
-    const result = await submitRemoteSellRequest(request)
-    if (backendConfig.databaseEnabled && !result.databaseSaved) {
-      flash(result.message)
-      return
-    }
-    const next = [request, ...sellRequests]
-    setSellRequests(next)
-    saveLocal('kc-sell-requests', next)
-    setSellDraft(defaultSellRequest)
-    flash(t.requestSent)
+    if (submitLock.current) return
+    if (!validCustomer(sellDraft) || sellDraft.cardList.trim().length < 3) { flash(site.language === 'fr' ? 'Vérifie tes coordonnées et la liste des cartes.' : 'Check your contact details and card list.'); return }
+    submitLock.current = true
+    setSending(true)
+    try {
+      const request = {
+        ...sellDraft,
+        id: `RACHAT-${crypto.randomUUID()}`,
+        status: 'Nouvelle',
+        date: new Date().toISOString().slice(0, 10),
+      }
+      const result = await submitRemoteSellRequest(request)
+      if (!result.databaseSaved) {
+        flash(result.message)
+        return
+      }
+      if (isAdminUnlocked) setSellRequests((current) => [request, ...current])
+      setSellDraft(defaultSellRequest)
+      flash(t.requestSent)
+    } catch { flash(t.reservationError) } finally { submitLock.current = false; setSending(false) }
   }
 
   async function submitJapanRequest(event) {
     event.preventDefault()
-    if (Number(japanDraft.expectedPrice) < 100) {
-      flash(site.language === 'fr' ? 'Le budget minimum est de 100 €.' : 'The minimum budget is €100.')
-      return
-    }
-    const result = await createJapanRequest(japanDraft)
-    if (!result.saved || !result.token) {
-      flash(result.error?.message || 'Impossible d’enregistrer la recherche.')
-      return
-    }
-    setJapanDraft(defaultJapanRequest)
-    setJapanPrivateToken(result.token)
-    setView('japanProposal')
-    window.history.pushState(null, '', `/recherche-japon/${result.token}`)
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-    flash(site.language === 'fr' ? 'Recherche envoyée. Conserve ce lien privé.' : 'Request sent. Keep this private link.')
+    if (submitLock.current) return
+    if (!validCustomer(japanDraft) || japanDraft.cardList.trim().length < 3 || !Number.isFinite(Number(japanDraft.expectedPrice))) { flash(site.language === 'fr' ? 'Vérifie tes coordonnées, ta recherche et ton budget.' : 'Check your contact details, request and budget.'); return }
+    submitLock.current = true
+    setSending(true)
+    try {
+      if (Number(japanDraft.expectedPrice) < 100) {
+        flash(site.language === 'fr' ? 'Le budget minimum est de 100 €.' : 'The minimum budget is €100.')
+        return
+      }
+      const result = await createJapanRequest(japanDraft)
+      if (!result.saved || !result.token) {
+        flash(result.error?.message || 'Impossible d’enregistrer la recherche.')
+        return
+      }
+      setJapanDraft(defaultJapanRequest)
+      setJapanPrivateToken(result.token)
+      setView('japanProposal')
+      window.history.pushState(null, '', `/recherche-japon/${result.token}`)
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      flash(site.language === 'fr' ? 'Recherche envoyée. Conserve ce lien privé.' : 'Request sent. Keep this private link.')
+    } catch { flash(t.reservationError) } finally { submitLock.current = false; setSending(false) }
   }
 
   async function registerStockAlert(cardId, email) {
     const result = await createStockAlert(cardId, email)
-    if (result.saved) flash('Alerte de disponibilité enregistrée.')
+    if (result.saved) flash(site.language === 'fr' ? 'Alerte de disponibilité enregistrée.' : 'Availability alert saved.')
     return result
   }
 
   async function checkout(event) {
     event.preventDefault()
-    const lines = cart
-      .map((item) => ({ ...item, card: cards.find((card) => card.id === item.id) }))
-      .filter((item) => item.card)
-    if (!lines.length) return
+    if (submitLock.current) return
+    if (!validCustomer(checkoutDraft) || !checkoutDraft.message.trim() || checkoutDraft.message.length > 2000) { flash(site.language === 'fr' ? 'Vérifie tes coordonnées et ton message.' : 'Check your contact details and message.'); return }
+    if (catalogState !== 'ready' || !validCart(cart, cards)) { flash(t.lowStockWarning); return }
+    submitLock.current = true
+    setSending(true)
+    try {
+      const lines = cart
+        .map((item) => ({ ...item, card: cards.find((card) => card.id === item.id) }))
+        .filter((item) => item.card)
+      if (!lines.length) return
 
-    const subtotal = lines.reduce((sum, item) => sum + item.card.price * item.qty, 0)
-    const cartItems = lines.map((item) => ({
-      id: item.card.id,
-      name: item.card.name,
-      set: item.card.set,
-      rarity: item.card.rarity,
-      type: item.card.type,
-      condition: item.card.condition,
-      language: item.card.language,
-      grade: item.card.grade,
-      color: item.card.color,
-      price: item.card.price,
-      qty: item.qty,
-    }))
-    const draftOrderId = `RESA-${Math.floor(2600 + Math.random() * 8000)}`
-    const order = {
-      id: draftOrderId,
-      customer: checkoutDraft.fullName,
-      email: checkoutDraft.email,
-      phone: checkoutDraft.phone,
-      message: checkoutDraft.message,
-      lines: cartItems,
-      total: subtotal,
-      items: lines.reduce((sum, item) => sum + item.qty, 0),
-      status: 'Nouvelle',
-      reservedUntil: addHours(new Date(), site.reservationHours),
-      paymentProvider: 'reservation',
-      paymentNote: site.copy[site.language].paymentNote,
-      date: new Date().toISOString().slice(0, 10),
-    }
-    const reservationResult = await submitReservation({
-      reservation: order,
-      sellerEmail: site.contactEmail,
-      siteName: site.brandName,
-    })
-    if (backendConfig.databaseEnabled && !reservationResult.databaseSaved) {
-      flash(reservationResult.message || t.reservationError)
-      return
-    }
-    const nextOrder = {
-      ...order,
-      emailSent: Boolean(reservationResult.emailSent),
-      notificationNote: reservationResult.message,
-    }
-    let nextCards = cards.map((card) => {
-      const line = lines.find((item) => item.id === card.id)
-      return line
-        ? {
-            ...card,
-            status: 'reserved',
-            reserved: true,
-            reservedUntil: order.reservedUntil,
-            stock: Math.max(0, card.stock - line.qty),
-          }
-        : card
-    })
-    if (backendConfig.databaseEnabled && reservationResult.databaseSaved) {
-      const remoteCards = await fetchCards()
-      if (Array.isArray(remoteCards)) nextCards = remoteCards
-    } else {
-      persistCards(nextCards)
-    }
-    const nextOrders = [nextOrder, ...orders]
-    setCards(nextCards)
-    savePublicCards(nextCards)
-    setOrders(nextOrders)
-    setLastReservation(nextOrder)
-    setCart([])
-    setCheckoutDraft(defaultCheckout)
-    saveLocal('kc-orders', nextOrders)
-    saveLocal('kc-cart', [])
-    flash(`${t.orderCreated} ${nextOrder.id}`)
-    navigate('reservationSuccess')
+      const subtotal = lines.reduce((sum, item) => sum + item.card.price * item.qty, 0)
+      const cartItems = lines.map((item) => ({
+        id: item.card.id,
+        name: item.card.name,
+        set: item.card.set,
+        rarity: item.card.rarity,
+        type: item.card.type,
+        condition: item.card.condition,
+        language: item.card.language,
+        grade: item.card.grade,
+        color: item.card.color,
+        price: item.card.price,
+        qty: item.qty,
+      }))
+      const draftOrderId = `RESA-${crypto.randomUUID()}`
+      const order = {
+        id: draftOrderId,
+        customer: checkoutDraft.fullName,
+        email: checkoutDraft.email,
+        phone: checkoutDraft.phone,
+        message: checkoutDraft.message,
+        lines: cartItems,
+        total: subtotal,
+        items: lines.reduce((sum, item) => sum + item.qty, 0),
+        status: 'Nouvelle',
+        reservedUntil: addHours(new Date(), site.reservationHours),
+        paymentProvider: 'reservation',
+        paymentNote: site.copy[site.language].paymentNote,
+        date: new Date().toISOString().slice(0, 10),
+      }
+      const reservationResult = await submitReservation({
+        reservation: order,
+        sellerEmail: site.contactEmail,
+        siteName: site.brandName,
+      })
+      if (!reservationResult.databaseSaved) {
+        flash(reservationResult.message || t.reservationError)
+        return
+      }
+      const nextOrder = {
+        ...order,
+        ...(reservationResult.receipt || {}),
+        emailSent: Boolean(reservationResult.emailSent),
+        notificationNote: '',
+      }
+      let nextCards = cards.map((card) => {
+        const line = lines.find((item) => item.id === card.id)
+        return line
+          ? {
+              ...card,
+              status: card.stock > line.qty ? 'available' : 'reserved',
+              reserved: card.stock <= line.qty,
+              reservedUntil: card.stock > line.qty ? '' : nextOrder.reservedUntil,
+              stock: Math.max(0, card.stock - line.qty),
+            }
+          : card
+      })
+      if (backendConfig.databaseEnabled && reservationResult.databaseSaved) {
+        try {
+          const remoteCards = await fetchCards()
+          if (Array.isArray(remoteCards)) nextCards = remoteCards
+        } catch { /* The reservation is confirmed even if refreshing the catalog fails. */ }
+      }
+      const receipt = reservationReceipt(nextOrder)
+      const nextReceipts = [receipt, ...receipts].slice(0, 50)
+      setCards(nextCards)
+      savePublicCards(nextCards)
+      if (isAdminUnlocked) refreshAdminData().catch(() => {})
+      setReceipts(nextReceipts)
+      setLastReservation(receipt)
+      setCart([])
+      setCheckoutDraft(defaultCheckout)
+      saveLocal('hk-receipts', nextReceipts)
+      saveLocal('kc-cart', [])
+      flash(`${t.orderCreated} ${nextOrder.id}`)
+      navigate('reservationSuccess')
+    } catch { flash(t.reservationError) } finally { submitLock.current = false; setSending(false) }
   }
 
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0)
@@ -4471,6 +4516,9 @@ function App() {
         setLanguage={setLanguage}
         toggleColorMode={toggleColorMode}
       />
+      {catalogState !== 'ready' && view !== 'admin' && <div className="service-notice" role="status">{catalogState === 'loading' ? (site.language === 'fr' ? 'Chargement du catalogue…' : 'Loading the catalog…') : <>{site.language === 'fr' ? 'Les réservations sont momentanément indisponibles. Contacte-nous : ' : 'Reservations are temporarily unavailable. Contact us: '}<a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a> <button type="button" onClick={() => window.location.reload()}>{site.language === 'fr' ? 'Réessayer' : 'Retry'}</button></>}</div>}
+      {sending && <div className="service-notice" role="status">{site.language === 'fr' ? 'Envoi en cours…' : 'Sending…'}</div>}
+      {view === 'notFound' && <main className="simple-page"><h1>{site.language === 'fr' ? 'Page introuvable' : 'Page not found'}</h1><button type="button" onClick={() => navigate('shop')}>{t.shop}</button></main>}
       {view === 'shop' && (
         <ShopView
           cards={cards}
@@ -4484,6 +4532,7 @@ function App() {
           updateQty={updateQty}
           removeItem={removeItem}
           checkout={checkout}
+          sending={sending}
           checkoutDraft={checkoutDraft}
           setCheckoutDraft={setCheckoutDraft}
           setView={navigate}
@@ -4682,6 +4731,7 @@ function App() {
           sellDraft={sellDraft}
           setSellDraft={setSellDraft}
           submitSellRequest={submitSellRequest}
+          sending={sending}
         />
       )}
       {view === 'japanSourcing' && (
@@ -4689,6 +4739,7 @@ function App() {
           draft={japanDraft}
           setDraft={setJapanDraft}
           submitRequest={submitJapanRequest}
+          sending={sending}
           site={site}
           t={t}
         />
@@ -4697,7 +4748,7 @@ function App() {
       {view === 'about' && <InfoPage type="about" site={site} t={t} />}
       {view === 'contact' && <InfoPage type="contact" site={site} t={t} />}
       {view === 'legal' && <InfoPage type="legal" site={site} t={t} />}
-      {view === 'orders' && <OrdersView orders={orders} site={site} t={t} />}
+      {view === 'orders' && <OrdersView orders={receipts} site={site} t={t} />}
       {view === 'admin' && !isAdminUnlocked && (
         <AdminLogin
           site={site}
@@ -4713,8 +4764,6 @@ function App() {
           japanRequests={japanRequests}
           customerNotes={customerNotes}
           stockAlerts={stockAlerts}
-          setOrders={setOrders}
-          setSellRequests={setSellRequests}
           persistCards={persistCards}
           removeCardById={removeCardById}
           site={site}

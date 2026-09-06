@@ -1,8 +1,11 @@
 import { writeFile } from 'node:fs/promises'
+import { loadEnv } from 'vite'
 
-const siteUrl = (process.env.VITE_SITE_URL || 'https://holokira2.contactholokira.workers.dev').replace(/\/$/, '')
-const supabaseUrl = process.env.VITE_SUPABASE_URL
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY
+const env = { ...loadEnv('production', process.cwd(), 'VITE_'), ...process.env }
+
+const siteUrl = (env.VITE_SITE_URL || 'https://holokira2.contactholokira.workers.dev').replace(/\/$/, '')
+const supabaseUrl = env.VITE_SUPABASE_URL
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY
 
 const staticPages = [
   ['/', '1.0'],
@@ -32,15 +35,21 @@ function cardPath(card) {
 async function fetchCards() {
   if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('your-project')) return []
 
+  try {
   const response = await fetch(`${supabaseUrl}/rest/v1/cards?select=id,name,card_set,created_at&order=created_at.desc`, {
+    signal: AbortSignal.timeout(10000),
     headers: {
       apikey: supabaseAnonKey,
       Authorization: `Bearer ${supabaseAnonKey}`,
     },
   })
 
-  if (!response.ok) return []
-  return response.json()
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return await response.json()
+  } catch {
+    console.warn('Sitemap : catalogue distant inaccessible, seules les pages publiques sont incluses.')
+    return []
+  }
 }
 
 const cards = await fetchCards()
@@ -53,13 +62,17 @@ const urls = [
   })),
 ]
 
+const escapeXml = (value) => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
+
 const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((url) => `  <url>
-    <loc>${url.loc}</loc>
+    <loc>${escapeXml(url.loc)}</loc>
 ${url.lastmod ? `    <lastmod>${new Date(url.lastmod).toISOString().slice(0, 10)}</lastmod>\n` : ''}    <priority>${url.priority}</priority>
   </url>`).join('\n')}
 </urlset>
 `
 
 await writeFile('public/sitemap.xml', xml)
+
+await writeFile('public/robots.txt', `User-agent: *\nAllow: /\nDisallow: /recherche-japon/\n\nSitemap: ${siteUrl}/sitemap.xml\n`)
