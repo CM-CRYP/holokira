@@ -161,7 +161,7 @@ export const starterSite = {
       homeEyebrow: 'Collection japonaise et européenne',
       homeTitle: 'HoloKira ouvre le Pokédex des cartes rares',
       homeIntro:
-        'Explore une boutique vitrine sombre, premium et vivante : les cartes se réservent sans paiement direct, puis tout se gère dans ton panel admin.',
+        'Découvre des cartes japonaises et européennes, consulte leur état et leurs photos, puis réserve tes coups de cœur sans paiement en ligne.',
       heroTitle: 'Cartes Pokémon premium',
       heroSubtitle:
         'Boutique européenne pour cartes gradées, singles rares et trouvailles japonaises sélectionnées à la main.',
@@ -212,7 +212,7 @@ export const starterSite = {
         'Après envoi, la carte passe en réservée et le vendeur te recontacte pour finaliser.',
       trustTitle: 'Achat clair, stock réel, envoi protégé',
       trustIntro:
-        'Aucune fausse vente affichée : seules les réservations créées sur le site alimentent le panel admin.',
+        'Consulte les photos et les défauts signalés avant de réserver. Le vendeur confirme ensuite les modalités avec toi.',
       emptyCart: 'Ajoute une carte pour préparer une réservation.',
       emptyOrders: 'Aucune réservation pour le moment.',
       footerNote: 'Expédition suivie depuis la France, protection rigide incluse.',
@@ -221,7 +221,7 @@ export const starterSite = {
       homeEyebrow: 'Japanese and European collection',
       homeTitle: 'HoloKira opens the rare-card Pokédex',
       homeIntro:
-        'Explore a dark, premium storefront where cards are reserved without direct payment, then managed from your admin panel.',
+        'Explore Japanese and European cards, check their condition and photos, and reserve your favorites without paying online.',
       heroTitle: 'Premium Pokémon cards',
       heroSubtitle:
         'A European boutique for graded cards, rare singles, and hand-picked Japanese finds.',
@@ -272,7 +272,7 @@ export const starterSite = {
         'After submission, the card becomes reserved and the seller will contact you to finalize.',
       trustTitle: 'Clear buying, real stock, protected shipping',
       trustIntro:
-        'No fake sales are displayed: only reservations created on the site feed the admin panel.',
+        'Check the photos and disclosed flaws before reserving. The seller then confirms the details with you.',
       emptyCart: 'Add a card to prepare a reservation.',
       emptyOrders: 'No reservations yet.',
       footerNote: 'Tracked shipping from France, rigid protection included.',

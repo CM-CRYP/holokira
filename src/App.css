@@ -3312,3 +3312,14 @@ td:nth-child(2) {
     grid-column: auto;
   }
 }
+
+/* Shared forms and durable save feedback. */
+.field > label { display: flex; flex-direction: column; gap: 8px; width: 100%; font-size: 0.875rem; }
+.service-notice, .settings-save-bar { padding: 16px; border: 1px solid currentColor; border-radius: 12px; margin: 16px; }
+.service-notice a { color: inherit; text-decoration: underline; }
+.settings-save-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 0 0 20px; }
+.receipt-list { display: grid; gap: 16px; }
+.receipt-list h2, .confirmation-panel > span { overflow-wrap: anywhere; }
+.receipt-list .info-card { display: block; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+:focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }

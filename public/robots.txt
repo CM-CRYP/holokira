@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /recherche-japon/
 
 Sitemap: https://holokira2.contactholokira.workers.dev/sitemap.xml

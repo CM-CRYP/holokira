@@ -489,11 +489,28 @@ using (bucket_id = 'card-images' and (select private.is_admin()));
 drop trigger if exists reserve_card_after_reservation_item on public.reservation_items;
 drop function if exists public.reserve_card_from_item();
 
+create or replace function public.get_public_site_settings()
+returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  select coalesce(jsonb_object_agg(field.key, field.value), '{}'::jsonb)
+  from public.site_settings settings,
+    lateral jsonb_each(settings.payload) field
+  where settings.id = 'default' and field.key = any(array[
+    'brandName', 'brandMark', 'contactEmail', 'supportPhone', 'freeShippingFrom',
+    'shippingFee', 'lowStockLimit', 'reservationHours', 'language', 'colorMode', 'theme', 'copy'
+  ]);
+$$;
+revoke all on function public.get_public_site_settings() from public;
+grant execute on function public.get_public_site_settings() to anon, authenticated;
+
+-- Changing the return type requires recreating this function (no table/data deletion).
+drop function if exists public.create_reservation(jsonb, jsonb);
 create or replace function public.create_reservation(
   reservation_payload jsonb,
   reservation_items_payload jsonb
 )
-returns void
+returns jsonb
 language plpgsql
 security definer
 set search_path = ''
@@ -511,20 +528,22 @@ declare
   current_status text;
   calculated_total numeric(10, 2) := 0;
   calculated_items integer := 0;
+  result_lines jsonb := '[]'::jsonb;
+  current_name text;
 begin
   if reservation_payload is null or reservation_items_payload is null then
     raise exception 'Reservation incomplete';
   end if;
 
-  if reservation_id !~ '^[A-Za-z0-9_-]{6,100}$' then
+  if reservation_id is null or reservation_id !~ '^[A-Za-z0-9_-]{6,100}$' then
     raise exception 'Identifiant de reservation invalide';
   end if;
 
-  if char_length(customer_name) not between 2 and 120 then
+  if customer_name is null or char_length(customer_name) not between 2 and 120 then
     raise exception 'Nom client invalide';
   end if;
 
-  if char_length(customer_email) not between 5 and 254 or position('@' in customer_email) <= 1 then
+  if customer_email is null or char_length(customer_email) not between 5 and 254 or position('@' in customer_email) <= 1 then
     raise exception 'Adresse e-mail invalide';
   end if;
 
@@ -532,7 +551,7 @@ begin
     raise exception 'Numero de telephone invalide';
   end if;
 
-  if char_length(customer_message) not between 1 and 2000 then
+  if customer_message is null or char_length(customer_message) not between 1 and 2000 then
     raise exception 'Message invalide';
   end if;
 
@@ -541,16 +560,11 @@ begin
     raise exception 'Liste de cartes invalide';
   end if;
 
-  begin
-    reservation_deadline := nullif(reservation_payload->>'reserved_until', '')::timestamptz;
-  exception when others then
-    reservation_deadline := null;
-  end;
-
-  if reservation_deadline is null or reservation_deadline <= now() then
-    reservation_deadline := now() + interval '48 hours';
-  end if;
-  reservation_deadline := least(reservation_deadline, now() + interval '7 days');
+  -- The seller's stored setting controls expiry; visitors cannot extend it.
+  select now() + make_interval(hours => greatest(1, least(168,
+    coalesce((payload->>'reservationHours')::integer, 48))))
+  into reservation_deadline from public.site_settings where id = 'default';
+  reservation_deadline := coalesce(reservation_deadline, now() + interval '48 hours');
 
   insert into public.reservations (
     id,
@@ -586,13 +600,14 @@ begin
       unit_price numeric
     )
     group by card_id
+    order by card_id
   loop
     if item.card_id is null or item.quantity is null or item.quantity < 1 or item.quantity > 20 then
       raise exception 'Ligne de reservation invalide';
     end if;
 
-    select price, stock, status
-    into current_price, current_stock, current_status
+    select price, stock, status, name
+    into current_price, current_stock, current_status, current_name
     from public.cards
     where id = item.card_id
     for update;
@@ -607,8 +622,8 @@ begin
 
     update public.cards
     set
-      status = 'reserved',
-      reserved_until = reservation_deadline,
+      status = case when stock - item.quantity > 0 then 'available' else 'reserved' end,
+      reserved_until = case when stock - item.quantity > 0 then null else reservation_deadline end,
       stock = stock - item.quantity
     where id = item.card_id;
 
@@ -626,11 +641,13 @@ begin
 
     calculated_total := calculated_total + (current_price * item.quantity);
     calculated_items := calculated_items + item.quantity;
+    result_lines := result_lines || jsonb_build_array(jsonb_build_object('id', item.card_id, 'name', current_name, 'qty', item.quantity, 'price', current_price));
   end loop;
 
   update public.reservations
   set total = calculated_total, items_count = calculated_items
   where id = reservation_id;
+  return jsonb_build_object('id', reservation_id, 'total', calculated_total, 'items', calculated_items, 'reservedUntil', reservation_deadline, 'lines', result_lines);
 end;
 $$;
 
@@ -686,17 +703,20 @@ begin
     select card_id, quantity
     from public.reservation_items
     where reservation_id = target_reservation_id
+    order by card_id
   loop
     perform 1 from public.cards where id = line.card_id for update;
     update public.cards
     set
-      stock = stock + line.quantity,
+      stock = case when status = 'sold' then stock else stock + line.quantity end,
       status = case when status = 'sold' then status else 'available' end,
       reserved_until = null
     where id = line.card_id;
   end loop;
 end;
 $$;
+
+revoke all on function private.release_reservation_stock(text) from public, anon, authenticated;
 
 create or replace function public.release_expired_reservations()
 returns integer
@@ -751,7 +771,7 @@ begin
     raise exception 'Acces refuse';
   end if;
 
-  if target_status not in ('Nouvelle', 'Contactée', 'Confirmée', 'Annulée', 'Expirée') then
+  if target_status is null or target_status not in ('Nouvelle', 'Contactée', 'Confirmée', 'Terminée', 'Annulée', 'Expirée') then
     raise exception 'Statut de reservation invalide';
   end if;
 
@@ -761,6 +781,10 @@ begin
   for update;
 
   if not found then raise exception 'Reservation introuvable'; end if;
+
+  if previous_status = 'Terminée' and target_status <> 'Terminée' then
+    raise exception 'Une vente terminee ne peut pas etre reactivee';
+  end if;
 
   was_released := previous_status in ('Annulée', 'Expirée');
   becomes_released := target_status in ('Annulée', 'Expirée');
@@ -772,6 +796,7 @@ begin
       select card_id, quantity
       from public.reservation_items
       where reservation_id = target_reservation_id
+      order by card_id
     loop
       select stock, status into current_stock, current_status
       from public.cards where id = line.card_id for update;
@@ -780,8 +805,26 @@ begin
       end if;
       update public.cards
       set stock = stock - line.quantity,
-          status = 'reserved',
-          reserved_until = now() + interval '48 hours'
+          status = case when stock - line.quantity > 0 then 'available' else 'reserved' end,
+          reserved_until = case when stock - line.quantity > 0 then null else now() + interval '48 hours' end
+      where id = line.card_id;
+    end loop;
+  end if;
+
+  if target_status = 'Terminée' and previous_status <> 'Terminée' then
+    -- Quantities were deducted when reserved. Never deduct them twice.
+    for line in select card_id from public.reservation_items
+      where reservation_id = target_reservation_id order by card_id
+    loop
+      perform 1 from public.cards where id = line.card_id for update;
+      update public.cards set
+        status = case when stock > 0 then 'available'
+          when exists (select 1 from public.reservation_items ri
+            join public.reservations r on r.id = ri.reservation_id
+            where ri.card_id = line.card_id and r.id <> target_reservation_id
+              and r.status not in ('Terminée', 'Annulée', 'Expirée')) then 'reserved'
+          else 'sold' end,
+        reserved_until = null
       where id = line.card_id;
     end loop;
   end if;
@@ -791,6 +834,7 @@ begin
     status = target_status,
     private_note = coalesce(target_note, private_note),
     reserved_until = case
+      when target_status = 'Terminée' then null
       when becomes_released then reserved_until
       when was_released then now() + interval '48 hours'
       else reserved_until
@@ -899,5 +943,84 @@ $$;
 
 revoke all on function public.create_stock_alert(text, text) from public;
 grant execute on function public.create_stock_alert(text, text) to anon, authenticated;
+
+-- Inventory changes and private notes commit atomically, with conflict detection.
+alter table public.cards add column if not exists updated_at timestamptz not null default clock_timestamp();
+create or replace function private.touch_card()
+returns trigger language plpgsql set search_path = '' as $$
+begin new.updated_at := clock_timestamp(); return new; end;
+$$;
+revoke all on function private.touch_card() from public;
+drop trigger if exists card_updated_at on public.cards;
+create trigger card_updated_at before update on public.cards
+for each row execute function private.touch_card();
+
+create or replace function public.admin_save_cards(cards_payload jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  entry jsonb;
+  previous public.cards;
+  result jsonb;
+begin
+  if not private.is_admin() then raise exception 'Acces refuse'; end if;
+  if cards_payload is null or jsonb_typeof(cards_payload) <> 'array' then raise exception 'Liste invalide'; end if;
+  for entry in select value from jsonb_array_elements(cards_payload) order by value->>'id'
+  loop
+    select * into previous from public.cards where id = entry->>'id' for update;
+    if found then
+      if entry->>'expected_updated_at' is null or previous.updated_at <> (entry->>'expected_updated_at')::timestamptz then
+        raise exception 'Cette carte a change depuis son chargement. Recharge le catalogue avant de sauvegarder : %', previous.name;
+      end if;
+      if ((entry->>'stock')::integer <> previous.stock or entry->>'status' <> previous.status)
+        and exists (select 1 from public.reservation_items ri join public.reservations r on r.id = ri.reservation_id
+          where ri.card_id = previous.id and r.status not in ('Annulée', 'Expirée', 'Terminée')) then
+        raise exception 'Gere la reservation avant de modifier le stock ou le statut : %', previous.name;
+      end if;
+    elsif entry->>'expected_updated_at' is not null then
+      raise exception 'Carte supprimee depuis son chargement';
+    end if;
+    if coalesce(trim(entry->>'name'), '') = '' or entry->>'status' is null or entry->>'status' not in ('available', 'reserved', 'sold') then
+      raise exception 'Nom ou statut de carte invalide';
+    end if;
+    insert into public.cards (id, name, card_set, rarity, type, condition, language, grade, price, stock, status, reserved_until, image_url, image_urls, thumbnail_urls, description, flaws, negotiable, featured, is_japanese, is_vintage, is_graded, is_promo, badge, tags, added_at, color)
+      select id, name, card_set, rarity, type, condition, language, grade, price, stock, status, reserved_until, image_url, image_urls, thumbnail_urls, description, flaws, negotiable, featured, is_japanese, is_vintage, is_graded, is_promo, badge, tags, added_at, color from jsonb_populate_record(null::public.cards, entry)
+      on conflict (id) do update set
+        name = excluded.name,
+        card_set = excluded.card_set,
+        rarity = excluded.rarity,
+        type = excluded.type,
+        condition = excluded.condition,
+        language = excluded.language,
+        grade = excluded.grade,
+        price = excluded.price,
+        stock = excluded.stock,
+        status = excluded.status,
+        reserved_until = excluded.reserved_until,
+        image_url = excluded.image_url,
+        image_urls = excluded.image_urls,
+        thumbnail_urls = excluded.thumbnail_urls,
+        description = excluded.description,
+        flaws = excluded.flaws,
+        negotiable = excluded.negotiable,
+        featured = excluded.featured,
+        is_japanese = excluded.is_japanese,
+        is_vintage = excluded.is_vintage,
+        is_graded = excluded.is_graded,
+        is_promo = excluded.is_promo,
+        badge = excluded.badge,
+        tags = excluded.tags,
+        added_at = excluded.added_at,
+        color = excluded.color;
+    insert into public.card_private_notes(card_id, note, updated_at)
+      values (entry->>'id', coalesce(entry->>'private_note', ''), clock_timestamp())
+      on conflict (card_id) do update set note = excluded.note, updated_at = excluded.updated_at;
+  end loop;
+  select coalesce(jsonb_agg(to_jsonb(c) || jsonb_build_object('private_note', coalesce(n.note, '')) order by c.created_at), '[]'::jsonb)
+    into result from public.cards c left join public.card_private_notes n on n.card_id = c.id;
+  return result;
+end;
+$$;
+revoke all on function public.admin_save_cards(jsonb) from public, anon;
+grant execute on function public.admin_save_cards(jsonb) to authenticated;
 
 commit;
