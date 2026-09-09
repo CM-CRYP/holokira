@@ -42,7 +42,7 @@
   top: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 24px;
   padding: 14px clamp(18px, 4vw, 56px);
@@ -88,6 +88,7 @@
 }
 
 .nav-tabs {
+  min-width: 0;
   display: flex;
   justify-content: center;
   gap: 6px;
@@ -2975,9 +2976,9 @@ td:nth-child(2) {
   font-weight: 800;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1600px) {
   .topbar {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 12px;
   }
 
@@ -3323,3 +3324,15 @@ td:nth-child(2) {
 .receipt-list .info-card { display: block; }
 button:disabled { cursor: not-allowed; opacity: .55; }
 :focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
+
+/* Keep grid children and form controls within the available viewport. */
+.topbar > *, .shop-layout > *, .filters > *, .info-grid > *, .settings-grid > * { min-width: 0; }
+.filters input, .filters select, .inventory-toolbar input, .inventory-toolbar select { min-width: 0; }
+.theme-toggle { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.info-card { overflow-wrap: anywhere; }
+.catalog-empty-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 16px; padding: 40px 24px; min-width: 0; border-left: 1px solid var(--line); }
+.catalog-empty-hero h2 { font-size: clamp(24px, 3vw, 40px); margin: 0; }
+.catalog-empty-hero p { max-width: 380px; color: var(--muted); }
+.product-grid > .empty-state { grid-column: 1 / -1; }
+@media (max-width: 560px) { .form-pair { grid-template-columns: minmax(0, 1fr); } .catalog-empty-hero { border-left: 0; border-top: 1px solid var(--line); } }
+@media (prefers-reduced-motion: reduce) { .app-shell *, .app-shell *::before, .app-shell *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

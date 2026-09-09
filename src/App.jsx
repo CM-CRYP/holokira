@@ -803,7 +803,9 @@ function getCardStory(card) {
   }
 }
 
-function HoloCardShowcase({ cards, openCardPage }) {
+function HoloCardShowcase({ cards, openCardPage, site }) {
+  const isFr = site.language === 'fr'
+  if (!cards.length) return <section className="catalog-empty-hero"><PackageCheck size={44} /><h2>{isFr ? 'Le catalogue se prépare' : 'The catalog is coming soon'}</h2><p>{isFr ? 'Les prochaines cartes seront présentées ici avec leurs photos et leur état.' : 'Upcoming cards will appear here with photos and condition details.'}</p></section>
   const showcaseCards = cards.slice(0, 5)
 
   return (
@@ -835,15 +837,15 @@ function HoloCardShowcase({ cards, openCardPage }) {
         ))}
       </div>
       <div className="holo-panel">
-        <span>HoloKira selection</span>
-        <strong>{showcaseCards.length} cartes à explorer</strong>
+        <span>{isFr ? 'Sélection HoloKira' : 'HoloKira selection'}</span>
+        <strong>{cards.length} {isFr ? 'cartes à explorer' : 'cards to explore'}</strong>
       </div>
     </section>
   )
 }
 
 function CardArt({ card, large = false }) {
-  const primaryImage = (!large && card.thumbnailUrls?.[0]) || getCardImages(card)[0]
+  const primaryImage = getCardImages(card)[0]
   const hasPhoto = Boolean(primaryImage)
 
   return (
@@ -932,10 +934,11 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
         <span className="brand-mark">{site.brandMark}</span>
         <span>{site.brandName}</span>
       </button>
-      <nav className="nav-tabs" aria-label="Navigation principale">
+      <nav className="nav-tabs" aria-label={site.language === 'fr' ? 'Navigation principale' : 'Main navigation'}>
         {nav.map(([id, label]) => (
           <button
             className={view === id ? 'active' : ''}
+            aria-current={view === id ? 'page' : undefined}
             key={id}
             type="button"
             onClick={() => setView(id)}
@@ -953,8 +956,8 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
           </select>
         </label>
         <button className="theme-toggle" type="button" onClick={toggleColorMode}>
-          {site.colorMode === 'light' ? <Sun size={17} /> : <Moon size={17} />}
-          <span>{site.colorMode === 'light' ? t.lightMode : t.darkMode}</span>
+          {site.colorMode === 'light' ? <Moon size={17} /> : <Sun size={17} />}
+          <span>{site.colorMode === 'light' ? t.darkMode : t.lightMode}</span>
         </button>
         <button className="cart-pill" aria-label={`${t.cart} (${cartCount})`} type="button" onClick={() => setView('shop')}>
           <ShoppingBag size={18} />
@@ -990,7 +993,7 @@ function HomeView({ cards, openCardPage, setView, site, t }) {
             </button>
           </div>
         </div>
-        <HoloCardShowcase cards={cards} openCardPage={openCardPage} />
+        <HoloCardShowcase cards={cards} openCardPage={openCardPage} site={site} />
       </section>
       <section className="home-focus">
         <div>
@@ -1145,18 +1148,18 @@ function Filters({
   ]
 
   return (
-    <section className="filters" aria-label="Filtres du catalogue">
+    <section className="filters" aria-label={isFr ? 'Filtres du catalogue' : 'Catalog filters'}>
       <label className="searchbox">
         <Search size={18} />
         <input
-          value={query}
+          aria-label={isFr ? 'Rechercher une carte' : 'Search cards'} value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={site.copy[site.language].searchPlaceholder}
         />
       </label>
       <label>
         <SlidersHorizontal size={17} />
-        <select value={type} onChange={(event) => setType(event.target.value)}>
+        <select aria-label={isFr ? 'Type' : 'Type'} value={type} onChange={(event) => setType(event.target.value)}>
           {types.map((option) => (
             <option key={option}>{option}</option>
           ))}
@@ -1164,7 +1167,7 @@ function Filters({
       </label>
       <label>
         <Sparkles size={17} />
-        <select value={rarity} onChange={(event) => setRarity(event.target.value)}>
+        <select aria-label={isFr ? 'Rareté' : 'Rarity'} value={rarity} onChange={(event) => setRarity(event.target.value)}>
           {rarities.map((option) => (
             <option key={option}>{option}</option>
           ))}
@@ -1172,7 +1175,7 @@ function Filters({
       </label>
       <label>
         <PackageCheck size={17} />
-        <select value={status} onChange={(event) => setStatus(event.target.value)}>
+        <select aria-label={isFr ? 'Disponibilité' : 'Availability'} value={status} onChange={(event) => setStatus(event.target.value)}>
           {statuses.map(([value, label]) => (
             <option value={value} key={value}>{label}</option>
           ))}
@@ -1180,7 +1183,7 @@ function Filters({
       </label>
       <label>
         <BarChart3 size={17} />
-        <select value={sort} onChange={(event) => setSort(event.target.value)}>
+        <select aria-label={isFr ? 'Trier par' : 'Sort by'} value={sort} onChange={(event) => setSort(event.target.value)}>
           {sorts.map(([value, label]) => (
             <option value={value} key={value}>{label}</option>
           ))}
@@ -1188,7 +1191,7 @@ function Filters({
       </label>
       <label>
         <Globe2 size={17} />
-        <select value={language} onChange={(event) => setLanguageFilter(event.target.value)}>
+        <select aria-label={isFr ? 'Langue des cartes' : 'Card language'} value={language} onChange={(event) => setLanguageFilter(event.target.value)}>
           {languages.map((option) => (
             <option key={option}>{option}</option>
           ))}
@@ -1196,7 +1199,7 @@ function Filters({
       </label>
       <label>
         <PackageCheck size={17} />
-        <select value={grade} onChange={(event) => setGradeFilter(event.target.value)}>
+        <select aria-label={isFr ? 'Grade' : 'Grade'} value={grade} onChange={(event) => setGradeFilter(event.target.value)}>
           {grades.map((option) => (
             <option key={option}>{option}</option>
           ))}
@@ -1204,7 +1207,7 @@ function Filters({
       </label>
       <label>
         <Sparkles size={17} />
-        <select value={collectionTag} onChange={(event) => setCollectionTag(event.target.value)}>
+        <select aria-label={isFr ? 'Collection' : 'Collection'} value={collectionTag} onChange={(event) => setCollectionTag(event.target.value)}>
           {collectionOptions.map(([value, label]) => (
             <option value={value} key={value}>{label}</option>
           ))}
@@ -1216,7 +1219,7 @@ function Filters({
           type="number"
           min="0"
           step="1"
-          value={minPrice}
+          aria-label={isFr ? 'Prix minimum (€)' : 'Minimum price (€)'} value={minPrice}
           onChange={(event) => setMinPrice(event.target.value)}
           placeholder={isFr ? 'Prix min' : 'Min price'}
         />
@@ -1227,7 +1230,7 @@ function Filters({
           type="number"
           min="0"
           step="1"
-          value={maxPrice}
+          aria-label={isFr ? 'Prix maximum (€)' : 'Maximum price (€)'} value={maxPrice}
           onChange={(event) => setMaxPrice(event.target.value)}
           placeholder={isFr ? 'Prix max' : 'Max price'}
         />
@@ -1428,7 +1431,7 @@ function ShopView(props) {
         </div>
         <Filters {...props.filters} cards={props.cards} site={props.site} t={props.t} />
         <div className="product-grid">
-          {props.filteredCards.length === 0 && <p className="empty-state">{props.site.language === 'fr' ? 'Aucune carte ne correspond à ces filtres.' : 'No cards match these filters.'}</p>}
+          {props.filteredCards.length === 0 && <p className="empty-state">{props.cards.length === 0 ? (props.site.language === 'fr' ? 'Le catalogue se prépare. Les cartes seront ajoutées prochainement.' : 'The catalog is coming soon. Cards will be added shortly.') : (props.site.language === 'fr' ? 'Aucune carte ne correspond à ces filtres.' : 'No cards match these filters.')}</p>}
           {props.filteredCards.map((card) => (
             <ProductCard
               key={card.id}
@@ -1506,14 +1509,14 @@ function CardsView({ cards, openCardPage, addToCart, copyCardLink, site, t }) {
         <label className="inventory-search">
           <Search size={18} />
           <input
-            value={inventoryQuery}
+            aria-label={isFr ? 'Rechercher une carte' : 'Search cards'} value={inventoryQuery}
             onChange={(event) => setInventoryQuery(event.target.value)}
             placeholder={isFr ? 'Nom, Pokémon, série ou numéro...' : 'Name, Pokemon, set or number...'}
           />
         </label>
         <label>
           <PackageCheck size={17} />
-          <select value={inventoryStatus} onChange={(event) => setInventoryStatus(event.target.value)}>
+          <select aria-label={isFr ? 'Disponibilité' : 'Availability'} value={inventoryStatus} onChange={(event) => setInventoryStatus(event.target.value)}>
             <option value="all">{isFr ? 'Toutes les disponibilités' : 'All availability'}</option>
             <option value="available">{t.available}</option>
             <option value="reserved">{t.reserved}</option>
@@ -1522,7 +1525,7 @@ function CardsView({ cards, openCardPage, addToCart, copyCardLink, site, t }) {
         </label>
         <label>
           <Sparkles size={17} />
-          <select value={inventoryCollection} onChange={(event) => setInventoryCollection(event.target.value)}>
+          <select aria-label={isFr ? 'Collection' : 'Collection'} value={inventoryCollection} onChange={(event) => setInventoryCollection(event.target.value)}>
             <option value="all">{isFr ? 'Toutes les collections' : 'All collections'}</option>
             <option value="japanese">{isFr ? 'Japonaises' : 'Japanese'}</option>
             <option value="vintage">Vintage</option>
@@ -1533,7 +1536,7 @@ function CardsView({ cards, openCardPage, addToCart, copyCardLink, site, t }) {
         </label>
         <label>
           <BarChart3 size={17} />
-          <select value={inventorySort} onChange={(event) => setInventorySort(event.target.value)}>
+          <select aria-label={isFr ? 'Trier par' : 'Sort by'} value={inventorySort} onChange={(event) => setInventorySort(event.target.value)}>
             <option value="newest">{isFr ? 'Plus récentes' : 'Newest'}</option>
             <option value="name">A-Z</option>
             <option value="priceAsc">{t.sortPriceAsc}</option>
@@ -1593,9 +1596,9 @@ function CardsView({ cards, openCardPage, addToCart, copyCardLink, site, t }) {
       {!visibleCards.length && (
         <div className="empty-state inventory-empty">
           <Search size={26} />
-          <strong>{isFr ? 'Aucune carte trouvée' : 'No cards found'}</strong>
-          <p>{isFr ? 'Essaie un nom plus court ou réinitialise les filtres.' : 'Try a shorter name or reset the filters.'}</p>
-          <button className="secondary-button" type="button" onClick={resetInventoryFilters}>{isFr ? 'Afficher toutes les cartes' : 'Show all cards'}</button>
+          <strong>{cards.length ? (isFr ? 'Aucune carte trouvée' : 'No cards found') : (isFr ? 'Le catalogue se prépare' : 'The catalog is coming soon')}</strong>
+          <p>{cards.length ? (isFr ? 'Essaie un nom plus court ou réinitialise les filtres.' : 'Try a shorter name or reset the filters.') : (isFr ? 'Les prochaines cartes seront affichées ici.' : 'Upcoming cards will appear here.')}</p>
+          {cards.length > 0 && <button className="secondary-button" type="button" onClick={resetInventoryFilters}>{isFr ? 'Afficher toutes les cartes' : 'Show all cards'}</button>}
         </div>
       )}
     </main>
@@ -1656,7 +1659,7 @@ function CardDetailPage({ card, cards, addToCart, setView, site, t, copyCardLink
   return (
     <main className="card-detail-page">
       <section className="card-detail-hero">
-        <CardPhotoGallery card={card} images={images} />
+        <CardPhotoGallery key={card.id} card={card} images={images} />
         <div className="card-detail-copy">
           <button className="text-button" type="button" onClick={() => setView('shop')}>
             ← Retour boutique
@@ -1864,7 +1867,7 @@ function CollectionPage({ title, intro, cards, openCardPage, addToCart, copyCard
           />
         ))}
       </div>
-      {cards.length === 0 && <p className="empty">{site.copy[site.language].emptyCart}</p>}
+      {cards.length === 0 && <div className="empty-state"><PackageCheck size={28} /><p>{site.language === 'fr' ? 'Aucune carte dans cette collection pour le moment.' : 'No cards in this collection yet.'}</p></div>}
     </main>
   )
 }
@@ -2035,10 +2038,10 @@ function SellRequestForm({ draft, setDraft, submitRequest, site, t, sending }) {
       </div>
       <Field label={site.language === 'fr' ? 'Cartes proposées' : 'Cards offered'}>
         <textarea
-          minLength={3} maxLength={5000}
+          required minLength={3} maxLength={5000}
           value={draft.cardList}
           onChange={(event) => setDraft({ ...draft, cardList: event.target.value })}
-          placeholder="Dracaufeu, Noctali, cartes gradées, langue, état..."
+          placeholder={site.language === 'fr' ? 'Dracaufeu, Noctali, cartes gradées, langue, état...' : 'Charizard, Umbreon, graded cards, language, condition...'}
         />
       </Field>
       <div className="form-pair">
@@ -2097,7 +2100,7 @@ function InfoPage({ type, site, t, sellDraft, setSellDraft, submitSellRequest, s
         {page.points.map((point, index) => (
           <article className="info-card" key={point}>
             <span>{String(index + 1).padStart(2, '0')}</span>
-            <p>{point}</p>
+            <p>{type === 'contact' && index === 0 ? <a href={`mailto:${site.contactEmail}`}>{point}</a> : point}</p>
           </article>
         ))}
       </section>
@@ -2343,13 +2346,16 @@ async function prepareCardsForSave(cards) {
 function ImageUploader({ value, onChange, thumbnailValue = [], onThumbnailChange, name, folder = 'cards' }) {
   const [error, setError] = useState('')
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState('')
+  const [draggedIndex, setDraggedIndex] = useState(null)
   const images = Array.isArray(value) ? value : [value].filter(Boolean)
-  const thumbnails = Array.isArray(thumbnailValue) ? thumbnailValue : []
+  const thumbnails = images.map((image, index) => thumbnailValue?.[index] || image)
 
   async function uploadImage(event) {
     const files = [...(event.target.files || [])]
     event.target.value = ''
     if (files.length === 0) return
+    if (isUploading) return
     if (files.some((file) => !file.type.startsWith('image/'))) {
       setError('Choisis un fichier image.')
       return
@@ -2360,6 +2366,7 @@ function ImageUploader({ value, onChange, thumbnailValue = [], onThumbnailChange
       const uploadedImages = []
       const uploadedThumbnails = []
       for (const file of files) {
+        setUploadProgress(`${uploadedImages.length + 1} / ${files.length}`)
         const blob = await imageFileToWebpBlob(file)
         const thumbnailBlob = await imageFileToWebpBlob(file, 480, 0.72)
         const uploadResult = await uploadCardImage(blob, `${name || 'carte'}-${file.name}`, folder)
@@ -2380,6 +2387,7 @@ function ImageUploader({ value, onChange, thumbnailValue = [], onThumbnailChange
       setError(uploadError.message)
     } finally {
       setIsUploading(false)
+      setUploadProgress('')
     }
   }
 
@@ -2389,6 +2397,7 @@ function ImageUploader({ value, onChange, thumbnailValue = [], onThumbnailChange
   }
 
   function moveImage(fromIndex, direction) {
+    if (isUploading) return
     const toIndex = fromIndex + direction
     if (toIndex < 0 || toIndex >= images.length) return
     const nextImages = [...images]
@@ -2408,17 +2417,22 @@ function ImageUploader({ value, onChange, thumbnailValue = [], onThumbnailChange
       <div className={images.length > 0 ? 'image-uploader-preview has-images' : 'image-uploader-preview'}>
         {images.length > 0 ? (
           images.map((image, index) => (
-            <figure key={image}>
-              <img src={thumbnails[index] || image} alt={`${name || 'Carte'} ${index + 1}`} loading="lazy" decoding="async" />
+            <figure key={image} draggable={!isUploading}
+              onDragStart={() => setDraggedIndex(index)}
+              onDragEnd={() => setDraggedIndex(null)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => { event.preventDefault(); if (draggedIndex !== null) moveImage(draggedIndex, index - draggedIndex); setDraggedIndex(null) }}>
+              <img src={image} alt={`${name || 'Carte'} ${index + 1}`} draggable={false} loading="lazy" decoding="async" />
               <figcaption>{index === 0 ? 'Principale' : `Photo ${index + 1}`}</figcaption>
               <div className="image-order-actions">
-                <button type="button" onClick={() => moveImage(index, -1)} disabled={index === 0} title="Déplacer avant">
+                <button type="button" onClick={() => moveImage(index, -1)} disabled={isUploading || index === 0} aria-label={`Déplacer la photo ${index + 1} avant`} title="Déplacer avant">
                   <ArrowLeft size={13} />
                 </button>
-                <button type="button" onClick={() => moveImage(index, 1)} disabled={index === images.length - 1} title="Déplacer après">
+                <button type="button" onClick={() => moveImage(index, 1)} disabled={isUploading || index === images.length - 1} aria-label={`Déplacer la photo ${index + 1} après`} title="Déplacer après">
                   <ArrowRight size={13} />
                 </button>
-                <button type="button" onClick={() => removeImage(index)} title="Retirer cette photo">
+                <button type="button" disabled={isUploading || index === 0} onClick={() => moveImage(index, -index)} title="Utiliser comme couverture">Couverture</button>
+                <button type="button" disabled={isUploading} onClick={() => removeImage(index)} aria-label={`Retirer la photo ${index + 1}`} title="Retirer cette photo">
                   <Trash2 size={13} />
                 </button>
               </div>
@@ -2431,17 +2445,17 @@ function ImageUploader({ value, onChange, thumbnailValue = [], onThumbnailChange
       <div className="image-uploader-actions">
         <label className="file-button">
           <Upload size={15} />
-          {isUploading ? 'Envoi des photos...' : 'Importer une ou plusieurs photos'}
+          {isUploading ? `Envoi des photos ${uploadProgress}…` : 'Importer une ou plusieurs photos'}
           <input type="file" accept="image/*" multiple onChange={uploadImage} disabled={isUploading} />
         </label>
         {images.length > 0 && (
-          <button type="button" onClick={() => { onChange([]); onThumbnailChange?.([]) }}>
+          <button type="button" disabled={isUploading} onClick={() => { if (window.confirm('Retirer toutes les photos de cette fiche ? Les fichiers stockés seront conservés.')) { onChange([]); onThumbnailChange?.([]) } }}>
             <Trash2 size={14} />
             Tout retirer
           </button>
         )}
       </div>
-      <small>Photos compressées automatiquement. La première photo est utilisée comme image principale.</small>
+      <small>Glisse les photos pour les ranger, ou utilise les flèches. La première est la couverture sur tout le site. Clique sur « Sauvegarder les produits » pour publier tes modifications.</small>
       {error && <small className="form-error">{error}</small>}
     </div>
   )
@@ -2861,7 +2875,7 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
 
   function updateCard(id, field, value) {
     const numeric = ['price', 'stock'].includes(field)
-    markEdited(draftCards.map((card) => {
+    markEdited((currentCards) => currentCards.map((card) => {
       if (card.id !== id) return card
       if (field === 'imageUrls') {
         return { ...card, imageUrls: value, imageUrl: value[0] || '' }
@@ -2920,6 +2934,7 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
   }
 
   async function saveProducts() {
+    if (isSaving) return
     setIsSaving(true)
     setSaveMessage('')
 
@@ -3195,7 +3210,7 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
             value={getCardImages(draft)}
             thumbnailValue={draft.thumbnailUrls}
             name={draft.name}
-            onChange={(value) => setDraft({ ...draft, imageUrls: value, imageUrl: value[0] || '' })}
+            onChange={(value) => setDraft((current) => ({ ...current, imageUrls: value, imageUrl: value[0] || '' }))}
             onThumbnailChange={(value) => setDraft((current) => ({ ...current, thumbnailUrls: value }))}
           />
         </Field>
@@ -3570,14 +3585,17 @@ function AdminLogin({ site, t, loginAdmin }) {
 
   async function submitLogin(event) {
     event.preventDefault()
+    if (isLoading) return
     setIsLoading(true)
-    const result = await signInAdmin({ email, password })
-    setIsLoading(false)
-    if (result.session) {
-      setError('')
-      loginAdmin()
-    } else {
-      setError(result.error?.message || t.loginError)
+    setError('')
+    try {
+      const result = await signInAdmin({ email: email.trim(), password })
+      if (result.session) await loginAdmin()
+      else setError(t.loginError)
+    } catch {
+      setError(site.language === 'fr' ? 'Connexion impossible. Vérifie ta connexion et réessaie.' : 'Unable to connect. Check your connection and try again.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -3588,15 +3606,15 @@ function AdminLogin({ site, t, loginAdmin }) {
         <h1>{t.loginTitle}</h1>
         <p>{t.loginIntro}</p>
         <Field label={t.email}>
-          <TextInput type="email" value={email} onChange={setEmail} />
+          <TextInput required autoComplete="username" type="email" value={email} onChange={setEmail} />
         </Field>
-        <Field label="Mot de passe">
-          <TextInput type="password" value={password} onChange={setPassword} />
+        <Field label={site.language === 'fr' ? 'Mot de passe' : 'Password'}>
+          <TextInput required autoComplete="current-password" type="password" value={password} onChange={setPassword} />
         </Field>
-        {error && <p className="form-error">{error}</p>}
+        {error && <p className="form-error" role="alert">{error}</p>}
         <button className="checkout" type="submit" disabled={!email || !password || isLoading}>
           <Lock size={18} />
-          {isLoading ? 'Connexion...' : 'Admin'}
+          {isLoading ? (site.language === 'fr' ? 'Connexion…' : 'Signing in…') : (site.language === 'fr' ? 'Se connecter' : 'Sign in')}
         </button>
       </form>
     </main>
@@ -4105,6 +4123,7 @@ function App() {
       if (!result.saved) return result
       const savedCards = result.cards || next
       setCards(savedCards)
+      setSelected((current) => current ? savedCards.find((card) => card.id === current.id) || null : null)
       savePublicCards(savedCards)
       return { saved: true, cards: savedCards }
     } catch (error) { return { saved: false, error } }

@@ -3,7 +3,7 @@ import { loadEnv } from 'vite'
 
 const env = { ...loadEnv('production', process.cwd(), 'VITE_'), ...process.env }
 
-const siteUrl = (env.VITE_SITE_URL || 'https://holokira2.contactholokira.workers.dev').replace(/\/$/, '')
+const siteUrl = (env.VITE_SITE_URL || 'https://holokira.oklmcrypto.workers.dev').replace(/\/$/, '')
 const supabaseUrl = env.VITE_SUPABASE_URL
 const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY
 

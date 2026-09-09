@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /recherche-japon/
 
-Sitemap: https://holokira2.contactholokira.workers.dev/sitemap.xml
+Sitemap: https://holokira.oklmcrypto.workers.dev/sitemap.xml
