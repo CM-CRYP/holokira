@@ -826,7 +826,7 @@ function HoloCardShowcase({ cards, openCardPage, site }) {
             style={{ '--card-accent': card.color }}
           >
             <span className="holo-card-inner">
-              <CardArt card={card} large />
+              <CardArt card={card} large priority={index === 0} />
               <span className="holo-card-copy">
                 <b>{card.name}</b>
                 <small>{card.set}</small>
@@ -844,7 +844,7 @@ function HoloCardShowcase({ cards, openCardPage, site }) {
   )
 }
 
-function CardArt({ card, large = false }) {
+function CardArt({ card, large = false, priority = false }) {
   const primaryImage = getCardImages(card)[0]
   const hasPhoto = Boolean(primaryImage)
 
@@ -857,7 +857,7 @@ function CardArt({ card, large = false }) {
       ].filter(Boolean).join(' ')}
       style={{ '--card-accent': card.color }}
     >
-      {primaryImage && <img src={primaryImage} alt={card.name} loading="lazy" decoding="async" />}
+      {primaryImage && <img src={primaryImage} alt={card.name} loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : 'auto'} decoding="async" />}
       <div className="card-art-top">
         <span>{card.language}</span>
         <strong>{card.grade}</strong>
@@ -2343,7 +2343,7 @@ async function prepareCardsForSave(cards) {
   return preparedCards
 }
 
-function ImageUploader({ value, onChange, thumbnailValue = [], onThumbnailChange, name, folder = 'cards' }) {
+function ImageUploader({ value, onChange, thumbnailValue = [], onThumbnailChange, onBusyChange, name, folder = 'cards' }) {
   const [error, setError] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState('')
@@ -2363,6 +2363,7 @@ function ImageUploader({ value, onChange, thumbnailValue = [], onThumbnailChange
     try {
       setError('')
       setIsUploading(true)
+      onBusyChange?.(true)
       const uploadedImages = []
       const uploadedThumbnails = []
       for (const file of files) {
@@ -2387,6 +2388,7 @@ function ImageUploader({ value, onChange, thumbnailValue = [], onThumbnailChange
       setError(uploadError.message)
     } finally {
       setIsUploading(false)
+      onBusyChange?.(false)
       setUploadProgress('')
     }
   }
@@ -2486,6 +2488,11 @@ function CardClassificationEditor({ card, onChange }) {
 }
 
 function OrderTable({ orders, updateOrderStatus, updateOrderNote, releaseReservation, t }) {
+  const [copyMessage, setCopyMessage] = useState('')
+  async function copyEmail(email) {
+    try { await navigator.clipboard.writeText(email); setCopyMessage('Adresse e-mail copiée.') }
+    catch { setCopyMessage('Copie impossible. Utilise le lien pour répondre par e-mail.') }
+  }
   if (orders.length === 0) {
     return (
       <div className="empty-state">
@@ -2498,6 +2505,7 @@ function OrderTable({ orders, updateOrderStatus, updateOrderNote, releaseReserva
 
   return (
     <div className="table-wrap">
+      {copyMessage && <p role="status">{copyMessage}</p>}
       <table>
         <thead>
           <tr>
@@ -2536,7 +2544,7 @@ function OrderTable({ orders, updateOrderStatus, updateOrderNote, releaseReserva
                 <span className="reservation-message">{order.message || order.paymentNote || '-'}</span>
                 {order.notificationNote && <small>{order.notificationNote}</small>}
               </td>
-              <td>{order.reservedUntil ? formatDateTime(order.reservedUntil) : '-'}</td>
+              <td>{['Terminée', 'Annulée', 'Expirée'].includes(normalizeStatus(order.status)) ? 'Clôturée' : order.reservedUntil ? <><time dateTime={order.reservedUntil}>{formatDateTime(order.reservedUntil)}</time>{new Date(order.reservedUntil).getTime() <= Date.now() + 86400000 && <strong className="deadline-warning">À vérifier : échéance proche ou dépassée</strong>}</> : '-'}</td>
               <td>
                 {updateOrderStatus ? (
                   <select
@@ -2555,7 +2563,7 @@ function OrderTable({ orders, updateOrderStatus, updateOrderNote, releaseReserva
               {updateOrderStatus && (
                 <td>
                   <div className="admin-row-actions">
-                    <button type="button" onClick={() => navigator.clipboard?.writeText(order.email)}>
+                    <button type="button" onClick={() => copyEmail(order.email)}>
                       <Copy size={14} />
                       {t.copyEmail}
                     </button>
@@ -2563,7 +2571,7 @@ function OrderTable({ orders, updateOrderStatus, updateOrderNote, releaseReserva
                       <Mail size={14} />
                       {t.reply}
                     </a>
-                    <button type="button" disabled={['Terminée', 'Annulée', 'Expirée'].includes(order.status)} onClick={() => releaseReservation(order.id)}>
+                    <button type="button" disabled={['Terminée', 'Annulée', 'Expirée'].includes(order.status)} onClick={() => { if (window.confirm('Annuler cette réservation et remettre les exemplaires en stock ?')) releaseReservation(order.id) }}>
                       <PackageCheck size={14} />
                       {t.release}
                     </button>
@@ -2806,23 +2814,26 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [uploadCount, setUploadCount] = useState(0)
+  const photoBusy = (busy) => setUploadCount((count) => Math.max(0, count + (busy ? 1 : -1)))
   useEffect(() => {
-    if (!hasUnsavedChanges) return
+    if (!hasUnsavedChanges && !uploadCount) return
     const warn = (event) => { event.preventDefault(); event.returnValue = '' }
     const guard = (event) => {
       if (!event.target.closest('.topbar button, .site-footer button, .admin-sidebar button')) return
-      if (!window.confirm('Des modifications ne sont pas enregistrées. Quitter et les abandonner ?')) {
+    if (uploadCount || !window.confirm('Des modifications ne sont pas enregistrées. Quitter et les abandonner ?')) {
         event.preventDefault(); event.stopPropagation()
       }
     }
     window.addEventListener('beforeunload', warn)
     document.addEventListener('click', guard, true)
     return () => { window.removeEventListener('beforeunload', warn); document.removeEventListener('click', guard, true) }
-  }, [hasUnsavedChanges])
+  }, [hasUnsavedChanges, uploadCount])
   const [productQuery, setProductQuery] = useState('')
   const [productStatus, setProductStatus] = useState('all')
   const [productCategory, setProductCategory] = useState('all')
   const [productSort, setProductSort] = useState('newest')
+  const [productQuality, setProductQuality] = useState('all')
   const [selectedProductIds, setSelectedProductIds] = useState([])
   const [bulkStatus, setBulkStatus] = useState('')
   const [bulkCategory, setBulkCategory] = useState('')
@@ -2865,7 +2876,11 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
         const matchQuery = !normalized || getCardSearchText(card).includes(normalized)
         const matchStatus = productStatus === 'all' || getCardStatus(card) === productStatus
         const matchCategory = productCategory === 'all' || Boolean(signals[productCategory])
-        return matchQuery && matchStatus && matchCategory
+        const matchQuality = productQuality === 'all' ||
+          (productQuality === 'photo' && getCardImages(card).length === 0) ||
+          (productQuality === 'description' && !card.description?.trim()) ||
+          (productQuality === 'stock' && Number(card.stock) <= 0)
+        return matchQuery && matchStatus && matchCategory && matchQuality
       })
       .sort((a, b) => {
         if (productSort === 'priceDesc') return Number(b.price) - Number(a.price)
@@ -2873,7 +2888,7 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
         if (productSort === 'name') return `${a.name}`.localeCompare(`${b.name}`)
         return new Date(b.addedAt || 0) - new Date(a.addedAt || 0)
       })
-  }, [draftCards, productCategory, productQuery, productSort, productStatus])
+  }, [draftCards, productCategory, productQuality, productQuery, productSort, productStatus])
 
   useEffect(() => {
     if (!hasUnsavedChanges) {
@@ -2949,7 +2964,7 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
   }
 
   async function saveProducts() {
-    if (isSaving) return
+    if (isSaving || uploadCount) return
     setIsSaving(true)
     setSaveMessage('')
 
@@ -3143,12 +3158,12 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
       <div className="admin-save-bar">
         <span>{saveMessage || (hasUnsavedChanges ? 'Modifications non sauvegardées' : 'Tous les produits sont sauvegardés')}</span>
         <div>
-          <button type="button" onClick={cancelProductChanges} disabled={!hasUnsavedChanges || isSaving}>
+          <button type="button" onClick={cancelProductChanges} disabled={!hasUnsavedChanges || isSaving || uploadCount > 0}>
             Annuler
           </button>
-          <button className="checkout" type="button" onClick={saveProducts} disabled={!hasUnsavedChanges || isSaving}>
+          <button className="checkout" type="button" onClick={saveProducts} disabled={!hasUnsavedChanges || isSaving || uploadCount > 0}>
             <Save size={16} />
-            {isSaving ? 'Sauvegarde...' : 'Sauvegarder les produits'}
+            {uploadCount ? 'Envoi des photos…' : isSaving ? 'Sauvegarde...' : 'Sauvegarder les produits'}
           </button>
         </div>
       </div>
@@ -3224,6 +3239,7 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
           <ImageUploader
             value={getCardImages(draft)}
             thumbnailValue={draft.thumbnailUrls}
+            onBusyChange={photoBusy}
             name={draft.name}
             onChange={(value) => setDraft((current) => ({ ...current, imageUrls: value, imageUrl: value[0] || '' }))}
             onThumbnailChange={(value) => setDraft((current) => ({ ...current, thumbnailUrls: value }))}
@@ -3262,6 +3278,14 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
         </button>
       </form>
       <div className="admin-toolbar product-admin-toolbar">
+        <label>Fiches à vérifier
+          <select aria-label="Fiches à vérifier" value={productQuality} onChange={(event) => setProductQuality(event.target.value)}>
+            <option value="all">Toutes les fiches</option>
+            <option value="photo">Sans photo</option>
+            <option value="description">Sans description</option>
+            <option value="stock">Stock épuisé</option>
+          </select>
+        </label>
         <label className="searchbox">
           <Search size={18} />
           <input
@@ -3335,6 +3359,7 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
         </button>
       </div>
       <div className="product-editor-list">
+        {visibleDraftCards.length === 0 && <div className="empty-state"><p>Aucune fiche ne correspond à ces filtres.</p><button className="secondary-button" type="button" onClick={() => { setProductQuery(''); setProductQuality('all'); setProductStatus('all'); setProductCategory('all') }}>Réinitialiser les filtres</button></div>}
         {visibleDraftCards.map((card) => (
           <article className={`editable-product card-edit-item${editingId === card.id ? ' is-editing' : ''}${selectedProductIds.includes(card.id) ? ' selected' : ''}`} key={card.id}>
             <div className="editable-product-preview">
@@ -3346,7 +3371,7 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
               <h3>{card.name}</h3>
               <p>{formatMoney(card.price)} · Stock : {card.stock}</p>
               <span>{cardStatuses[getCardStatus(card)]}</span>
-              <button type="button" className="checkout" aria-expanded={editingId === card.id} onClick={() => { setEditingId(editingId === card.id ? null : card.id); setShowPreview(false) }}>
+              <button type="button" className="checkout" disabled={uploadCount > 0 || isSaving} aria-expanded={editingId === card.id} onClick={() => { setEditingId(editingId === card.id ? null : card.id); setShowPreview(false) }}>
                 <Edit3 size={16} /> {editingId === card.id ? 'Replier la fiche' : 'Modifier la fiche'}
               </button>
               <button type="button" className="secondary-button" onClick={() => duplicateCard(card)}>
@@ -3407,6 +3432,7 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
                 <ImageUploader
                   value={getCardImages(card)}
                   thumbnailValue={card.thumbnailUrls}
+                  onBusyChange={photoBusy}
                   name={card.name}
                   onChange={(value) => updateCard(card.id, 'imageUrls', value)}
                   onThumbnailChange={(value) => updateCard(card.id, 'thumbnailUrls', value)}
@@ -3486,7 +3512,7 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
                 <span>Complète automatiquement les tags, le descriptif et le classement sans toucher aux photos.</span>
               </div>
             </div>
-            <div className="card-edit-footer"><span role="status">{saveMessage || (hasUnsavedChanges ? 'Modifications à enregistrer' : 'Fiche enregistrée')}</span><button className="checkout" type="button" disabled={!hasUnsavedChanges || isSaving} onClick={saveProducts}><Save size={16} />{isSaving ? 'Sauvegarde…' : 'Sauvegarder les produits modifiés'}</button></div>
+            <div className="card-edit-footer"><span role="status">{saveMessage || (hasUnsavedChanges ? 'Modifications à enregistrer' : 'Fiche enregistrée')}</span><button className="checkout" type="button" disabled={!hasUnsavedChanges || isSaving || uploadCount > 0} onClick={saveProducts}><Save size={16} />{uploadCount ? 'Envoi des photos…' : isSaving ? 'Sauvegarde…' : 'Sauvegarder les produits modifiés'}</button></div>
             <button className="danger-button product-delete-button" type="button" onClick={() => { if (window.confirm(`Supprimer la fiche « ${card.name} » lors de la prochaine sauvegarde ?`)) removeCard(card.id) }}>
               <Trash2 size={16} />
               Supprimer
@@ -3699,13 +3725,26 @@ function AdminView({
 
   const [orderQuery, setOrderQuery] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState('Tous')
+  const [orderGroup, setOrderGroup] = useState('all')
+  const [clock, setClock] = useState(Date.now())
+  useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 60000); return () => clearInterval(timer) }, [])
+  const orderMatchesGroup = (order, group) => {
+    const status = normalizeStatus(order.status)
+    const active = ['Nouvelle', 'Contactée', 'Confirmée'].includes(status)
+    if (group === 'new') return status === 'Nouvelle'
+    if (group === 'active') return active
+    if (group === 'due') return active && Boolean(order.reservedUntil) && new Date(order.reservedUntil).getTime() <= clock + 86400000
+    if (group === 'done') return status === 'Terminée'
+    return true
+  }
+  const orderGroups = [['all', 'Toutes'], ['new', 'À traiter'], ['active', 'En cours'], ['due', 'Échéance ≤ 24 h'], ['done', 'Ventes terminées']]
   const stock = cards.reduce((sum, card) => sum + Number(card.stock), 0)
   const stockValue = cards.reduce(
     (sum, card) => sum + Number(card.price || 0) * Number(card.stock || 0),
     0,
   )
   const lowStock = cards.filter((card) => Number(card.stock) <= Number(site.lowStockLimit)).length
-  const filteredOrders = useMemo(() => {
+  const filteredOrders = (() => {
     const normalized = orderQuery.toLowerCase().trim()
     return orders.filter((order) => {
       const text = [
@@ -3719,9 +3758,9 @@ function AdminView({
       ].join(' ').toLowerCase()
       const matchQuery = text.includes(normalized)
       const matchStatus = orderStatusFilter === 'Tous' || normalizeStatus(order.status) === orderStatusFilter
-      return matchQuery && matchStatus
+      return matchQuery && matchStatus && orderMatchesGroup(order, orderGroup)
     })
-  }, [orderQuery, orderStatusFilter, orders])
+  })()
 
   async function updateOrderStatus(id, status) {
     const order = orders.find((item) => item.id === id)
@@ -3782,6 +3821,7 @@ function AdminView({
           {activeTab === 'overview' && (
             <>
               <section className="stats">
+                <button className="secondary-button" type="button" onClick={() => { setOrderGroup('new'); setOrderStatusFilter('Tous'); setOrderQuery(''); setActiveTab('orders') }}>{orders.filter((order) => orderMatchesGroup(order, 'new')).length} réservation(s) à traiter</button>
                 <StatCard
                   icon={CircleDollarSign}
                   label={site.language === 'fr' ? 'Valeur du stock' : 'Stock value'}
@@ -3843,6 +3883,7 @@ function AdminView({
                 <span>Lis les messages clients et change le statut des réservations.</span>
               </div>
               <div className="admin-toolbar">
+                <div className="order-group-filters" aria-label="Suivi des réservations">{orderGroups.map(([id, label]) => <button className="secondary-button" type="button" key={id} aria-pressed={orderGroup === id} onClick={() => { setOrderGroup(id); setOrderStatusFilter('Tous') }}>{label} · {orders.filter((order) => orderMatchesGroup(order, id)).length}</button>)}</div>
                 <label className="searchbox">
                   <Search size={18} />
                   <input
