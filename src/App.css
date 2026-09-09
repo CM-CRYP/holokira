@@ -3336,3 +3336,19 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .product-grid > .empty-state { grid-column: 1 / -1; }
 @media (max-width: 560px) { .form-pair { grid-template-columns: minmax(0, 1fr); } .catalog-empty-hero { border-left: 0; border-top: 1px solid var(--line); } }
 @media (prefers-reduced-motion: reduce) { .app-shell *, .app-shell *::before, .app-shell *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+.product-editor-list:has(.card-edit-item) { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 18px; align-items: start; }
+.editable-product.card-edit-item { display: block; min-width: 0; }
+.card-edit-item.is-editing { grid-column: 1 / -1; }
+.card-edit-item .editable-product-preview { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.card-edit-item .editable-product-preview .card-art { max-width: 200px; width: 100%; align-self: center; }
+.card-edit-item .editable-product-preview h3, .card-edit-item .editable-product-preview p { margin: 0; }
+.card-edit-item.is-editing > .editable-product-preview { flex-direction: row; flex-wrap: wrap; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.card-edit-item.is-editing > .editable-product-preview .card-art { max-width: 72px; min-height: 96px; }
+.card-edit-detail { min-width: 0; padding-top: 20px; }
+.card-edit-heading, .card-edit-footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.card-edit-heading p { color: var(--muted); margin-bottom: 0; }
+.card-edit-footer { padding-top: 20px; border-top: 1px solid var(--line); margin-top: 20px; }
+.card-edit-preview { display: grid; grid-template-columns: minmax(160px, 280px) minmax(0, 1fr); gap: 24px; padding: 20px; border: 1px solid var(--line); background: var(--surface); }
+.card-edit-preview p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.card-edit-detail .editable-grid[hidden] { display: none; }
+@media (max-width: 560px) { .card-edit-preview { grid-template-columns: 1fr; } }

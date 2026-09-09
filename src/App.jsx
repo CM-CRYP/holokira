@@ -2799,11 +2799,26 @@ function JapanProposalPage({ token, setView, site }) {
 }
 
 function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) {
+  const [editingId, setEditingId] = useState(null)
+  const [showPreview, setShowPreview] = useState(false)
   const [draftCards, setDraftCards] = useState(cards)
   const [deletedIds, setDeletedIds] = useState([])
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+    const warn = (event) => { event.preventDefault(); event.returnValue = '' }
+    const guard = (event) => {
+      if (!event.target.closest('.topbar button, .site-footer button, .admin-sidebar button')) return
+      if (!window.confirm('Des modifications ne sont pas enregistrées. Quitter et les abandonner ?')) {
+        event.preventDefault(); event.stopPropagation()
+      }
+    }
+    window.addEventListener('beforeunload', warn)
+    document.addEventListener('click', guard, true)
+    return () => { window.removeEventListener('beforeunload', warn); document.removeEventListener('click', guard, true) }
+  }, [hasUnsavedChanges])
   const [productQuery, setProductQuery] = useState('')
   const [productStatus, setProductStatus] = useState('all')
   const [productCategory, setProductCategory] = useState('all')
@@ -3321,18 +3336,33 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
       </div>
       <div className="product-editor-list">
         {visibleDraftCards.map((card) => (
-          <article className={`editable-product${selectedProductIds.includes(card.id) ? ' selected' : ''}`} key={card.id}>
+          <article className={`editable-product card-edit-item${editingId === card.id ? ' is-editing' : ''}${selectedProductIds.includes(card.id) ? ' selected' : ''}`} key={card.id}>
             <div className="editable-product-preview">
               <label className="check-field">
                 <input type="checkbox" checked={selectedProductIds.includes(card.id)} onChange={() => toggleSelectedProduct(card.id)} />
                 Sélectionner
               </label>
               <CardArt card={card} />
+              <h3>{card.name}</h3>
+              <p>{formatMoney(card.price)} · Stock : {card.stock}</p>
+              <span>{cardStatuses[getCardStatus(card)]}</span>
+              <button type="button" className="checkout" aria-expanded={editingId === card.id} onClick={() => { setEditingId(editingId === card.id ? null : card.id); setShowPreview(false) }}>
+                <Edit3 size={16} /> {editingId === card.id ? 'Replier la fiche' : 'Modifier la fiche'}
+              </button>
               <button type="button" className="secondary-button" onClick={() => duplicateCard(card)}>
                 <Copy size={15} /> Dupliquer
               </button>
             </div>
-            <div className="editable-grid">
+            {editingId === card.id && <div className="card-edit-detail">
+              <div className="card-edit-heading">
+                <div><h3>Édition · {card.name}</h3><p>Les changements sont publiés uniquement après sauvegarde.</p></div>
+                <button type="button" className="secondary-button" aria-pressed={showPreview} onClick={() => setShowPreview(!showPreview)}>{showPreview ? 'Revenir aux champs' : 'Aperçu de la carte'}</button>
+              </div>
+              {showPreview && <section className="card-edit-preview" aria-label="Aperçu public de la carte">
+                <CardArt card={card} large />
+                <div><h2>{card.name}</h2><p>{card.set}</p><strong>{formatMoney(card.price)}</strong><p>{card.condition} · {card.language} · {card.grade}</p><p>{card.description || 'Aucune description pour le moment.'}</p>{card.flaws && <p><strong>Défauts visibles : </strong>{card.flaws}</p>}<p>{cardStatuses[getCardStatus(card)]} · {card.stock} exemplaire(s)</p></div>
+              </section>}
+            <div className="editable-grid" hidden={showPreview}>
               {[
                 ['name', 'Nom'],
                 ['set', 'Set'],
@@ -3456,10 +3486,12 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
                 <span>Complète automatiquement les tags, le descriptif et le classement sans toucher aux photos.</span>
               </div>
             </div>
-            <button className="danger-button product-delete-button" type="button" onClick={() => removeCard(card.id)}>
+            <div className="card-edit-footer"><span role="status">{saveMessage || (hasUnsavedChanges ? 'Modifications à enregistrer' : 'Fiche enregistrée')}</span><button className="checkout" type="button" disabled={!hasUnsavedChanges || isSaving} onClick={saveProducts}><Save size={16} />{isSaving ? 'Sauvegarde…' : 'Sauvegarder les produits modifiés'}</button></div>
+            <button className="danger-button product-delete-button" type="button" onClick={() => { if (window.confirm(`Supprimer la fiche « ${card.name} » lors de la prochaine sauvegarde ?`)) removeCard(card.id) }}>
               <Trash2 size={16} />
               Supprimer
             </button>
+            </div>}
           </article>
         ))}
       </div>
