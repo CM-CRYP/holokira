@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /recherche-japon/
 
 Sitemap: https://holokira.oklmcrypto.workers.dev/sitemap.xml

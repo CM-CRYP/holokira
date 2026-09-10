@@ -56,7 +56,7 @@
 .language-switch,
 .theme-toggle,
 .secondary-button,
-.nav-tabs button,
+.nav-tabs :is(button, a),
 .hero-copy button,
 .buy-row button,
 .checkout,
@@ -94,7 +94,7 @@
   gap: 6px;
 }
 
-.nav-tabs button,
+.nav-tabs :is(button, a),
 .cart-pill,
 .language-switch,
 .secondary-button,
@@ -147,7 +147,7 @@
   background: var(--field-bg);
 }
 
-.nav-tabs button {
+.nav-tabs :is(button, a) {
   min-height: 38px;
   padding: 0 14px;
   color: var(--muted);
@@ -155,8 +155,8 @@
   white-space: nowrap;
 }
 
-.nav-tabs button.active,
-.nav-tabs button:hover {
+.nav-tabs :is(button, a).active,
+.nav-tabs :is(button, a):hover {
   color: var(--ink);
   border-color: var(--line);
   background: var(--field-bg);
@@ -527,7 +527,7 @@
   gap: 10px;
 }
 
-.focus-card-list button {
+.focus-card-list :is(button, a) {
   display: grid;
   align-content: start;
   gap: 8px;
@@ -2961,7 +2961,7 @@ td:nth-child(2) {
   justify-content: flex-start;
 }
 
-.site-footer button {
+.site-footer :is(button, a) {
   min-height: 34px;
   padding: 0 10px;
   color: var(--muted);
@@ -2991,7 +2991,7 @@ td:nth-child(2) {
     scroll-snap-type: x proximity;
   }
 
-  .nav-tabs button {
+  .nav-tabs :is(button, a) {
     flex: 0 0 auto;
     scroll-snap-align: start;
   }
@@ -3216,7 +3216,7 @@ td:nth-child(2) {
     display: none;
   }
 
-  .nav-tabs button {
+  .nav-tabs :is(button, a) {
     min-height: 34px;
     padding: 0 10px;
     font-size: 12px;
@@ -3368,3 +3368,11 @@ button:disabled { cursor: not-allowed; opacity: .55; }
   .card-detail-page h1 { font-size: clamp(28px, 8vw, 44px); overflow-wrap: anywhere; }
   .photo-main img { max-height: 65vh; object-fit: contain; }
 }
+
+.app-link { color: inherit; text-decoration: none; cursor: pointer; }
+.product-open.app-link { display: block; }
+.nav-tabs a { display: inline-flex; align-items: center; justify-content: center; }
+.inventory-open.app-link { display: block; }
+.card-breadcrumbs { margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.card-breadcrumbs a:hover { text-decoration: underline; }
+.app-link:focus-visible { outline: 3px solid var(--accent, #db2a2a); outline-offset: 4px; }

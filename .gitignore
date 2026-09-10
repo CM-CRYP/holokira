@@ -24,3 +24,6 @@ server/.env
 *.njsproj
 *.sln
 *.sw?
+
+# Generated public configuration bundled by Cloudflare at build time
+.generated/

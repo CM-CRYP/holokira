@@ -38,6 +38,7 @@ import {
 } from 'lucide-react'
 import Papa from 'papaparse'
 import { starterSite } from './data'
+import { publicRoutes, pageMeta, productData, collectionCards, isCollection, compact } from './seo.js'
 import {
   deleteRemoteCard,
   fetchCards,
@@ -91,15 +92,7 @@ const cardStatuses = {
   sold: 'Vendue',
 }
 
-const seoRoutes = {
-  seoVintage: '/cartes-pokemon-japonaises-vintage',
-  seoPromo: '/cartes-pokemon-promo-japonaises',
-  seoVending: '/cartes-pokemon-vending-series',
-  seoDracaufeu: '/cartes-pokemon-dracaufeu',
-  seoPikachu: '/cartes-pokemon-pikachu',
-  seoMew: '/cartes-pokemon-mew',
-  seoStarters: '/cartes-pokemon-starters',
-}
+const seoRoutes = publicRoutes
 
 const typeColors = {
   Feu: '#db2a2a',
@@ -668,6 +661,7 @@ function getViewPath(viewName) {
 }
 
 function readPathTarget() {
+  if (window.location.pathname === '/') return null
   const seoView = Object.entries(seoRoutes).find(([, path]) => path === window.location.pathname)?.[0]
   if (seoView) return { view: seoView }
   const japanMatch = window.location.pathname.match(/^\/recherche-japon\/([^/]+)/)
@@ -818,7 +812,7 @@ function HoloCardShowcase({ cards, openCardPage, site }) {
       </div>
       <div className="holo-deck">
         {showcaseCards.map((card, index) => (
-          <button
+          <AppLink href={getCardPath(card)}
             className={`holo-card holo-card-${index + 1}`}
             type="button"
             key={card.id}
@@ -833,7 +827,7 @@ function HoloCardShowcase({ cards, openCardPage, site }) {
                 <strong>{formatMoney(card.price)}</strong>
               </span>
             </span>
-          </button>
+          </AppLink>
         ))}
       </div>
       <div className="holo-panel">
@@ -914,6 +908,14 @@ function FavoriteButton({ cardId, compact = false }) {
   )
 }
 
+function AppLink({ href, onClick, type: _type, className = '', children, ...props }) {
+  return <a {...props} href={href} className={`app-link ${className}`} onClick={(event) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    onClick?.(event)
+  }}>{children}</a>
+}
+
 function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }) {
   const t = labels[site.language]
   const nav = [
@@ -930,13 +932,13 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
 
   return (
     <header className="topbar">
-      <button className="brand" type="button" onClick={() => setView('home')}>
+      <AppLink href={getViewPath('home')} className="brand" type="button" onClick={() => setView('home')}>
         <span className="brand-mark">{site.brandMark}</span>
         <span>{site.brandName}</span>
-      </button>
+      </AppLink>
       <nav className="nav-tabs" aria-label={site.language === 'fr' ? 'Navigation principale' : 'Main navigation'}>
         {nav.map(([id, label]) => (
-          <button
+          <AppLink href={getViewPath(id)}
             className={view === id ? 'active' : ''}
             aria-current={view === id ? 'page' : undefined}
             key={id}
@@ -944,7 +946,7 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
             onClick={() => setView(id)}
           >
             {label}
-          </button>
+          </AppLink>
         ))}
       </nav>
       <div className="top-actions">
@@ -959,10 +961,10 @@ function Header({ view, setView, cartCount, site, setLanguage, toggleColorMode }
           {site.colorMode === 'light' ? <Moon size={17} /> : <Sun size={17} />}
           <span>{site.colorMode === 'light' ? t.darkMode : t.lightMode}</span>
         </button>
-        <button className="cart-pill" aria-label={`${t.cart} (${cartCount})`} type="button" onClick={() => setView('shop')}>
+        <AppLink href={getViewPath('shop')} className="cart-pill" aria-label={`${t.cart} (${cartCount})`} type="button" onClick={() => setView('shop')}>
           <ShoppingBag size={18} />
           <span>{cartCount}</span>
-        </button>
+        </AppLink>
       </div>
     </header>
   )
@@ -983,14 +985,14 @@ function HomeView({ cards, openCardPage, setView, site, t }) {
           <h1>{copy.homeTitle}</h1>
           <p>{copy.homeIntro}</p>
           <div className="home-actions">
-            <button className="checkout" type="button" onClick={() => setView('shop')}>
+            <AppLink href={getViewPath('shop')} className="checkout" type="button" onClick={() => setView('shop')}>
               <ShoppingBag size={18} />
               {t.enterShop}
-            </button>
-            <button className="secondary-button" type="button" onClick={() => setView('cards')}>
+            </AppLink>
+            <AppLink href={getViewPath('cards')} className="secondary-button" type="button" onClick={() => setView('cards')}>
               <Sparkles size={17} />
               {t.discoverCards}
-            </button>
+            </AppLink>
           </div>
         </div>
         <HoloCardShowcase cards={cards} openCardPage={openCardPage} site={site} />
@@ -1004,30 +1006,30 @@ function HomeView({ cards, openCardPage, setView, site, t }) {
               ? `Le stock se concentre sur les pi\u00e8ces japonaises anciennes et recherch\u00e9es : ${inventory.vintageSets.join(', ') || 'Expansion Sheet, Fossil, Neo, Vending'}. Chaque carte est pr\u00e9sent\u00e9e avec ses photos, son \u00e9tat et ses d\u00e9fauts visibles.`
               : `The stock focuses on older and collectible Japanese cards: ${inventory.vintageSets.join(', ') || 'Expansion Sheet, Fossil, Neo, Vending'}. Every card is shown with real photos, condition and visible flaws.`}
           </p>
-          <button className="secondary-button" type="button" onClick={() => setView('vintageJapanese')}>
+          <AppLink href={getViewPath('vintageJapanese')} className="secondary-button" type="button" onClick={() => setView('vintageJapanese')}>
             {t.vintageJapanese}
-          </button>
+          </AppLink>
         </div>
         <div className="focus-card-list">
           {vintageCards.map((card) => (
-            <button type="button" key={card.id} onClick={() => openCardPage(card)}>
+            <AppLink href={getCardPath(card)} type="button" key={card.id} onClick={() => openCardPage(card)}>
               <CardArt card={card} />
               <strong>{card.name}</strong>
               <span>{card.set}</span>
-            </button>
+            </AppLink>
           ))}
         </div>
       </section>
       <section className="home-strip">
         {previewCards.map((card) => (
-          <button className="home-card-link" type="button" key={card.id} onClick={() => openCardPage(card)}>
+          <AppLink href={getCardPath(card)} className="home-card-link" type="button" key={card.id} onClick={() => openCardPage(card)}>
             <CardArt card={card} />
             <span className="home-card-copy">
               <strong>{card.name}</strong>
               <small>{card.set}</small>
             </span>
             <b>{formatMoney(card.price)}</b>
-          </button>
+          </AppLink>
         ))}
       </section>
       <TrustSection site={site} />
@@ -1044,7 +1046,7 @@ function ProductCard({ card, selected, onSelect, onAdd, onShare, t }) {
 
   return (
     <article className={`${selected ? 'product-card selected' : 'product-card'} ${unavailable ? 'reserved' : ''}`}>
-      <button className="product-open" type="button" onClick={() => onSelect(card)}>
+      <AppLink href={getCardPath(card)} className="product-open" type="button" onClick={() => onSelect(card)}>
         <span className="badge-row" aria-hidden={badges.length === 0}>
           {badges.map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
         </span>
@@ -1068,7 +1070,7 @@ function ProductCard({ card, selected, onSelect, onAdd, onShare, t }) {
           {card.negotiable && <span>Prix négociable</span>}
           {card.tags && <span>{card.tags}</span>}
         </div>
-      </button>
+      </AppLink>
       <div className="product-actions">
         <button
           className="reserve-card-button"
@@ -1559,16 +1561,16 @@ function CardsView({ cards, openCardPage, addToCart, copyCardLink, site, t }) {
               className={!isReservable(card) ? 'inventory-card reserved' : 'inventory-card'}
               key={card.id}
             >
-              <button className="inventory-open" type="button" onClick={() => openCardPage(card)}>
+              <AppLink href={getCardPath(card)} className="inventory-open" onClick={() => openCardPage(card)}>
                 <CardArt card={card} />
-              </button>
+              </AppLink>
               <div className="inventory-copy">
                 {badges.length > 0 && (
                   <span className="inventory-badges">
                     {badges.slice(0, 3).map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
                   </span>
                 )}
-                <button className="inventory-title" type="button" onClick={() => openCardPage(card)}>{card.name}</button>
+                <AppLink href={getCardPath(card)} className="inventory-title" onClick={() => openCardPage(card)}>{card.name}</AppLink>
                 <small>{card.set || (isFr ? 'Série à compléter' : 'Set to complete')}</small>
               </div>
               <div className="inventory-card-footer">
@@ -1658,12 +1660,18 @@ function CardDetailPage({ card, cards, addToCart, setView, site, t, copyCardLink
 
   return (
     <main className="card-detail-page">
+      <nav className="card-breadcrumbs" aria-label="Fil d’Ariane">
+        <AppLink href="/" onClick={() => setView('home')}>Accueil</AppLink>
+        <span aria-hidden="true"> / </span>
+        <AppLink href="/boutique" onClick={() => setView('shop')}>Boutique</AppLink>
+        <span aria-hidden="true"> / </span><span aria-current="page">{card.name}</span>
+      </nav>
       <section className="card-detail-hero">
         <CardPhotoGallery key={card.id} card={card} images={images} />
         <div className="card-detail-copy">
-          <button className="text-button" type="button" onClick={() => setView('shop')}>
+          <AppLink href="/boutique" className="text-button" onClick={() => setView('shop')}>
             ← Retour boutique
-          </button>
+          </AppLink>
           {badges.length > 0 && (
             <span className="badge-row">
               {badges.map((badge) => <span className="card-badge" key={badge}>{badge}</span>)}
@@ -2210,20 +2218,20 @@ function SiteFooter({ site, setView, t }) {
         <span>{site.copy[site.language].footerNote}</span>
       </div>
       <nav className="footer-collections" aria-label="Collections Pokémon">
-        <button type="button" onClick={() => setView('japanSourcing')}>{t.japanSourcing}</button>
-        <button type="button" onClick={() => setView('seoVintage')}>Vintage JP</button>
-        <button type="button" onClick={() => setView('seoPromo')}>Promos JP</button>
-        <button type="button" onClick={() => setView('seoVending')}>Vending Series</button>
-        <button type="button" onClick={() => setView('seoDracaufeu')}>Dracaufeu</button>
-        <button type="button" onClick={() => setView('seoPikachu')}>Pikachu</button>
-        <button type="button" onClick={() => setView('seoMew')}>Mew</button>
-        <button type="button" onClick={() => setView('seoStarters')}>Starters</button>
+        <AppLink href={getViewPath('japanSourcing')} type="button" onClick={() => setView('japanSourcing')}>{t.japanSourcing}</AppLink>
+        <AppLink href={getViewPath('seoVintage')} type="button" onClick={() => setView('seoVintage')}>Vintage JP</AppLink>
+        <AppLink href={getViewPath('seoPromo')} type="button" onClick={() => setView('seoPromo')}>Promos JP</AppLink>
+        <AppLink href={getViewPath('seoVending')} type="button" onClick={() => setView('seoVending')}>Vending Series</AppLink>
+        <AppLink href={getViewPath('seoDracaufeu')} type="button" onClick={() => setView('seoDracaufeu')}>Dracaufeu</AppLink>
+        <AppLink href={getViewPath('seoPikachu')} type="button" onClick={() => setView('seoPikachu')}>Pikachu</AppLink>
+        <AppLink href={getViewPath('seoMew')} type="button" onClick={() => setView('seoMew')}>Mew</AppLink>
+        <AppLink href={getViewPath('seoStarters')} type="button" onClick={() => setView('seoStarters')}>Starters</AppLink>
       </nav>
       <nav aria-label="Navigation secondaire">
-        <button type="button" onClick={() => setView('about')}>{t.about}</button>
-        <button type="button" onClick={() => setView('contact')}>{t.contact}</button>
-        <button type="button" onClick={() => setView('legal')}>{t.legal}</button>
-        <button type="button" onClick={() => setView('admin')}>{t.admin}</button>
+        <AppLink href={getViewPath('about')} type="button" onClick={() => setView('about')}>{t.about}</AppLink>
+        <AppLink href={getViewPath('contact')} type="button" onClick={() => setView('contact')}>{t.contact}</AppLink>
+        <AppLink href={getViewPath('legal')} type="button" onClick={() => setView('legal')}>{t.legal}</AppLink>
+        <AppLink href={getViewPath('admin')} type="button" onClick={() => setView('admin')}>{t.admin}</AppLink>
       </nav>
       <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>
     </footer>
@@ -2820,7 +2828,7 @@ function ProductEditor({ cards, persistCards, removeCardById, reloadCards, t }) 
     if (!hasUnsavedChanges && !uploadCount) return
     const warn = (event) => { event.preventDefault(); event.returnValue = '' }
     const guard = (event) => {
-      if (!event.target.closest('.topbar button, .site-footer button, .admin-sidebar button')) return
+      if (!event.target.closest('.topbar button, .topbar a, .site-footer button, .site-footer a, .admin-sidebar button')) return
     if (uploadCount || !window.confirm('Des modifications ne sont pas enregistrées. Quitter et les abandonner ?')) {
         event.preventDefault(); event.stopPropagation()
       }
@@ -3982,7 +3990,7 @@ function App() {
   })
   const [lastReservation, setLastReservation] = useState(() => receipts[0] || null)
   const [selected, setSelected] = useState(() => cards[0])
-  const [view, setView] = useState('home')
+  const [view, setView] = useState(() => (readPathTarget() || readHashTarget()).view)
   const [query, setQuery] = useState('')
   const [type, setType] = useState(labels[site.language].all)
   const [rarity, setRarity] = useState(labels[site.language].allFeminine)
@@ -3998,15 +4006,17 @@ function App() {
   const t = labels[site.language]
 
   useEffect(() => {
+    if (catalogState !== 'ready') return
+    if (view === 'cardDetail' && !selected) return
     const origin = window.location.origin
-    const pageSeo = getPageSeo({ view, selected, site, t, cards })
+    const pageSeo = site.language === 'fr' ? pageMeta(view, view === 'cardDetail' ? selected : null, origin) : getPageSeo({ view, selected, site, t, cards })
     const canonical = view === 'cardDetail' && selected
       ? `${origin}${getCardPath(selected)}`
       : view === 'japanProposal'
         ? `${origin}/recherche-japon/${japanPrivateToken}`
         : `${origin}${getViewPath(view)}`
     const title = pageSeo.title
-    const description = pageSeo.description
+    const description = compact(pageSeo.description)
     const shareImage = view === 'cardDetail' && selected && getCardImages(selected)[0]
       ? getCardImages(selected)[0]
       : `${origin}/og-image.svg`
@@ -4014,7 +4024,7 @@ function App() {
     document.documentElement.lang = site.language
     document.title = title
     setMetaTag('meta[name="description"]', { name: 'description', content: description })
-    setMetaTag('meta[name="keywords"]', { name: 'keywords', content: pageSeo.keywords })
+    setMetaTag('meta[name="keywords"]', { name: 'keywords', content: pageSeo.keywords || '' })
     setMetaTag('meta[property="og:title"]', { property: 'og:title', content: title })
     setMetaTag('meta[property="og:description"]', { property: 'og:description', content: description })
     setMetaTag('meta[property="og:type"]', { property: 'og:type', content: view === 'cardDetail' ? 'product' : 'website' })
@@ -4025,61 +4035,21 @@ function App() {
     setMetaTag('meta[name="robots"]', { name: 'robots', content: ['japanProposal', 'admin', 'orders', 'reservationSuccess', 'notFound'].includes(view) ? 'noindex,nofollow' : 'index,follow' })
     setLinkTag('canonical', canonical)
 
+    const shown = collectionCards(view, cards)
     const structuredData = view === 'cardDetail' && selected
-      ? {
-          '@context': 'https://schema.org',
-          '@type': 'Product',
-          name: selected.name,
-          description,
-          brand: site.brandName,
-          category: 'Pokémon card',
-          sku: selected.id,
-          image: getCardImages(selected).length ? getCardImages(selected) : `${origin}/favicon.svg`,
-          additionalProperty: [
-            { '@type': 'PropertyValue', name: 'Rareté', value: selected.rarity },
-            { '@type': 'PropertyValue', name: 'État', value: selected.condition },
-            { '@type': 'PropertyValue', name: 'Langue', value: selected.language },
-            { '@type': 'PropertyValue', name: 'Grade', value: selected.grade },
-            { '@type': 'PropertyValue', name: 'Prix négociable', value: selected.negotiable ? 'Oui' : 'Non' },
-          ],
-          offers: {
-            '@type': 'Offer',
-            priceCurrency: 'EUR',
-            price: Number(selected.price).toFixed(2),
-            availability: isReservable(selected)
-              ? 'https://schema.org/InStock'
-              : 'https://schema.org/OutOfStock',
-            url: canonical,
-          },
-        }
-      : {
-          '@context': 'https://schema.org',
-          '@type': 'Store',
-          name: site.brandName,
-          url: origin,
-          email: site.contactEmail,
-          description,
-          keywords: pageSeo.keywords,
-          areaServed: ['FR', 'EU'],
-          makesOffer: cards.slice(0, 12).map((card) => ({
-            '@type': 'Offer',
-            url: `${origin}${getCardPath(card)}`,
-            priceCurrency: 'EUR',
-            price: Number(card.price || 0).toFixed(2),
-            availability: isReservable(card)
-              ? 'https://schema.org/InStock'
-              : 'https://schema.org/OutOfStock',
-            itemOffered: {
-              '@type': 'Product',
-              name: card.name,
-              category: 'Pokemon card',
-              image: getCardImages(card)[0] || `${origin}/og-image.svg`,
-            },
-          })),
-        }
+      ? [productData(selected, origin), {'@context':'https://schema.org', '@type':'BreadcrumbList', itemListElement: [
+          {'@type':'ListItem', position:1, name:site.brandName, item:origin+'/'},
+          {'@type':'ListItem', position:2, name:'Boutique', item:origin+'/boutique'},
+          {'@type':'ListItem', position:3, name:selected.name, item:canonical},
+        ]}]
+      : [{'@context':'https://schema.org', '@type':'Organization', name:site.brandName, url:origin, email:site.contactEmail},
+          ...(shown.length && (view === 'home' || isCollection(view)) ? [{'@context':'https://schema.org', '@type':'ItemList', itemListElement:shown.map((card,index) => ({'@type':'ListItem', position:index+1, name:card.name, url:origin+getCardPath(card)}))}] : [])]
+    if (isCollection(view) && shown.length === 0) setMetaTag('meta[name="robots"]', {name:'robots',content:'noindex,follow'})
+    setMetaTag('meta[name="twitter:title"]', {name:'twitter:title',content:title})
+    setMetaTag('meta[name="twitter:description"]', {name:'twitter:description',content:description})
 
     setStructuredData(structuredData)
-  }, [cards, japanPrivateToken, selected, site, t, view])
+  }, [cards, catalogState, japanPrivateToken, selected, site, t, view])
 
   useEffect(() => {
     let active = true
