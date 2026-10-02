@@ -4087,6 +4087,32 @@ function App() {
     return () => { active = false }
   }, [])
 
+  useEffect(() => {
+    // Never replace an administrator's unsaved product edits.
+    if (isAdminUnlocked || !backendConfig.databaseEnabled) return
+    let active = true
+    let refreshing = false
+    async function refreshCatalog() {
+      if (document.visibilityState !== 'visible' || refreshing) return
+      refreshing = true
+      try {
+        const remoteCards = await fetchCards()
+        if (!active || !Array.isArray(remoteCards)) return
+        setCards(remoteCards)
+        savePublicCards(remoteCards)
+        setCatalogState('ready')
+      } catch { /* Keep the current catalogue during a temporary outage. */ }
+      finally { refreshing = false }
+    }
+    window.addEventListener('focus', refreshCatalog)
+    document.addEventListener('visibilitychange', refreshCatalog)
+    return () => {
+      active = false
+      window.removeEventListener('focus', refreshCatalog)
+      document.removeEventListener('visibilitychange', refreshCatalog)
+    }
+  }, [isAdminUnlocked, backendConfig.databaseEnabled])
+
   function clearAdminData() {
     adminSessionVersion.current += 1
     setIsAdminUnlocked(false)
