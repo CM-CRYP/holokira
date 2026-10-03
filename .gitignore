@@ -27,3 +27,6 @@ server/.env
 
 # Generated public configuration bundled by Cloudflare at build time
 .generated/
+
+# Separate Cloudflare Pages output
+pages-dist/

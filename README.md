@@ -177,3 +177,22 @@ uploads de photos, de l’authentification et du rendu mobile/desktop dans un
 navigateur. Aucun paiement ou envoi automatique d’e-mail n’est intégré, conformément
 au fonctionnement de réservation déjà prévu. Les informations légales de
 l’éditeur et les conditions spécifiques restent à compléter par le propriétaire.
+
+## Adresse gratuite Cloudflare Pages
+
+La sortie Pages conserve le catalogue Supabase existant, les photos, les fiches
+indexables et le sitemap dynamique. Le Worker actuel reste disponible pendant
+la transition.
+
+Créer un projet **Pages** relié à `CM-CRYP/holokira`, branche `main` :
+
+- Nom souhaité : `holokira` (selon disponibilité).
+- Commande : `npm run build:pages`.
+- Dossier de sortie : `pages-dist`.
+- Variables : reprendre `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` du
+  projet actuel ; définir `VITE_SITE_URL` avec l'adresse Pages réellement attribuée.
+
+Ne pas recréer la base ni exécuter de script d'initialisation. Vérifier la nouvelle
+adresse avant de désactiver ou rediriger l'ancienne. Le fichier `_worker.js`
+compilé assure le rendu des fiches ; `_routes.json` laisse les photos et fichiers
+statiques à Pages.
